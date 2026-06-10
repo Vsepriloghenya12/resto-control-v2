@@ -478,9 +478,44 @@ async function handleCollections(req, res, state, pathname, auth) {
     if (name === 'employees' && String(body.position || '').toLowerCase().includes('кладов')) {
       throw httpError(400, 'Должность «Кладовщик» не используется. Используйте «Клининг».')
     }
+    const targetRestaurantId = role === 'service_owner' && body.restaurantId ? body.restaurantId : currentRestaurantId
+
+    if (name === 'employees') {
+      const login = normalizeLogin(body.login)
+      const password = String(body.password || '')
+      if (!String(body.name || '').trim() || !login || !String(body.position || '').trim() || password.length < 4) {
+        throw httpError(400, 'Заполните имя, телефон/email, должность и временный пароль.')
+      }
+      if (state.users.some((user) => user.login === login)) {
+        throw httpError(409, 'Пользователь с таким телефоном или email уже существует.')
+      }
+      const createdAt = nowIso()
+      const user = { id: id('user'), name: String(body.name).trim(), login, passwordHash: hashPassword(password), roleHint: 'employee', createdAt, updatedAt: createdAt }
+      const membership = { id: id('membership'), userId: user.id, restaurantId: targetRestaurantId, role: 'employee', position: body.position, status: 'active', createdAt, updatedAt: createdAt }
+      const employee = {
+        id: id('employee'),
+        restaurantId: targetRestaurantId,
+        userId: user.id,
+        name: user.name,
+        login,
+        position: body.position,
+        status: body.status || 'active',
+        shiftStatus: body.shiftStatus || 'closed',
+        attestationPercent: Number(body.attestationPercent || 0),
+        createdAt,
+        updatedAt: createdAt,
+      }
+      state.users.push(user)
+      state.memberships.push(membership)
+      collection.items.push(employee)
+      await saveState(state)
+      send(res, 201, employee)
+      return true
+    }
+
     const item = {
       id: id(name.replace(/-/g, '_')),
-      restaurantId: role === 'service_owner' && body.restaurantId ? body.restaurantId : currentRestaurantId,
+      restaurantId: targetRestaurantId,
       ...body,
       createdAt: nowIso(),
       updatedAt: nowIso(),
@@ -519,9 +554,38 @@ async function handleCollections(req, res, state, pathname, auth) {
   }
 
   if (req.method === 'DELETE' && itemId) {
+    if (name === 'employees' && item.userId) {
+      state.memberships = state.memberships.filter((membership) => membership.userId !== item.userId || membership.restaurantId !== item.restaurantId)
+      state.users = state.users.filter((user) => user.id !== item.userId)
+      state.sessions = state.sessions.filter((session) => session.userId !== item.userId)
+    }
     state[collection.key] = collection.items.filter((entry) => entry.id !== itemId)
     await saveState(state)
     send(res, 200, { ok: true })
+    return true
+  }
+
+  return false
+}
+
+
+async function handleRestaurant(req, res, state, pathname, auth) {
+  if (pathname !== '/api/restaurant') return false
+  const payload = requireRole(auth, ['owner', 'manager', 'service_owner'])
+  const restaurantId = payload.restaurant.id
+  const restaurant = state.restaurants.find((item) => item.id === restaurantId)
+  if (!restaurant) throw httpError(404, 'Ресторан не найден.')
+
+  if (req.method === 'GET') {
+    send(res, 200, restaurant)
+    return true
+  }
+
+  if (req.method === 'PATCH' || req.method === 'PUT') {
+    const body = await readBody(req)
+    Object.assign(restaurant, body, { updatedAt: nowIso() })
+    await saveState(state)
+    send(res, 200, restaurant)
     return true
   }
 
@@ -605,6 +669,7 @@ async function handleRequest(req, res) {
 
     if (await handleAuth(req, res, state, pathname, auth)) return
     if (await handleServiceOwner(req, res, state, pathname, auth)) return
+    if (await handleRestaurant(req, res, state, pathname, auth)) return
     if (await handleDashboard(req, res, state, pathname, auth)) return
     if (await handleMobile(req, res, state, pathname, auth)) return
     if (await handleCollections(req, res, state, pathname, auth)) return

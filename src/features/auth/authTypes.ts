@@ -12,6 +12,19 @@ export type Restaurant = {
   trialStartedAt?: string
   trialEndsAt?: string
   subscriptionEndsAt?: string
+  legalType?: string
+  legalName?: string
+  inn?: string
+  kpp?: string
+  ogrn?: string
+  legalAddress?: string
+  bankName?: string
+  bik?: string
+  account?: string
+  corrAccount?: string
+  contactEmail?: string
+  contactPhone?: string
+  edo?: string
 }
 
 export type MembershipRole = 'service_owner' | 'owner' | 'manager' | 'senior' | 'employee'

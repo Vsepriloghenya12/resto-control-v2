@@ -1,34 +1,11 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useSession } from '../../app/providers/SessionProvider'
+import { api, apiRequest } from '../../shared/api/client'
+import './PaymentPage.css'
+
 type InvoiceStatus = 'issued' | 'payment_reported' | 'payment_document_attached' | 'paid' | 'payment_rejected'
-type DocumentStatus = 'issued' | 'signed'
-
-type Tariff = {
-  id: string
-  title: string
-  employees: string
-  price: string
-  period: string
-  note: string
-  featured?: boolean
-}
-
-type Invoice = {
-  id: string
-  number: string
-  plan: string
-  period: string
-  amount: string
-  issuedAt: string
-  status: InvoiceStatus
-}
-
-type ClosingDocument = {
-  id: string
-  type: 'act' | 'upd'
-  number: string
-  period: string
-  amount: string
-  status: DocumentStatus
-}
+type Tariff = { id: string; title: string; employees: string; price: string; period: string; note: string; featured?: boolean }
+type Invoice = { id: string; invoiceNumber?: string; number?: string; plan: string; period: string; amount: number | string; issuedAt: string; status: InvoiceStatus; closingDocument?: string }
 
 const tariffs: Tariff[] = [
   { id: 'start', title: 'Старт', employees: 'до 10 сотрудников', price: '1 490 ₽', period: '/ мес', note: 'Счёт на оплату, закрывающие документы' },
@@ -42,224 +19,82 @@ const tariffs: Tariff[] = [
 ]
 
 const invoiceStatusLabels: Record<InvoiceStatus, string> = {
-  issued: 'Счёт выставлен',
-  payment_reported: 'Клиент отметил оплату',
-  payment_document_attached: 'Поручение прикреплено',
-  paid: 'Оплата подтверждена',
-  payment_rejected: 'Платёж не найден',
+  issued: 'Счёт выставлен', payment_reported: 'Клиент отметил оплату', payment_document_attached: 'Поручение прикреплено', paid: 'Оплата подтверждена', payment_rejected: 'Платёж не найден',
 }
 
-const invoices: Invoice[] = [
-  {
-    id: 'inv-1287',
-    number: '1287',
-    plan: 'Стандарт',
-    period: '01.06.2026 — 30.06.2026',
-    amount: '2 990 ₽',
-    issuedAt: '01.06.2026',
-    status: 'paid',
-  },
-  {
-    id: 'inv-1298',
-    number: '1298',
-    plan: 'Стандарт',
-    period: '01.07.2026 — 31.07.2026',
-    amount: '2 990 ₽',
-    issuedAt: '10.06.2026',
-    status: 'issued',
-  },
-]
-
-const closingDocuments: ClosingDocument[] = [
-  { id: 'doc-74', type: 'act', number: '74', period: 'до 30.06.2026', amount: '2 990 ₽', status: 'issued' },
-  { id: 'doc-61', type: 'upd', number: '61', period: 'до 31.05.2026', amount: '2 990 ₽', status: 'signed' },
-]
-
-const paymentAccess = {
-  planId: 'standard',
-  paidUntil: '15.06.2026',
-  daysLeft: 5,
-}
-
-function StatusBadge({ status }: { status: InvoiceStatus }) {
-  return <span className={`payment-status payment-status--${status}`}>{invoiceStatusLabels[status]}</span>
-}
-
-function ToggleButton({ active, children }: { active?: boolean; children: string }) {
-  return <button className={active ? 'payment-toggle payment-toggle--active' : 'payment-toggle'} type="button">{children}</button>
-}
-
-function TariffCard({ tariff, selected }: { tariff: Tariff; selected?: boolean }) {
+function StatusBadge({ status }: { status: InvoiceStatus }) { return <span className={`payment-status payment-status--${status}`}>{invoiceStatusLabels[status]}</span> }
+function ToggleButton({ active, children }: { active?: boolean; children: string }) { return <button className={active ? 'payment-toggle payment-toggle--active' : 'payment-toggle'} type="button">{children}</button> }
+function TariffCard({ tariff, selected, onSelect }: { tariff: Tariff; selected?: boolean; onSelect: () => void }) {
   return (
-    <button className={selected ? 'payment-tariff-card payment-tariff-card--selected' : tariff.featured ? 'payment-tariff-card payment-tariff-card--featured' : 'payment-tariff-card'} type="button">
-      {tariff.featured ? <span className="payment-tariff-card__badge">Популярный</span> : null}
-      {selected ? <span className="payment-tariff-card__selected">Текущий</span> : null}
-      <div>
-        <strong>{tariff.title}</strong>
-        <p>{tariff.employees}</p>
-      </div>
-      <div className="payment-tariff-price">
-        <b>{tariff.price}</b>
-        {tariff.period ? <em>{tariff.period}</em> : null}
-      </div>
-      <small>{tariff.note}</small>
+    <button className={selected ? 'payment-tariff-card payment-tariff-card--selected' : tariff.featured ? 'payment-tariff-card payment-tariff-card--featured' : 'payment-tariff-card'} type="button" onClick={onSelect}>
+      {tariff.featured ? <span className="payment-tariff-card__badge">Популярный</span> : null}{selected ? <span className="payment-tariff-card__selected">Текущий</span> : null}
+      <div><strong>{tariff.title}</strong><p>{tariff.employees}</p></div><div className="payment-tariff-price"><b>{tariff.price}</b>{tariff.period ? <em>{tariff.period}</em> : null}</div><small>{tariff.note}</small>
     </button>
   )
 }
 
 export function PaymentPage() {
+  const { session } = useSession()
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [restaurant, setRestaurant] = useState(session?.restaurant)
+  const [message, setMessage] = useState('')
+  const [requisites, setRequisites] = useState({
+    legalType: session?.restaurant.legalType || 'ИП', legalName: session?.restaurant.legalName || '', inn: session?.restaurant.inn || '', kpp: session?.restaurant.kpp || '', ogrn: session?.restaurant.ogrn || '', legalAddress: session?.restaurant.legalAddress || '', bankName: session?.restaurant.bankName || '', bik: session?.restaurant.bik || '', account: session?.restaurant.account || '', corrAccount: session?.restaurant.corrAccount || '', contactEmail: session?.restaurant.contactEmail || '', contactPhone: session?.restaurant.contactPhone || '', edo: session?.restaurant.edo || '',
+  })
+
+  async function loadPayments() {
+    const result = await api.list<Invoice>('payments')
+    setInvoices(result.items)
+  }
+  useEffect(() => { void loadPayments() }, [])
+
+  const currentTariff = tariffs.find((tariff) => tariff.id === (restaurant?.plan || 'standard')) ?? tariffs[2]
+  const paidUntil = restaurant?.subscriptionEndsAt ? new Date(restaurant.subscriptionEndsAt).toLocaleDateString('ru-RU') : '—'
+  const daysLeft = restaurant?.subscriptionEndsAt ? Math.max(0, Math.ceil((new Date(restaurant.subscriptionEndsAt).getTime() - Date.now()) / 86400000)) : null
   const latestInvoice = invoices[0]
-  const currentTariff = tariffs.find((tariff) => tariff.id === paymentAccess.planId) ?? tariffs[2]
+
+  async function selectTariff(tariff: Tariff) {
+    const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify({ plan: tariff.id }) })
+    setRestaurant(updated)
+    setMessage(`Выбран тариф «${tariff.title}». Счёт выставляет владелец сервиса.`)
+  }
+
+  async function saveRequisites() {
+    const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify(requisites) })
+    setRestaurant(updated)
+    setMessage('Реквизиты сохранены в карточке ресторана.')
+  }
+
+  async function reportPaid(invoice: Invoice) {
+    const updated = await api.update<Invoice>('payments', invoice.id, { status: 'payment_reported' })
+    setInvoices((items) => items.map((item) => item.id === updated.id ? updated : item))
+  }
+
+  async function attachPaymentOrder(invoice: Invoice) {
+    const updated = await api.update<Invoice>('payments', invoice.id, { status: 'payment_document_attached', paymentOrderAttachedAt: new Date().toISOString() })
+    setInvoices((items) => items.map((item) => item.id === updated.id ? updated : item))
+  }
 
   return (
     <section className="payment-page">
+      {message ? <div className="payment-summary-card"><p>{message}</p></div> : null}
       <section className="payment-summary-grid">
-        <article className="payment-summary-card payment-summary-card--main">
-          <div>
-            <span>Тариф</span>
-            <strong>{currentTariff.title}</strong>
-            <p>Доступ активен. Оплаченный период заканчивается через {paymentAccess.daysLeft} дней.</p>
-          </div>
-          <b>Оплачено до {paymentAccess.paidUntil}</b>
-        </article>
-
-        <article className="payment-summary-card">
-          <span>Последний счёт</span>
-          <strong>№ {latestInvoice.number}</strong>
-          <p>{latestInvoice.amount} · {invoiceStatusLabels[latestInvoice.status]}</p>
-        </article>
-
-        <article className="payment-summary-card">
-          <span>Поддержка</span>
-          <strong>Нужна помощь?</strong>
-          <p>Вопросы по счёту, оплате, тарифу или закрывающим документам.</p>
-          <button className="payment-support-button" type="button" onClick={() => { window.location.href = 'mailto:support@resto-control.ru?subject=Поддержка по оплате Resto Control' }}>Поддержка</button>
-        </article>
+        <article className="payment-summary-card payment-summary-card--main"><div><span>Тариф</span><strong>{currentTariff.title}</strong><p>{daysLeft !== null ? `Доступ активен. До окончания ${daysLeft} дней.` : 'Доступ активен.'}</p></div><b>Оплачено до {paidUntil}</b></article>
+        <article className="payment-summary-card"><span>Последний счёт</span><strong>{latestInvoice ? `№ ${latestInvoice.invoiceNumber || latestInvoice.number}` : '—'}</strong><p>{latestInvoice ? `${latestInvoice.amount} ₽ · ${invoiceStatusLabels[latestInvoice.status]}` : 'Счётов пока нет'}</p></article>
+        <article className="payment-summary-card"><span>Поддержка</span><strong>Нужна помощь?</strong><p>Вопросы по счёту, оплате, тарифу или закрывающим документам.</p><button className="payment-support-button" type="button" onClick={() => { window.location.href = 'mailto:support@resto-control.ru?subject=Поддержка по оплате Resto Control' }}>Поддержка</button></article>
       </section>
 
-      <section className="payment-tariffs-card">
-        <div className="payment-card-header">
-          <div>
-            <h2>Тарифы</h2>
-            <p>Линейка тарифов как в старой версии: стоимость зависит от размера команды.</p>
-          </div>
-          <span className="payment-trial-pill">Пробный период 14 дней при регистрации</span>
-        </div>
-        <div className="payment-tariff-grid">
-          {tariffs.map((tariff) => <TariffCard key={tariff.id} tariff={tariff} selected={tariff.id === paymentAccess.planId} />)}
-        </div>
-      </section>
+      <section className="payment-tariffs-card"><div className="payment-card-header"><div><h2>Тарифы</h2><p>Стоимость зависит от размера команды.</p></div><span className="payment-trial-pill">Пробный период 14 дней при регистрации</span></div><div className="payment-tariff-grid">{tariffs.map((tariff) => <TariffCard key={tariff.id} tariff={tariff} selected={tariff.id === restaurant?.plan} onSelect={() => selectTariff(tariff)} />)}</div></section>
 
-      <div className="payment-layout">
-        <section className="payment-requisites-card">
-          <div className="payment-card-header">
-            <div>
-              <h2>Реквизиты ресторана</h2>
-              <p>По ним владелец сервиса выставляет счёт и закрывающие документы.</p>
-            </div>
-            <div className="payment-toggle-group">
-              <ToggleButton active>ИП</ToggleButton>
-              <ToggleButton>ООО</ToggleButton>
-            </div>
-          </div>
+      <div className="payment-layout"><section className="payment-requisites-card"><div className="payment-card-header"><div><h2>Реквизиты ресторана</h2><p>По ним владелец сервиса выставляет счёт и закрывающие документы.</p></div><div className="payment-toggle-group"><ToggleButton active={requisites.legalType === 'ИП'}>ИП</ToggleButton><ToggleButton active={requisites.legalType === 'ООО'}>ООО</ToggleButton></div></div>
+        <div className="payment-form-grid">
+          {([['legalName','Юридическое название'],['inn','ИНН'],['kpp','КПП'],['ogrn','ОГРН / ОГРНИП'],['legalAddress','Юридический адрес'],['bankName','Банк'],['bik','БИК'],['account','Расчётный счёт'],['corrAccount','Корреспондентский счёт'],['contactEmail','Email для документов'],['contactPhone','Телефон бухгалтерии'],['edo','ЭДО']] as const).map(([key, label]) => <label key={key} className={key === 'legalAddress' ? 'payment-form-grid__wide' : undefined}><span>{label}</span><input value={String(requisites[key] || '')} onChange={(e) => setRequisites((v) => ({ ...v, [key]: e.target.value }))} /></label>)}
+        </div><div className="payment-card-actions"><button className="payment-primary-button" type="button" onClick={saveRequisites}>Сохранить реквизиты</button><span>Счёт создаёт владелец сервиса после проверки реквизитов.</span></div></section>
+        <aside className="payment-side-card"><h2>Порядок оплаты</h2><ol><li><strong>Выбрать тариф</strong><span>Тариф зависит от количества сотрудников.</span></li><li><strong>Заполнить реквизиты</strong><span>ИП или ООО, банк, расчётный счёт и email.</span></li><li><strong>Получить счёт</strong><span>Счёт выставляет владелец приложения.</span></li><li><strong>Отметить оплату</strong><span>При необходимости прикрепить платёжное поручение.</span></li></ol></aside></div>
 
-          <div className="payment-form-grid">
-            <label><span>Юридическое название</span><input defaultValue="ИП Иванов Иван Иванович" /></label>
-            <label><span>ИНН</span><input defaultValue="231000000000" /></label>
-            <label><span>КПП</span><input placeholder="Для ООО" /></label>
-            <label><span>ОГРН / ОГРНИП</span><input defaultValue="326230000000000" /></label>
-            <label className="payment-form-grid__wide"><span>Юридический адрес</span><input defaultValue="Краснодарский край, г. Сочи, ул. Морская, 10" /></label>
-            <label><span>Банк</span><input defaultValue="Т-Банк" /></label>
-            <label><span>БИК</span><input defaultValue="044525974" /></label>
-            <label><span>Расчётный счёт</span><input defaultValue="40802810000000000000" /></label>
-            <label><span>Корреспондентский счёт</span><input defaultValue="30101810145250000974" /></label>
-            <label><span>Email для документов</span><input defaultValue="owner@restaurant.ru" /></label>
-            <label><span>Телефон бухгалтерии</span><input defaultValue="+7 900 000-00-00" /></label>
-            <label><span>ЭДО</span><input placeholder="Диадок / СБИС / Контур" /></label>
-          </div>
+      <section className="payment-table-card"><div className="payment-card-header"><div><h2>Счета к оплате</h2><p>Здесь отображаются выставленные счета.</p></div></div><div className="payment-table-scroll"><table className="payment-table"><thead><tr><th>Счёт</th><th>Тариф</th><th>Период</th><th>Сумма</th><th>Статус</th><th>Дата</th><th>Действия</th></tr></thead><tbody>{invoices.map((invoice) => <tr key={invoice.id}><td>№ {invoice.invoiceNumber || invoice.number}</td><td>{invoice.plan}</td><td>{invoice.period}</td><td>{invoice.amount} ₽</td><td><StatusBadge status={invoice.status} /></td><td>{invoice.issuedAt ? new Date(invoice.issuedAt).toLocaleDateString('ru-RU') : '—'}</td><td><div className="payment-row-actions"><button type="button" onClick={() => window.print()}>Скачать счёт</button>{invoice.status !== 'paid' && <button type="button" onClick={() => reportPaid(invoice)}>Оплатил</button>}{invoice.status !== 'paid' && <button type="button" onClick={() => attachPaymentOrder(invoice)}>Поручение</button>}</div></td></tr>)}</tbody></table></div></section>
 
-          <div className="payment-card-actions">
-            <button className="payment-primary-button" type="button">Сохранить реквизиты</button>
-            <span>Счёт создаёт владелец сервиса после проверки реквизитов.</span>
-          </div>
-        </section>
-
-        <aside className="payment-side-card">
-          <h2>Порядок оплаты</h2>
-          <ol>
-            <li><strong>Выбрать тариф</strong><span>Тариф зависит от количества сотрудников.</span></li>
-            <li><strong>Заполнить реквизиты</strong><span>ИП или ООО, банк, расчётный счёт и email.</span></li>
-            <li><strong>Получить счёт</strong><span>Счёт выставляет владелец приложения.</span></li>
-            <li><strong>Отметить оплату</strong><span>При необходимости прикрепить платёжное поручение.</span></li>
-          </ol>
-        </aside>
-      </div>
-
-      <section className="payment-table-card">
-        <div className="payment-card-header">
-          <div>
-            <h2>Счета к оплате</h2>
-            <p>Ресторан не создаёт счёт самостоятельно. Здесь отображаются выставленные счета.</p>
-          </div>
-        </div>
-
-        <div className="payment-table-scroll">
-          <table className="payment-table">
-            <thead>
-              <tr>
-                <th>Счёт</th>
-                <th>Тариф</th>
-                <th>Период</th>
-                <th>Сумма</th>
-                <th>Статус</th>
-                <th>Дата</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td>№ {invoice.number}</td>
-                  <td>{invoice.plan}</td>
-                  <td>{invoice.period}</td>
-                  <td>{invoice.amount}</td>
-                  <td><StatusBadge status={invoice.status} /></td>
-                  <td>{invoice.issuedAt}</td>
-                  <td>
-                    <div className="payment-row-actions">
-                      <button type="button">Скачать счёт</button>
-                      {invoice.status !== 'paid' && <button type="button">Оплатил</button>}
-                      {invoice.status !== 'paid' && <button type="button">Поручение</button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="payment-documents-card">
-        <div className="payment-card-header">
-          <div>
-            <h2>Закрывающие документы</h2>
-            <p>Акты и УПД появляются после подтверждения оплаты.</p>
-          </div>
-        </div>
-
-        <div className="payment-documents-list">
-          {closingDocuments.map((document) => (
-            <article className="payment-document" key={document.id}>
-              <div>
-                <strong>{document.type === 'upd' ? 'УПД' : 'Акт'} № {document.number}</strong>
-                <span>{document.amount} · период {document.period}</span>
-              </div>
-              <em>{document.status === 'signed' ? 'Подписан' : 'Выставлен'}</em>
-              <button type="button">Скачать</button>
-            </article>
-          ))}
-        </div>
-      </section>
+      <section className="payment-documents-card"><div className="payment-card-header"><div><h2>Закрывающие документы</h2><p>Акты и УПД появляются после подтверждения оплаты.</p></div></div><div className="payment-documents-list">{invoices.filter((invoice) => invoice.status === 'paid' || invoice.closingDocument).map((invoice) => <article className="payment-document" key={invoice.id}><div><strong>{invoice.closingDocument || `Акт №${invoice.invoiceNumber || invoice.number}`}</strong><span>{invoice.amount} ₽ · период {invoice.period}</span></div><em>Выставлен</em><button type="button" onClick={() => window.print()}>Скачать</button></article>)}</div></section>
     </section>
   )
 }

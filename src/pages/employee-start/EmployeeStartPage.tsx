@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useSession } from "../../app/providers/SessionProvider";
+import { api, apiRequest } from "../../shared/api/client";
 import {
   AlertCircleIcon,
   BellIcon,
@@ -50,7 +51,7 @@ type MobileBooking = {
   phone: string;
   time: string;
   guestsCount: number;
-  status: "confirmed" | "arrived" | "seated" | "cancelled" | "no_show";
+  status: "new" | "confirmed" | "arrived" | "seated" | "cancelled" | "no_show";
   comment?: string;
 };
 
@@ -63,14 +64,14 @@ type MobileHallTable = {
   booking?: MobileBooking;
 };
 
-const halls: MobileHall[] = [
+const fallbackHalls: MobileHall[] = [
   { id: "main", name: "Основной зал", tablesCount: 12 },
   { id: "terrace", name: "Терраса", tablesCount: 8 },
   { id: "vip", name: "VIP", tablesCount: 4 },
   { id: "bar", name: "Бар", tablesCount: 6 },
 ];
 
-const hallTables: MobileHallTable[] = [
+const fallbackHallTables: MobileHallTable[] = [
   { id: "t1", hallId: "main", name: "Стол 1", seats: 2, status: "free" },
   {
     id: "t4",
@@ -144,6 +145,7 @@ function getHallStatusLabel(status: HallStatus) {
 
 function getBookingStatusLabel(status: MobileBooking["status"]) {
   const labels: Record<MobileBooking["status"], string> = {
+    new: "Новая",
     confirmed: "Подтверждена",
     arrived: "Пришли по брони",
     seated: "Гости сели",
@@ -160,10 +162,38 @@ export function EmployeeStartPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
-  const [selectedHallId, setSelectedHallId] = useState<string>(halls[0].id);
+  const [halls, setHalls] = useState<MobileHall[]>(fallbackHalls);
+  const [hallTables, setHallTables] = useState<MobileHallTable[]>(fallbackHallTables);
+  const [selectedHallId, setSelectedHallId] = useState<string>(fallbackHalls[0].id);
   const [hallMode, setHallMode] = useState<HallMode>("tables");
   const [hallFilter, setHallFilter] = useState<HallFilter>("all");
   const [selectedTable, setSelectedTable] = useState<MobileHallTable | null>(null);
+
+
+  async function loadHallPlan() {
+    try {
+      const result = await apiRequest<{ halls: Array<{ id: string; name: string; tablesCount?: number }>; tables: Array<{ id: string; hallId: string; name: string; seats: number; status: HallStatus }>; bookings: Array<{ id: string; tableId: string; guestName: string; phone?: string; time: string; guestsCount: number; status: MobileBooking["status"]; comment?: string }> }>("/api/mobile/hall-plan");
+      const nextTables = result.tables.map((table) => {
+        const booking = result.bookings.find((item) => item.tableId === table.id && !["cancelled", "no_show"].includes(item.status));
+        return { ...table, booking: booking ? { ...booking, phone: booking.phone || "", comment: booking.comment || "" } : undefined };
+      });
+      setHalls(result.halls.map((hall) => ({ id: hall.id, name: hall.name, tablesCount: hall.tablesCount || nextTables.filter((table) => table.hallId === hall.id).length })));
+      setHallTables(nextTables);
+      if (result.halls[0] && !result.halls.some((hall) => hall.id === selectedHallId)) setSelectedHallId(result.halls[0].id);
+    } catch {
+      setHalls(fallbackHalls);
+      setHallTables(fallbackHallTables);
+    }
+  }
+
+  useEffect(() => { void loadHallPlan() }, []);
+
+  async function updateSelectedBookingStatus(status: MobileBooking["status"]) {
+    if (!selectedTable?.booking) return;
+    await api.bookingStatus(selectedTable.booking.id, status);
+    await loadHallPlan();
+    setSelectedTable(null);
+  }
 
   const employee = {
     name: session?.user.name || "Мария",
@@ -671,12 +701,12 @@ export function EmployeeStartPage() {
             )}
 
             <div className="employee-mobile__hall-actions">
-              <button type="button" className="employee-mobile__hall-actions-blue">Пришли по брони</button>
-              <button type="button" className="employee-mobile__hall-actions-purple">Гости сели</button>
-              <button type="button" className="employee-mobile__hall-actions-green">Освободить стол</button>
-              <button type="button">Позвонить</button>
-              <button type="button">Не пришли</button>
-              <button type="button" className="employee-mobile__hall-actions-red">Отменить бронь</button>
+              <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus("arrived")}>Пришли по брони</button>
+              <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus("seated")}>Гости сели</button>
+              <button type="button" className="employee-mobile__hall-actions-green" onClick={() => updateSelectedBookingStatus("cancelled")}>Освободить стол</button>
+              <button type="button" onClick={() => { if (selectedTable?.booking?.phone) window.location.href = `tel:${selectedTable.booking.phone}` }}>Позвонить</button>
+              <button type="button" onClick={() => updateSelectedBookingStatus("no_show")}>Не пришли</button>
+              <button type="button" className="employee-mobile__hall-actions-red" onClick={() => updateSelectedBookingStatus("cancelled")}>Отменить бронь</button>
             </div>
           </div>
         </div>
@@ -748,14 +778,22 @@ export function EmployeeStartPage() {
             ) : (
               <form
                 className="employee-mobile__request-form"
-                onSubmit={(event) => {
+                onSubmit={async (event) => {
                   event.preventDefault();
+                  const form = event.currentTarget;
+                  const formData = new FormData(form);
+                  await api.create("technical-requests", {
+                    category: String(formData.get("category") || "Оборудование"),
+                    title: String(formData.get("title") || "Тех. заявка"),
+                    description: String(formData.get("description") || ""),
+                    status: "new",
+                  });
                   setRequestSubmitted(true);
                 }}
               >
                 <label>
                   <span>Категория</span>
-                  <select defaultValue="Оборудование">
+                  <select name="category" defaultValue="Оборудование">
                     <option>Оборудование</option>
                     <option>Клининг</option>
                     <option>Расходники</option>
@@ -765,11 +803,12 @@ export function EmployeeStartPage() {
                 </label>
                 <label>
                   <span>Коротко о проблеме</span>
-                  <input defaultValue="Не работает лампа у входа" />
+                  <input name="title" defaultValue="Не работает лампа у входа" />
                 </label>
                 <label>
                   <span>Описание</span>
                   <textarea
+                    name="description"
                     rows={4}
                     defaultValue="После открытия смены лампа возле входной зоны не включается. Нужна проверка."
                   />
