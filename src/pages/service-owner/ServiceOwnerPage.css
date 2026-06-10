@@ -1,0 +1,725 @@
+.service-owner-page,
+.service-owner-page * {
+  box-sizing: border-box;
+  font-style: normal;
+}
+
+.service-owner-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  background: #f6f8fb;
+  color: #111827;
+}
+
+.service-owner-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 24px 18px;
+  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.service-owner-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 12px;
+}
+
+.service-owner-brand__mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #0f2147;
+  background: #f7fbff;
+}
+
+.service-owner-brand__mark svg {
+  width: 28px;
+  height: 28px;
+}
+
+.service-owner-brand strong {
+  display: block;
+  color: #0f2147;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.service-owner-brand strong em {
+  color: #ff7a00;
+  font-style: normal;
+}
+
+.service-owner-brand span span {
+  display: block;
+  margin-top: 6px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.service-owner-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.service-owner-nav__item {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: transparent;
+  color: #475467;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 850;
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-owner-nav__item svg {
+  width: 22px;
+  height: 22px;
+}
+
+.service-owner-nav__item--active {
+  color: #ffffff;
+  border-color: #0f2147;
+  background: linear-gradient(135deg, #0f2147 0%, #1d3a6c 100%);
+  box-shadow: 0 12px 26px rgba(15, 33, 71, 0.18);
+}
+
+.service-owner-sidebar-note {
+  margin-top: auto;
+  padding: 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  background: #fff7ed;
+}
+
+.service-owner-sidebar-note strong {
+  display: block;
+  color: #9a3412;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.service-owner-sidebar-note p {
+  margin: 0;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.service-owner-main {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  padding: 24px;
+}
+
+.service-owner-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.service-owner-title-block h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.service-owner-title-block p {
+  margin: 7px 0 0;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.service-owner-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.service-owner-search {
+  width: 340px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid #dbe1ea;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #667085;
+}
+
+.service-owner-search svg {
+  width: 19px;
+  height: 19px;
+}
+
+.service-owner-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.service-owner-icon-button,
+.service-owner-logout,
+.service-owner-profile {
+  height: 48px;
+  border: 1px solid #dbe1ea;
+  background: #ffffff;
+  color: #111827;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.service-owner-icon-button,
+.service-owner-logout {
+  width: 48px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+}
+
+.service-owner-icon-button svg,
+.service-owner-logout svg {
+  width: 21px;
+  height: 21px;
+}
+
+.service-owner-icon-button span {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.service-owner-profile {
+  min-width: 178px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 16px;
+  padding: 0 14px;
+  text-align: left;
+}
+
+.service-owner-profile > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #0f2147;
+  background: #f4f7fb;
+}
+
+.service-owner-profile svg {
+  width: 20px;
+  height: 20px;
+}
+
+.service-owner-profile strong,
+.service-owner-profile small {
+  display: block;
+}
+
+.service-owner-profile strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.service-owner-profile small {
+  margin-top: 3px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.service-owner-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.service-owner-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.service-owner-metric,
+.service-owner-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+}
+
+.service-owner-metric {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+}
+
+.service-owner-metric__icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+}
+
+.service-owner-metric__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.service-owner-metric__icon--blue { color: #2563eb; background: #eff6ff; }
+.service-owner-metric__icon--green { color: #039855; background: #ecfdf3; }
+.service-owner-metric__icon--purple { color: #7c3aed; background: #f5f3ff; }
+.service-owner-metric__icon--orange { color: #c2410c; background: #fff7ed; }
+
+.service-owner-metric p,
+.service-owner-metric small {
+  margin: 0;
+  color: #667085;
+  font-weight: 750;
+}
+
+.service-owner-metric p {
+  font-size: 13px;
+}
+
+.service-owner-metric strong {
+  display: block;
+  margin: 5px 0;
+  color: #0f172a;
+  font-size: 25px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.service-owner-metric small {
+  font-size: 12px;
+}
+
+.service-owner-card {
+  padding: 18px;
+}
+
+.service-owner-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.service-owner-card__header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.service-owner-card__header p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.service-owner-primary-button,
+.service-owner-row-actions button,
+.service-owner-invoice button,
+.service-owner-support-item button {
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.service-owner-primary-button {
+  border: 1px solid #0f2147;
+  background: linear-gradient(135deg, #0f2147 0%, #1d3a6c 100%);
+  color: #ffffff;
+}
+
+.service-owner-row-actions button,
+.service-owner-invoice button,
+.service-owner-support-item button {
+  border: 1px solid #dbe1ea;
+  background: #ffffff;
+  color: #0f2147;
+}
+
+.service-owner-danger-button {
+  border-color: #fda29b !important;
+  color: #d92d20 !important;
+  background: #fff5f5 !important;
+}
+
+.service-owner-restaurant-list,
+.service-owner-invoice-list,
+.service-owner-support-list {
+  display: grid;
+  gap: 12px;
+}
+
+.service-owner-restaurant,
+.service-owner-invoice,
+.service-owner-support-item {
+  border: 1px solid #edf0f4;
+  border-radius: 14px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.service-owner-restaurant__summary,
+.service-owner-invoice__summary,
+.service-owner-support-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.service-owner-restaurant__avatar {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  color: #ffffff;
+  background: #0f2147;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.service-owner-restaurant__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.service-owner-restaurant__title strong,
+.service-owner-invoice strong,
+.service-owner-latest-invoice strong,
+.service-owner-support-item strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.service-owner-restaurant__title small,
+.service-owner-invoice small,
+.service-owner-latest-invoice small,
+.service-owner-support-item small {
+  display: block;
+  margin-top: 5px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.service-owner-restaurant__badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.service-owner-badge--active,
+.service-owner-badge--paid { color: #027a48; background: #dcfae6; }
+.service-owner-badge--trial { color: #175cd3; background: #dbeafe; }
+.service-owner-badge--payment_reported,
+.service-owner-badge--payment_order_attached { color: #b54708; background: #ffead5; }
+.service-owner-badge--expired,
+.service-owner-badge--blocked,
+.service-owner-badge--not_found,
+.service-owner-badge--overdue { color: #b42318; background: #fee4e2; }
+.service-owner-badge--payment_pending,
+.service-owner-badge--awaiting_payment,
+.service-owner-badge--issued { color: #344054; background: #f2f4f7; }
+
+.service-owner-restaurant__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.service-owner-restaurant__details div {
+  min-height: 72px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #edf0f4;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.service-owner-restaurant__details span {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.service-owner-restaurant__details strong {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.service-owner-restaurant__details small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.service-owner-latest-invoice,
+.service-owner-empty-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #edf0f4;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.service-owner-latest-invoice em,
+.service-owner-empty-line {
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.service-owner-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.service-owner-payments-layout {
+  display: grid;
+  grid-template-columns: 420px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.service-owner-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.service-owner-form-grid--wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.service-owner-form-full {
+  grid-column: 1 / -1;
+}
+
+.service-owner-form-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.service-owner-form-grid label span {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.service-owner-form-grid input,
+.service-owner-form-grid select {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #dbe1ea;
+  border-radius: 9px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.service-owner-plan-grid {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.service-owner-plan {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ffffff;
+  color: #111827;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-owner-plan strong,
+.service-owner-plan b {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.service-owner-plan span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.service-owner-plan--active {
+  border-color: #0f2147;
+  background: #f7fbff;
+  box-shadow: inset 3px 0 0 #0f2147;
+}
+
+.service-owner-wide-button {
+  width: 100%;
+}
+
+.service-owner-invoice__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.service-owner-invoice__meta span {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #667085;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.service-owner-requisites-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.service-owner-support-item p {
+  margin: 5px 0;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.service-owner-support-item span {
+  min-width: 90px;
+  min-height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #175cd3;
+  background: #dbeafe;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.service-owner-create-card {
+  max-width: 980px;
+}
+
+@media (max-width: 1320px) {
+  .service-owner-page { grid-template-columns: 220px minmax(0, 1fr); }
+  .service-owner-topbar { align-items: flex-start; flex-direction: column; }
+  .service-owner-topbar__actions { width: 100%; }
+  .service-owner-search { flex: 1; width: auto; }
+  .service-owner-payments-layout { grid-template-columns: 1fr; }
+  .service-owner-form-grid--wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 920px) {
+  .service-owner-page { grid-template-columns: 1fr; }
+  .service-owner-sidebar { position: static; }
+  .service-owner-metrics-grid,
+  .service-owner-restaurant__details,
+  .service-owner-form-grid,
+  .service-owner-form-grid--wide { grid-template-columns: 1fr; }
+  .service-owner-topbar__actions { flex-wrap: wrap; }
+  .service-owner-profile { flex: 1; }
+}
+
+.service-owner-brand__logo-img {
+  width: 158px;
+  height: auto;
+  display: block;
+}
+
+.service-owner-brand > span:not(.service-owner-brand__mark) {
+  display: block;
+  margin-top: 6px;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}

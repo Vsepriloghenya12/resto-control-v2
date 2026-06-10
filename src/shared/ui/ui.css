@@ -1,0 +1,134 @@
+.rc-button {
+  min-height: 52px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 22px;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.rc-button:active {
+  transform: translateY(1px);
+}
+
+.rc-button--primary {
+  color: #fff;
+  background: linear-gradient(180deg, #ff8b00 0%, #ff7900 100%);
+  box-shadow: 0 10px 20px rgba(255, 121, 0, 0.22);
+}
+
+.rc-button--primary:hover {
+  box-shadow: 0 12px 24px rgba(255, 121, 0, 0.26);
+}
+
+.rc-button--ghost {
+  color: #22242a;
+  background: transparent;
+}
+
+.rc-button--full {
+  width: 100%;
+}
+
+.rc-field {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.rc-field__label {
+  color: #24252b;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.rc-input-wrap {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  min-height: 56px;
+  border: 1px solid #d6d9df;
+  border-radius: 8px;
+  background: #fff;
+  color: #8d919c;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.rc-input-wrap:focus-within {
+  border-color: #ff9b2f;
+  box-shadow: 0 0 0 4px rgba(255, 121, 0, 0.1);
+}
+
+.rc-input-wrap__icon,
+.rc-input-wrap__right {
+  display: grid;
+  place-items: center;
+  color: #8e929c;
+}
+
+.rc-input-wrap__icon {
+  padding-left: 16px;
+}
+
+.rc-input-wrap__right {
+  padding-right: 16px;
+}
+
+.rc-input-wrap svg {
+  width: 24px;
+  height: 24px;
+}
+
+.rc-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #22242a;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 0 12px 0 10px;
+}
+
+.rc-input::placeholder {
+  color: #9a9da8;
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .rc-button {
+    min-height: 56px;
+    border-radius: 8px;
+    font-size: 18px;
+  }
+
+  .rc-field {
+    gap: 13px;
+  }
+
+  .rc-field__label {
+    font-size: 17px;
+  }
+
+  .rc-input-wrap {
+    min-height: 64px;
+    grid-template-columns: 44px 1fr auto;
+    border-radius: 8px;
+  }
+
+  .rc-input-wrap__icon {
+    padding-left: 18px;
+  }
+
+  .rc-input {
+    font-size: 17px;
+    padding-left: 14px;
+  }
+}
