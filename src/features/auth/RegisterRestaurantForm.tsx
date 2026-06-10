@@ -25,8 +25,12 @@ export function RegisterRestaurantForm() {
       return
     }
 
-    await registerRestaurant(form)
-    setMessage('Ресторан создан. Можно продолжать работу.')
+    try {
+      await registerRestaurant(form)
+      setMessage('Ресторан создан. Пробный период 14 дней включён.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось создать ресторан.')
+    }
   }
 
   return (

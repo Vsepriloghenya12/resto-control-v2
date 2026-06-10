@@ -20,8 +20,12 @@ export function LoginForm() {
       return
     }
 
-    await login(form)
-    setMessage('Форма входа работает. Backend подключим следующим этапом.')
+    try {
+      await login(form)
+      setMessage('Вход выполнен.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось войти.')
+    }
   }
 
   return (

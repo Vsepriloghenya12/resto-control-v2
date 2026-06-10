@@ -6,7 +6,11 @@ import { ServiceOwnerPage } from '../pages/service-owner/ServiceOwnerPage'
 import '../pages/service-owner/ServiceOwnerPage.css'
 
 function AppContent() {
-  const { session } = useSession()
+  const { session, isLoading } = useSession()
+
+  if (isLoading) {
+    return <main className="app-loading">Загрузка...</main>
+  }
 
   if (!session) {
     return <AuthPage />
