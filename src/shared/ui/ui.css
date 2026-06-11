@@ -132,3 +132,20 @@
     padding-left: 14px;
   }
 }
+
+
+.rc-input:focus,
+.rc-input:focus-visible,
+.rc-input:-webkit-autofill:focus {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+.auth-page .rc-input,
+.auth-page .rc-input:focus,
+.auth-page .rc-input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}

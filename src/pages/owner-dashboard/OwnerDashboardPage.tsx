@@ -1,6 +1,7 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import type { Restaurant } from '../../features/auth/authTypes'
+import { apiRequest } from '../../shared/api/client'
 import {
   AlertCircleIcon,
   BellIcon,
@@ -8,7 +9,6 @@ import {
   BoxIcon,
   CalendarIcon,
   ChecklistIcon,
-  ChefIcon,
   ClockIcon,
   HomeIcon,
   LogoutIcon,
@@ -47,6 +47,16 @@ type SummaryMetric = {
   description: string
   icon: ReactNode
   tone: Tone
+  target: OwnerSection
+}
+
+type OperationRow = {
+  label: string
+  value: string
+  percent: number
+  tone: 'good' | 'medium' | 'low'
+  icon: ReactNode
+  target: OwnerSection
 }
 
 type ZoneReadiness = {
@@ -61,6 +71,7 @@ type AttentionItem = {
   description: string
   time: string
   tone: StatusTone
+  target: OwnerSection
 }
 
 type ShiftEmployee = {
@@ -72,7 +83,25 @@ type ShiftEmployee = {
   initials: string
 }
 
-const navItems: Array<{ label: string; section?: OwnerSection; icon: ReactNode }> = [
+type DashboardSummary = {
+  restaurant: Restaurant
+  paymentNotice?: { subscriptionEndsAt: string; daysLeft: number } | null
+  employees?: Array<{ id: string; name: string; position: string; shiftStatus?: string; status?: string }>
+  employeesOnShift?: number
+  tasks?: Array<{ id: string; title: string; description?: string; status?: string; assignedPosition?: string; dueTime?: string; updatedAt?: string }>
+  checklists?: Array<{ id: string; title: string; position?: string; active?: boolean; items?: unknown[] }>
+  bookings?: Array<{ id: string; guestName?: string; status?: string; time?: string; guestsCount?: number }>
+  technicalRequests?: Array<{ id: string; title: string; status?: string; priority?: string; updatedAt?: string }>
+  inventoryAssignments?: Array<{ id: string; title: string; status?: string; section?: string }>
+  ttkItems?: Array<{ id: string; name: string }>
+  payments?: Array<{ id: string; status?: string }>
+  halls?: Array<{ id: string; name: string }>
+  tables?: Array<{ id: string; name: string; status?: string }>
+  knowledgeMaterials?: Array<{ id: string; title: string }>
+  guests?: Array<{ id: string; name: string }>
+}
+
+const navItems: Array<{ label: string; section: OwnerSection; icon: ReactNode }> = [
   { label: 'Главная', section: 'dashboard', icon: <HomeIcon /> },
   { label: 'Сотрудники', section: 'employees', icon: <TeamIcon /> },
   { label: 'Чек-листы', section: 'checklists', icon: <ChecklistIcon /> },
@@ -84,106 +113,19 @@ const navItems: Array<{ label: string; section?: OwnerSection; icon: ReactNode }
   { label: 'Оплата', section: 'payment', icon: <PaymentIcon /> },
 ]
 
-const summaryMetrics: SummaryMetric[] = [
-  {
-    label: 'Сотрудников',
-    value: '6',
-    description: 'на смене',
-    icon: <TeamIcon />,
-    tone: 'blue',
-  },
-  {
-    label: 'Чек-листов',
-    value: '8',
-    subValue: '/ 12',
-    description: 'выполнено',
-    icon: <ChecklistIcon />,
-    tone: 'blue',
-  },
-  {
-    label: 'Задач',
-    value: '5',
-    subValue: '/ 9',
-    description: 'выполнено',
-    icon: <ClockIcon />,
-    tone: 'orange',
-  },
-  {
-    label: 'Броней',
-    value: '14',
-    description: 'сегодня',
-    icon: <CalendarIcon />,
-    tone: 'purple',
-  },
-  {
-    label: 'Позиций',
-    value: '7',
-    description: 'в стоп-листе',
-    icon: <AlertCircleIcon />,
-    tone: 'red',
-  },
-  {
-    label: 'Инвентаризации',
-    value: '2',
-    description: 'назначено',
-    icon: <BoxIcon />,
-    tone: 'green',
-  },
-]
-
-const zones: ZoneReadiness[] = [
-  { label: 'Открытие', percent: 90, completed: '9 из 10', tone: 'good' },
-  { label: 'Зал', percent: 80, completed: '8 из 10', tone: 'good' },
-  { label: 'Кухня', percent: 72, completed: '13 из 18', tone: 'good' },
-  { label: 'Бар', percent: 58, completed: '7 из 12', tone: 'medium' },
-  { label: 'Склад', percent: 40, completed: '4 из 10', tone: 'low' },
-]
-
-const attentionItems: AttentionItem[] = [
-  {
-    title: 'Бар не завершил чек-лист открытия',
-    description: 'Чек-лист «Открытие бара»',
-    time: '15 мин назад',
-    tone: 'danger',
-  },
-  {
-    title: 'У официанта Марии просрочена задача',
-    description: 'Протереть стопы на террасе',
-    time: '45 мин назад',
-    tone: 'warning',
-  },
-  {
-    title: 'В стоп-лист добавлены 3 позиции',
-    description: 'Список обновлён',
-    time: '1 ч назад',
-    tone: 'warning',
-  },
-  {
-    title: 'Инвентаризация кухни не назначена',
-    description: 'Назначьте ответственного',
-    time: '2 ч назад',
-    tone: 'neutral',
-  },
-]
-
-
-const notificationMessages = [
-  { title: 'Чек-лист бара не закрыт', text: 'Бар не завершил чек-лист открытия. Проверьте раздел «Чек-листы».', time: '15 мин назад', target: 'checklists' as OwnerSection },
-  { title: 'Просрочена задача', text: 'У официанта Марии просрочена задача: протереть столы на террасе.', time: '45 мин назад', target: 'tasks' as OwnerSection },
-  { title: 'Инвентаризация кухни', text: 'Инвентаризация кухни ещё не назначена ответственному сотруднику.', time: '2 ч назад', target: 'inventory' as OwnerSection },
-]
-
-const shiftEmployees: ShiftEmployee[] = [
-  { name: 'Мария Иванова', role: 'Официант', zone: 'Зал', status: 'Смена открыта', tone: 'success', initials: 'МИ' },
-  { name: 'Алексей Смирнов', role: 'Бармен', zone: 'Бар', status: 'Смена открыта', tone: 'success', initials: 'АС' },
-  { name: 'Дмитрий Кузнецов', role: 'Повар', zone: 'Кухня', status: 'Смена открыта', tone: 'success', initials: 'ДК' },
-  { name: 'Анна Петрова', role: 'Хостес', zone: 'Зал', status: 'Есть задачи', tone: 'warning', initials: 'АП' },
-  { name: 'Сергей Волков', role: 'Клининг', zone: 'Склад', status: 'Просрочено', tone: 'danger', initials: 'СВ' },
-  { name: 'Ольга Соколова', role: 'Повар', zone: 'Кухня', status: 'Смена открыта', tone: 'success', initials: 'ОС' },
-]
-
 function formatRuDate(date: Date) {
   return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
+}
+
+function percent(done: number, total: number) {
+  if (!total) return 0
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)))
+}
+
+function toneByPercent(value: number): 'good' | 'medium' | 'low' {
+  if (value >= 70) return 'good'
+  if (value >= 40) return 'medium'
+  return 'low'
 }
 
 function getPaymentAccess(restaurant?: Restaurant) {
@@ -208,12 +150,104 @@ function getPaymentAccess(restaurant?: Restaurant) {
   }
 }
 
-const operationRows = [
-  { label: 'Завершено чек-листов', value: '8 из 12', percent: 67, tone: 'good', icon: <ChecklistIcon /> },
-  { label: 'Выполнено задач', value: '5 из 9', percent: 56, tone: 'medium', icon: <ClockIcon /> },
-  { label: 'Проблемы требуют внимания', value: '3', percent: 30, tone: 'low', icon: <AlertCircleIcon /> },
-  { label: 'Сотрудники на смене', value: '6 из 8', percent: 75, tone: 'good', icon: <TeamIcon /> },
-]
+function getInitials(name: string) {
+  return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'С'
+}
+
+function buildDashboardModel(summary: DashboardSummary | null) {
+  const employees = (summary?.employees || []).filter((item) => item.status !== 'fired' && item.status !== 'blocked')
+  const tasks = summary?.tasks || []
+  const checklists = summary?.checklists || []
+  const bookings = summary?.bookings || []
+  const technicalRequests = summary?.technicalRequests || []
+  const inventoryAssignments = summary?.inventoryAssignments || []
+  const ttkItems = summary?.ttkItems || []
+
+  const tasksDone = tasks.filter((item) => item.status === 'done').length
+  const overdueTasks = tasks.filter((item) => item.status === 'overdue')
+  const activeChecklists = checklists.filter((item) => item.active !== false).length
+  const employeesOnShift = employees.filter((item) => item.shiftStatus === 'open').length
+  const openBookings = bookings.filter((item) => !['cancelled', 'no_show'].includes(String(item.status || ''))).length
+  const activeInventory = inventoryAssignments.filter((item) => ['assigned', 'draft', 'in_progress'].includes(String(item.status || ''))).length
+  const openTechRequests = technicalRequests.filter((item) => !['done', 'closed', 'cancelled'].includes(String(item.status || ''))).length
+  const problemCount = overdueTasks.length + openTechRequests + inventoryAssignments.filter((item) => item.status === 'draft').length
+
+  const metrics: SummaryMetric[] = [
+    { label: 'Сотрудников', value: String(employees.length), description: employeesOnShift ? `${employeesOnShift} на смене` : 'действующие', icon: <TeamIcon />, tone: 'blue', target: 'employees' },
+    { label: 'Чек-листов', value: String(activeChecklists), subValue: checklists.length ? ` / ${checklists.length}` : '', description: checklists.length ? 'активно' : 'ещё не созданы', icon: <ChecklistIcon />, tone: 'blue', target: 'checklists' },
+    { label: 'Задач', value: String(tasksDone), subValue: tasks.length ? ` / ${tasks.length}` : '', description: tasks.length ? 'выполнено' : 'задач нет', icon: <ClockIcon />, tone: overdueTasks.length ? 'orange' : 'green', target: 'tasks' },
+    { label: 'Броней', value: String(openBookings), description: bookings.length ? 'активные брони' : 'броней нет', icon: <CalendarIcon />, tone: 'purple', target: 'hallBookings' },
+    { label: 'Тех. заявок', value: String(openTechRequests), description: openTechRequests ? 'открыто' : 'заявок нет', icon: <AlertCircleIcon />, tone: openTechRequests ? 'red' : 'green', target: 'tasks' },
+    { label: 'Инвентаризации', value: String(activeInventory), description: activeInventory ? 'в работе' : 'не назначено', icon: <BoxIcon />, tone: activeInventory ? 'green' : 'blue', target: 'inventory' },
+  ]
+
+  const operationRows: OperationRow[] = [
+    { label: 'Активные чек-листы', value: `${activeChecklists} из ${checklists.length}`, percent: percent(activeChecklists, checklists.length), tone: toneByPercent(percent(activeChecklists, checklists.length)), icon: <ChecklistIcon />, target: 'checklists' },
+    { label: 'Выполнено задач', value: `${tasksDone} из ${tasks.length}`, percent: percent(tasksDone, tasks.length), tone: toneByPercent(percent(tasksDone, tasks.length)), icon: <ClockIcon />, target: 'tasks' },
+    { label: 'Требует внимания', value: String(problemCount), percent: problemCount ? 30 : 100, tone: problemCount ? 'low' : 'good', icon: <AlertCircleIcon />, target: problemCount ? 'tasks' : 'dashboard' },
+    { label: 'Сотрудники на смене', value: `${employeesOnShift} из ${employees.length}`, percent: percent(employeesOnShift, employees.length), tone: toneByPercent(percent(employeesOnShift, employees.length)), icon: <TeamIcon />, target: 'employees' },
+  ]
+
+  const checklistGroups = Array.from(checklists.reduce((map, item) => {
+    const key = item.position || 'Без должности'
+    const current = map.get(key) || { label: key, total: 0, active: 0 }
+    current.total += 1
+    if (item.active !== false) current.active += 1
+    map.set(key, current)
+    return map
+  }, new Map<string, { label: string; total: number; active: number }>()).values())
+
+  const zones: ZoneReadiness[] = checklistGroups.slice(0, 5).map((item) => {
+    const value = percent(item.active, item.total)
+    return { label: item.label, percent: value, completed: `${item.active} из ${item.total}`, tone: toneByPercent(value) }
+  })
+
+  const attentionItems: AttentionItem[] = []
+  overdueTasks.slice(0, 3).forEach((task) => {
+    attentionItems.push({ title: task.title, description: task.description || 'Просроченная задача', time: task.dueTime ? `до ${task.dueTime}` : 'требует внимания', tone: 'danger', target: 'tasks' })
+  })
+  technicalRequests.filter((item) => !['done', 'closed', 'cancelled'].includes(String(item.status || ''))).slice(0, 3).forEach((request) => {
+    attentionItems.push({ title: request.title, description: request.priority === 'high' ? 'Высокий приоритет' : 'Техническая заявка открыта', time: 'активна', tone: request.priority === 'high' ? 'danger' : 'warning', target: 'tasks' })
+  })
+  inventoryAssignments.filter((item) => item.status === 'draft').slice(0, 2).forEach((assignment) => {
+    attentionItems.push({ title: assignment.title, description: 'Инвентаризация не назначена', time: assignment.section || 'инвентаризация', tone: 'warning', target: 'inventory' })
+  })
+  bookings.filter((item) => item.status === 'new').slice(0, 2).forEach((booking) => {
+    attentionItems.push({ title: `Новая бронь: ${booking.guestName || 'гость'}`, description: `${booking.guestsCount || 1} гостей${booking.time ? `, ${booking.time}` : ''}`, time: 'сегодня', tone: 'neutral', target: 'hallBookings' })
+  })
+
+  const shiftEmployees: ShiftEmployee[] = employees
+    .filter((employee) => employee.shiftStatus === 'open')
+    .slice(0, 6)
+    .map((employee) => ({
+      name: employee.name,
+      role: employee.position,
+      zone: employee.position.includes('Бар') ? 'Бар' : employee.position.includes('Повар') || employee.position.includes('Шеф') ? 'Кухня' : employee.position.includes('Клининг') || employee.position.includes('Убор') ? 'Клининг' : 'Зал',
+      status: 'Смена открыта',
+      tone: 'success',
+      initials: getInitials(employee.name),
+    }))
+
+  const readinessPercent = percent(activeChecklists + tasksDone, checklists.length + tasks.length)
+
+  return {
+    employees,
+    tasks,
+    checklists,
+    bookings,
+    technicalRequests,
+    inventoryAssignments,
+    ttkItems,
+    metrics,
+    operationRows,
+    zones,
+    attentionItems,
+    shiftEmployees,
+    readinessPercent,
+    completedProcesses: activeChecklists + tasksDone,
+    totalProcesses: checklists.length + tasks.length,
+  }
+}
 
 function BrandLogo() {
   return (
@@ -261,7 +295,6 @@ function AttentionIcon({ tone }: { tone: StatusTone }) {
   if (tone === 'neutral') {
     return <span className={`owner-attention__icon owner-attention__icon--${tone}`}><BellIcon /></span>
   }
-
   return <span className={`owner-attention__icon owner-attention__icon--${tone}`}><AlertCircleIcon /></span>
 }
 
@@ -275,37 +308,17 @@ function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: strin
   )
 }
 
-function RestaurantTabs({
-  restaurants,
-  activeRestaurantId,
-  onSelect,
-  onAdd,
-}: {
-  restaurants: Array<{ id: string; name: string }>
-  activeRestaurantId: string
-  onSelect: (restaurantId: string) => void
-  onAdd: () => void
-}) {
+function RestaurantHeader({ restaurant }: { restaurant?: Restaurant }) {
   return (
-    <section className="owner-restaurant-row" aria-label="Рестораны владельца">
-      <div className="owner-restaurant-tabs">
-        {restaurants.map((restaurant) => (
-          <button
-            className={restaurant.id === activeRestaurantId ? 'owner-restaurant-tab owner-restaurant-tab--active' : 'owner-restaurant-tab'}
-            type="button"
-            key={restaurant.id}
-            onClick={() => onSelect(restaurant.id)}
-          >
-            {restaurant.name}
-          </button>
-        ))}
+    <section className="owner-restaurant-row owner-restaurant-row--single" aria-label="Текущий ресторан">
+      <div className="owner-restaurant-current">
+        <span>Текущий ресторан</span>
+        <strong>{restaurant?.name || 'Ресторан'}</strong>
       </div>
-      <span className="owner-restaurant-divider" aria-hidden="true" />
-      <button className="owner-add-restaurant" type="button" onClick={onAdd}>+ Добавить ресторан</button>
+      <p>Все данные на экране относятся только к этому ресторану.</p>
     </section>
   )
 }
-
 
 function SupportDialog({ onClose }: { onClose: () => void }) {
   return (
@@ -314,7 +327,7 @@ function SupportDialog({ onClose }: { onClose: () => void }) {
         <div className="owner-support-dialog__header">
           <div>
             <h2>Поддержка</h2>
-            <p>Опишите вопрос. Сообщение пока готовится для отправки в поддержку.</p>
+            <p>Опишите вопрос. Сообщение можно отправить на почту поддержки.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
         </div>
@@ -335,45 +348,51 @@ function SupportDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
+function ProfileDialog({ userName, login, roleLabel, restaurantName, onClose }: { userName: string; login?: string; roleLabel: string; restaurantName: string; onClose: () => void }) {
+  return (
+    <div className="owner-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="owner-support-dialog owner-profile-dialog" role="dialog" aria-modal="true" aria-label="Профиль" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="owner-support-dialog__header">
+          <div>
+            <h2>Профиль</h2>
+            <p>Данные текущего входа.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
+        </div>
+        <div className="owner-profile-dialog__rows">
+          <div><span>Имя</span><strong>{userName}</strong></div>
+          <div><span>Логин</span><strong>{login || '—'}</strong></div>
+          <div><span>Роль</span><strong>{roleLabel}</strong></div>
+          <div><span>Ресторан</span><strong>{restaurantName}</strong></div>
+        </div>
+        <div className="owner-support-dialog__actions">
+          <button type="button" onClick={onClose}>Закрыть</button>
+        </div>
+      </section>
+    </div>
+  )
+}
 
-function DashboardContent({ onOpen, onNotice }: { onOpen: (section: OwnerSection) => void; onNotice: (message: string) => void }) {
-  const metricTargets: Record<string, OwnerSection> = {
-    'Сотрудников': 'employees',
-    'Чек-листов': 'checklists',
-    'Задач': 'tasks',
-    'Броней': 'hallBookings',
-    'Позиций': 'inventory',
-    'Инвентаризации': 'inventory',
-  }
-
-  const operationTargets: Record<string, OwnerSection> = {
-    'Завершено чек-листов': 'checklists',
-    'Выполнено задач': 'tasks',
-    'Проблемы требуют внимания': 'tasks',
-    'Сотрудники на смене': 'employees',
-  }
-
-  function openMetric(label: string) {
-    onOpen(metricTargets[label] || 'dashboard')
-  }
+function DashboardContent({ summary, onOpen }: { summary: DashboardSummary | null; onOpen: (section: OwnerSection) => void }) {
+  const model = useMemo(() => buildDashboardModel(summary), [summary])
 
   return (
     <>
       <section className="owner-overview-card" aria-label="Операционная сводка за сегодня">
         <div className="owner-overview-card__left">
           <h2>Операционная сводка за сегодня</h2>
-          <div className="owner-readiness-ring" aria-label="Готовность смены 67 процентов">
+          <div className="owner-readiness-ring" aria-label={`Готовность смены ${model.readinessPercent} процентов`}>
             <div>
-              <strong>67%</strong>
+              <strong>{model.readinessPercent}%</strong>
               <span>Готовность смены</span>
-              <p>8 из 12 процессов завершено</p>
+              <p>{model.completedProcesses} из {model.totalProcesses} процессов завершено</p>
             </div>
           </div>
         </div>
 
         <div className="owner-operation-list">
-          {operationRows.map((row) => (
-            <button className="owner-operation-row owner-clickable-row" type="button" key={row.label} onClick={() => onOpen(operationTargets[row.label] || 'dashboard')}>
+          {model.operationRows.map((row) => (
+            <button className="owner-operation-row owner-clickable-row" type="button" key={row.label} onClick={() => onOpen(row.target)}>
               <div className={`owner-operation-row__icon owner-operation-row__icon--${row.tone}`}>{row.icon}</div>
               <div className="owner-operation-row__content">
                 <div>
@@ -390,48 +409,54 @@ function DashboardContent({ onOpen, onNotice }: { onOpen: (section: OwnerSection
 
         <div className="owner-zones-card">
           <div className="owner-zones-card__header">
-            <h2>Готовность по зонам</h2>
-            <button type="button" onClick={() => onOpen('checklists')}>Подробнее</button>
+            <h2>Чек-листы по должностям</h2>
+            <button type="button" onClick={() => onOpen('checklists')}>Открыть</button>
           </div>
-          <div className="owner-zones-list">
-            {zones.map((item) => <ProgressLine item={item} key={item.label} />)}
-          </div>
+          {model.zones.length ? (
+            <div className="owner-zones-list">
+              {model.zones.map((item) => <ProgressLine item={item} key={item.label} />)}
+            </div>
+          ) : <p className="owner-empty-text">Чек-листы ещё не созданы.</p>}
         </div>
       </section>
 
       <section className="owner-metrics-grid" aria-label="Ключевые показатели смены">
-        {summaryMetrics.map((item) => <SummaryMetricCard item={item} key={item.label} onClick={() => openMetric(item.label)} />)}
+        {model.metrics.map((item) => <SummaryMetricCard item={item} key={item.label} onClick={() => onOpen(item.target)} />)}
       </section>
 
       <section className="owner-lower-grid">
         <article className="owner-section-card owner-zone-details">
           <div className="owner-section-card__header">
-            <h2>Готовность процессов по зонам</h2>
+            <h2>Процессы ресторана</h2>
             <button type="button" onClick={() => onOpen('checklists')}>Сегодня</button>
           </div>
-          <div className="owner-zone-details__list">
-            {zones.map((item) => <ProgressLine item={item} compact key={item.label} />)}
-          </div>
+          {model.zones.length ? (
+            <div className="owner-zone-details__list">
+              {model.zones.map((item) => <ProgressLine item={item} compact key={item.label} />)}
+            </div>
+          ) : <p className="owner-empty-text">Нет настроенных чек-листов. Создайте первый шаблон во вкладке «Чек-листы».</p>}
           <button className="owner-link-button" type="button" onClick={() => onOpen('checklists')}>Перейти ко всем чек-листам</button>
         </article>
 
         <article className="owner-section-card owner-attention-card">
           <div className="owner-section-card__header">
             <h2>Требует внимания</h2>
-            <button type="button" onClick={() => onNotice('Открыт список событий, требующих внимания. Нажмите на событие, чтобы перейти в нужный раздел.')}>Все (3)</button>
+            <button type="button" onClick={() => model.attentionItems[0] ? onOpen(model.attentionItems[0].target) : onOpen('tasks')}>Все ({model.attentionItems.length})</button>
           </div>
-          <div className="owner-attention-list">
-            {attentionItems.map((item) => (
-              <button className="owner-attention owner-clickable-row" type="button" key={item.title} onClick={() => onOpen(item.title.toLowerCase().includes('чек') ? 'checklists' : item.title.toLowerCase().includes('задач') ? 'tasks' : item.title.toLowerCase().includes('инвентар') ? 'inventory' : 'inventory')}>
-                <AttentionIcon tone={item.tone} />
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.description}</span>
-                </div>
-                <small>{item.time}</small>
-              </button>
-            ))}
-          </div>
+          {model.attentionItems.length ? (
+            <div className="owner-attention-list">
+              {model.attentionItems.map((item) => (
+                <button className="owner-attention owner-clickable-row" type="button" key={`${item.title}-${item.description}`} onClick={() => onOpen(item.target)}>
+                  <AttentionIcon tone={item.tone} />
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.description}</span>
+                  </div>
+                  <small>{item.time}</small>
+                </button>
+              ))}
+            </div>
+          ) : <p className="owner-empty-text">Сейчас нет событий, требующих внимания.</p>}
         </article>
 
         <article className="owner-section-card owner-employees-card">
@@ -439,82 +464,68 @@ function DashboardContent({ onOpen, onNotice }: { onOpen: (section: OwnerSection
             <h2>Сотрудники на смене</h2>
             <button type="button" onClick={() => onOpen('employees')}>Все</button>
           </div>
-          <div className="owner-employees-list">
-            {shiftEmployees.map((employee) => (
-              <button className="owner-employee owner-clickable-row" type="button" key={employee.name} onClick={() => onOpen('employees')}>
-                <span className="owner-employee__avatar">{employee.initials}</span>
-                <div>
-                  <strong>{employee.name}</strong>
-                  <p>{employee.role}</p>
-                </div>
-                <small>{employee.zone}</small>
-                <StatusBadge tone={employee.tone}>{employee.status}</StatusBadge>
-              </button>
-            ))}
-          </div>
+          {model.shiftEmployees.length ? (
+            <div className="owner-employees-list">
+              {model.shiftEmployees.map((employee) => (
+                <button className="owner-employee owner-clickable-row" type="button" key={employee.name} onClick={() => onOpen('employees')}>
+                  <span className="owner-employee__avatar">{employee.initials}</span>
+                  <div>
+                    <strong>{employee.name}</strong>
+                    <p>{employee.role}</p>
+                  </div>
+                  <small>{employee.zone}</small>
+                  <StatusBadge tone={employee.tone}>{employee.status}</StatusBadge>
+                </button>
+              ))}
+            </div>
+          ) : <p className="owner-empty-text">Никто не открыл смену.</p>}
         </article>
       </section>
     </>
   )
 }
 
-function UnsupportedSectionNotice({ label }: { label: string }) {
-  return (
-    <section className="owner-section-card owner-empty-section">
-      <span className="owner-empty-section__icon"><BookIcon /></span>
-      <h2>{label}</h2>
-      <p>Раздел будет собран отдельным шагом, чтобы не смешивать сценарии и не ломать готовые страницы.</p>
-    </section>
-  )
-}
-
 export function OwnerDashboardPage() {
   const { session, logout } = useSession()
   const [section, setSection] = useState<OwnerSection>('dashboard')
-  const [pendingLabel, setPendingLabel] = useState('')
-  const [notice, setNotice] = useState('')
   const [shiftOpen, setShiftOpen] = useState(true)
   const [globalSearch, setGlobalSearch] = useState('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
-  const userName = session?.user.name ?? 'Иван'
-  const restaurantName = session?.restaurant.name ?? 'Resto Control'
-  const paymentAccess = getPaymentAccess(session?.restaurant)
-  const ownerRestaurants = [
-    { id: 'main', name: restaurantName },
-    { id: 'terrace', name: 'Resto Terrace' },
-    { id: 'bar', name: 'Resto Bar' },
-  ]
-  const [activeRestaurantId, setActiveRestaurantId] = useState(ownerRestaurants[0].id)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [summaryError, setSummaryError] = useState('')
+  const userName = session?.user.name ?? 'Пользователь'
+  const restaurantName = summary?.restaurant?.name || session?.restaurant.name || 'Ресторан'
+  const paymentAccess = getPaymentAccess(summary?.restaurant || session?.restaurant)
+  const dashboardModel = useMemo(() => buildDashboardModel(summary), [summary])
+  const notifications = dashboardModel.attentionItems
 
-  const handleNavigate = (item: { label: string; section?: OwnerSection }) => {
-    if (item.section) {
-      setSection(item.section)
-      setPendingLabel('')
-      return
+  async function loadSummary() {
+    try {
+      const nextSummary = await apiRequest<DashboardSummary>('/api/dashboard/summary')
+      setSummary(nextSummary)
+      setSummaryError('')
+    } catch (err) {
+      setSummaryError(err instanceof Error ? err.message : 'Не удалось загрузить данные главной')
     }
-
-    setPendingLabel(item.label)
   }
+
+  useEffect(() => { void loadSummary() }, [])
+  useEffect(() => {
+    if (section === 'dashboard') void loadSummary()
+  }, [section])
 
   const openSection = (nextSection: OwnerSection) => {
     setSection(nextSection)
-    setPendingLabel('')
+    setNotificationsOpen(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const showNotice = (message: string) => {
-    setNotice(message)
-    window.setTimeout(() => setNotice((current) => current === message ? '' : current), 3200)
   }
 
   const handleGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const value = globalSearch.trim().toLowerCase()
-    if (!value) {
-      showNotice('Введите запрос: сотрудник, задача, чек-лист, бронь, ТТК, инвентаризация, оплата.')
-      return
-    }
+    if (!value) return
 
     if (value.includes('сотруд')) openSection('employees')
     else if (value.includes('чек')) openSection('checklists')
@@ -524,61 +535,25 @@ export function OwnerDashboardPage() {
     else if (value.includes('ттк') || value.includes('блюд')) openSection('ttk')
     else if (value.includes('знани') || value.includes('обуч')) openSection('knowledge')
     else if (value.includes('оплат') || value.includes('счет') || value.includes('счёт')) openSection('payment')
-    else showNotice('Ничего не найдено. Попробуйте: сотрудник, задача, чек-лист, бронь, ТТК, оплата.')
   }
 
   const pageCopy: Record<OwnerSection, { title: string; subtitle: string; searchPlaceholder: string }> = {
-    dashboard: {
-      title: `Добрый день, ${userName}!`,
-      subtitle: 'Выберите ресторан или добавьте новое заведение',
-      searchPlaceholder: 'Поиск...',
-    },
-    employees: {
-      title: 'Сотрудники',
-      subtitle: 'Команда ресторана, должности и рабочий статус',
-      searchPlaceholder: 'Поиск сотрудника...',
-    },
-    checklists: {
-      title: 'Чек-листы',
-      subtitle: 'Создание и настройка стандартов работы',
-      searchPlaceholder: 'Поиск чек-листа...',
-    },
-    tasks: {
-      title: 'Задачи',
-      subtitle: 'Создание и назначение рабочих задач',
-      searchPlaceholder: 'Поиск задач...',
-    },
-    hallBookings: {
-      title: 'План зала / Брони',
-      subtitle: 'Залы, столы, посадочные места и бронирования',
-      searchPlaceholder: 'Поиск...',
-    },
-    inventory: {
-      title: 'Инвентаризация',
-      subtitle: 'Бланки, товары, назначения и сданные остатки',
-      searchPlaceholder: 'Поиск по товарам...',
-    },
-    ttk: {
-      title: 'ТТК',
-      subtitle: 'Карточки блюд и товаров',
-      searchPlaceholder: 'Поиск по позициям, ингредиентам, тэгам...',
-    },
-    knowledge: {
-      title: 'База знаний',
-      subtitle: 'Знакомство, обучение и корпоративная жизнь',
-      searchPlaceholder: 'Поиск по материалам...',
-    },
-    payment: {
-      title: 'Оплата',
-      subtitle: 'Тариф, реквизиты, счета и закрывающие документы',
-      searchPlaceholder: 'Поиск по счетам и документам...',
-    },
+    dashboard: { title: `Добрый день, ${userName}!`, subtitle: restaurantName, searchPlaceholder: 'Поиск...' },
+    employees: { title: 'Сотрудники', subtitle: 'Команда ресторана, должности и рабочий статус', searchPlaceholder: 'Поиск сотрудника...' },
+    checklists: { title: 'Чек-листы', subtitle: 'Создание и настройка стандартов работы', searchPlaceholder: 'Поиск чек-листа...' },
+    tasks: { title: 'Задачи', subtitle: 'Создание и назначение рабочих задач', searchPlaceholder: 'Поиск задач...' },
+    hallBookings: { title: 'План зала / Брони', subtitle: 'Залы, столы, посадочные места и бронирования', searchPlaceholder: 'Поиск...' },
+    inventory: { title: 'Инвентаризация', subtitle: 'Бланки, товары, назначения и сданные остатки', searchPlaceholder: 'Поиск по товарам...' },
+    ttk: { title: 'ТТК', subtitle: 'Карточки блюд и товаров', searchPlaceholder: 'Поиск по позициям...' },
+    knowledge: { title: 'База знаний', subtitle: 'Знакомство, обучение и корпоративная жизнь', searchPlaceholder: 'Поиск по материалам...' },
+    payment: { title: 'Оплата', subtitle: 'Тариф, реквизиты, счета и закрывающие документы', searchPlaceholder: 'Поиск по счетам...' },
   }
 
-  const activeLabel = pendingLabel || (section === 'employees' ? 'Сотрудники' : section === 'checklists' ? 'Чек-листы' : section === 'tasks' ? 'Задачи' : section === 'hallBookings' ? 'План зала / Брони' : section === 'inventory' ? 'Инвентаризация' : section === 'ttk' ? 'ТТК' : section === 'knowledge' ? 'База знаний' : section === 'payment' ? 'Оплата' : 'Главная')
-  const pageTitle = pendingLabel ? pendingLabel : pageCopy[section].title
-  const pageSubtitle = pendingLabel ? 'Раздел будет подключён отдельным экраном' : pageCopy[section].subtitle
-  const searchPlaceholder = pendingLabel ? 'Поиск...' : pageCopy[section].searchPlaceholder
+  const activeLabel = navItems.find((item) => item.section === section)?.label || 'Главная'
+  const pageTitle = pageCopy[section].title
+  const pageSubtitle = pageCopy[section].subtitle
+  const searchPlaceholder = pageCopy[section].searchPlaceholder
+  const roleLabel = session?.membership.role === 'owner' ? 'Владелец' : session?.membership.role === 'manager' ? 'Управляющий' : 'Сотрудник'
 
   return (
     <main className="owner-dashboard">
@@ -589,12 +564,7 @@ export function OwnerDashboardPage() {
           {navItems.map((item) => {
             const isActive = item.label === activeLabel
             return (
-              <button
-                className={isActive ? 'owner-nav__item owner-nav__item--active' : 'owner-nav__item'}
-                type="button"
-                key={item.label}
-                onClick={() => handleNavigate(item)}
-              >
+              <button className={isActive ? 'owner-nav__item owner-nav__item--active' : 'owner-nav__item'} type="button" key={item.label} onClick={() => openSection(item.section)}>
                 {item.icon}
                 <span>{item.label}</span>
               </button>
@@ -602,11 +572,7 @@ export function OwnerDashboardPage() {
           })}
         </nav>
 
-        <button
-          className="owner-support-button"
-          type="button"
-          onClick={() => setSupportOpen(true)}
-        >
+        <button className="owner-support-button" type="button" onClick={() => setSupportOpen(true)}>
           <MailIcon />
           <span>Поддержка</span>
         </button>
@@ -615,7 +581,7 @@ export function OwnerDashboardPage() {
           <span />
           <strong>{shiftOpen ? 'Смена открыта' : 'Смена закрыта'}</strong>
           <p>{shiftOpen ? 'Сегодня до 23:00' : 'Откройте смену перед работой'}</p>
-          <button type="button" onClick={() => { setShiftOpen((value) => !value); showNotice(shiftOpen ? 'Смена закрыта.' : 'Смена открыта.') }}>{shiftOpen ? 'Закрыть смену' : 'Открыть смену'}</button>
+          <button type="button" onClick={() => setShiftOpen((value) => !value)}>{shiftOpen ? 'Закрыть смену' : 'Открыть смену'}</button>
         </div>
       </aside>
 
@@ -623,10 +589,10 @@ export function OwnerDashboardPage() {
         <header className="owner-topbar">
           <div className="owner-title-block">
             <h1>{pageTitle}</h1>
-            {section !== 'dashboard' || pendingLabel ? <p>{pageSubtitle}</p> : null}
+            <p>{pageSubtitle}</p>
           </div>
 
-          {section === 'dashboard' && !pendingLabel && paymentAccess ? <PaymentAccessBadge paidUntil={paymentAccess.paidUntil} daysLeft={paymentAccess.daysLeft} onClick={() => openSection('payment')} /> : null}
+          {section === 'dashboard' && paymentAccess ? <PaymentAccessBadge paidUntil={paymentAccess.paidUntil} daysLeft={paymentAccess.daysLeft} onClick={() => openSection('payment')} /> : null}
 
           <div className="owner-topbar__actions">
             <form className="owner-search" onSubmit={handleGlobalSearch}>
@@ -636,51 +602,42 @@ export function OwnerDashboardPage() {
             <div className="owner-notifications-wrap">
               <button className="owner-icon-button" type="button" aria-label="Уведомления" onClick={() => setNotificationsOpen((value) => !value)}>
                 <BellIcon />
-                <span>{notificationMessages.length}</span>
+                {notifications.length ? <span>{notifications.length}</span> : null}
               </button>
               {notificationsOpen ? (
                 <div className="owner-notifications-popover">
                   <div className="owner-notifications-popover__header">
                     <strong>Уведомления</strong>
-                    <small>{notificationMessages.length} новых</small>
+                    <small>{notifications.length ? `${notifications.length} событий` : 'нет новых'}</small>
                   </div>
-                  {notificationMessages.map((item) => (
-                    <button key={item.title} type="button" onClick={() => { setNotificationsOpen(false); openSection(item.target) }}>
+                  {notifications.length ? notifications.map((item) => (
+                    <button key={`${item.title}-${item.description}`} type="button" onClick={() => openSection(item.target)}>
                       <strong>{item.title}</strong>
-                      <span>{item.text}</span>
+                      <span>{item.description}</span>
                       <small>{item.time}</small>
                     </button>
-                  ))}
+                  )) : <p className="owner-empty-text owner-empty-text--popover">Новых уведомлений нет.</p>}
                 </div>
               ) : null}
             </div>
-            <button className="owner-profile" type="button" onClick={() => showNotice('Профиль пользователя будет открыт отдельным экраном настроек аккаунта.') }>
+            <button className="owner-profile" type="button" onClick={() => setProfileOpen(true)}>
               <span><UserIcon /></span>
               <div>
                 <strong>{userName}</strong>
-                <small>{session?.membership.role === 'owner' ? 'Владелец' : 'Управляющий'}</small>
+                <small>{roleLabel}</small>
               </div>
             </button>
-            <button className="owner-logout" type="button" onClick={logout} aria-label="Выйти">
-              <LogoutIcon />
-            </button>
+            <button className="owner-logout" type="button" onClick={logout} aria-label="Выйти"><LogoutIcon /></button>
           </div>
         </header>
 
-        {section === 'dashboard' && !pendingLabel ? (
-          <RestaurantTabs
-            restaurants={ownerRestaurants}
-            activeRestaurantId={activeRestaurantId}
-            onSelect={(restaurantId) => setActiveRestaurantId(restaurantId)}
-            onAdd={() => showNotice('Добавление второго ресторана будет доступно из кабинета владельца сервиса.')}
-          />
-        ) : null}
+        {section === 'dashboard' ? <RestaurantHeader restaurant={summary?.restaurant || session?.restaurant} /> : null}
+        {summaryError ? <div className="owner-action-notice" role="status">{summaryError}</div> : null}
 
-        {notice ? <div className="owner-action-notice" role="status">{notice}</div> : null}
-
-        {pendingLabel ? <UnsupportedSectionNotice label={pendingLabel} /> : section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent onOpen={openSection} onNotice={showNotice} />}
+        {section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent summary={summary} onOpen={openSection} />}
       </section>
-    {supportOpen ? <SupportDialog onClose={() => setSupportOpen(false)} /> : null}
+      {supportOpen ? <SupportDialog onClose={() => setSupportOpen(false)} /> : null}
+      {profileOpen ? <ProfileDialog userName={userName} login={session?.user.login} roleLabel={roleLabel} restaurantName={restaurantName} onClose={() => setProfileOpen(false)} /> : null}
     </main>
   )
 }

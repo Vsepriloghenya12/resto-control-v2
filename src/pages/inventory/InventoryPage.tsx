@@ -1,13 +1,13 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AlertCircleIcon, BoxIcon, CalendarIcon, ChecklistIcon, ChevronRightIcon, SearchIcon } from '../../shared/ui/Icon'
+import { api } from '../../shared/api/client'
 
 type InventoryTab = 'products' | 'assigned' | 'submitted'
 type SectionKey = 'bar' | 'kitchen' | 'household' | 'dishes'
 type ActionMode = 'addProduct' | 'importTemplate' | 'assignInventory' | 'submittedRuns'
 type InventorySection = { id: SectionKey; title: string; icon: ReactNode }
-type InventoryProduct = { id: string; name: string; unit: string; category: string; templatesCount: number; updatedAt: string; section: SectionKey }
-type InventoryAssignment = { id: string; template: string; date: string; assignee: string; status: 'assigned' | 'completed' }
-type InventoryRun = { id: string; template: string; employee: string; completedAt: string; rows: number }
+type InventoryProduct = { id: string; name: string; unit: string; category: string; section: string; minBalance?: number; active?: boolean; updatedAt?: string }
+type InventoryAssignment = { id: string; title?: string; template?: string; section: string; assignedPosition?: string; assignee?: string; dueDate?: string; date?: string; status: 'assigned' | 'completed' | 'draft' | 'submitted' | 'in_progress'; rowsCount?: number }
 
 const sections: InventorySection[] = [
   { id: 'bar', title: 'Бар', icon: <BoxIcon /> },
@@ -16,29 +16,8 @@ const sections: InventorySection[] = [
   { id: 'dishes', title: 'Посуда', icon: <AlertCircleIcon /> },
 ]
 
-const initialProducts: InventoryProduct[] = [
-  { id: 'p1', name: 'Джин', unit: 'бут.', category: 'Крепкий алкоголь', templatesCount: 2, updatedAt: 'сегодня 10:15', section: 'bar' },
-  { id: 'p2', name: 'Ром белый', unit: 'бут.', category: 'Крепкий алкоголь', templatesCount: 1, updatedAt: 'сегодня 10:12', section: 'bar' },
-  { id: 'p3', name: 'Сироп ванильный', unit: 'л', category: 'Сиропы', templatesCount: 2, updatedAt: 'сегодня 10:05', section: 'bar' },
-  { id: 'p4', name: 'Томаты', unit: 'кг', category: 'Овощи', templatesCount: 1, updatedAt: 'сегодня 09:30', section: 'kitchen' },
-  { id: 'p5', name: 'Куриное филе', unit: 'кг', category: 'Мясо', templatesCount: 1, updatedAt: 'сегодня 09:20', section: 'kitchen' },
-  { id: 'p6', name: 'Салфетки', unit: 'уп.', category: 'Расходники', templatesCount: 1, updatedAt: 'вчера 18:22', section: 'household' },
-  { id: 'p7', name: 'Моющее средство', unit: 'л', category: 'Хозтовары', templatesCount: 1, updatedAt: 'вчера 18:12', section: 'household' },
-  { id: 'p8', name: 'Тарелка 26 см', unit: 'шт.', category: 'Тарелки', templatesCount: 2, updatedAt: 'вчера 17:05', section: 'dishes' },
-  { id: 'p9', name: 'Бокал винный', unit: 'шт.', category: 'Стекло', templatesCount: 1, updatedAt: 'вчера 16:48', section: 'dishes' },
-]
-
-const initialAssignments: InventoryAssignment[] = [
-  { id: 'a1', template: 'Бар — вечерняя инвентаризация', date: '10.06.2026', assignee: 'Старший бармен', status: 'assigned' },
-  { id: 'a2', template: 'Кухня — заготовки', date: '10.06.2026', assignee: 'Су-шеф', status: 'assigned' },
-  { id: 'a3', template: 'Посуда — зал', date: '11.06.2026', assignee: 'Администратор', status: 'assigned' },
-]
-
-const initialRuns: InventoryRun[] = [
-  { id: 'r1', template: 'Бар — открытие', employee: 'Сергей Петров', completedAt: 'сегодня 11:20', rows: 42 },
-  { id: 'r2', template: 'Кухня — вечер', employee: 'Алексей Кузнецов', completedAt: 'вчера 23:10', rows: 67 },
-  { id: 'r3', template: 'Хозтовары', employee: 'Игорь Соколов', completedAt: 'вчера 18:50', rows: 31 },
-]
+const sectionNames: Record<SectionKey, string> = { bar: 'Бар', kitchen: 'Кухня', household: 'Хозтовары', dishes: 'Посуда' }
+const sectionIdsByName: Record<string, SectionKey> = { Бар: 'bar', Кухня: 'kitchen', Хозтовары: 'household', Посуда: 'dishes' }
 
 function TabButton({ active, children, count, onClick }: { active: boolean; children: string; count?: number; onClick: () => void }) {
   return <button className={active ? 'inventory-tab inventory-tab--active' : 'inventory-tab'} type="button" onClick={onClick}>{children}{typeof count === 'number' && <span>{count}</span>}</button>
@@ -63,105 +42,83 @@ export function InventoryPage() {
   const [selectedSectionId, setSelectedSectionId] = useState<SectionKey>('bar')
   const [activeTab, setActiveTab] = useState<InventoryTab>('products')
   const [actionMode, setActionMode] = useState<ActionMode>('addProduct')
-  const [products, setProducts] = useState(initialProducts)
-  const [assignments, setAssignments] = useState(initialAssignments)
-  const [runs, setRuns] = useState(initialRuns)
+  const [products, setProducts] = useState<InventoryProduct[]>([])
+  const [assignments, setAssignments] = useState<InventoryAssignment[]>([])
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
   const [productForm, setProductForm] = useState({ name: '', unit: '', category: '' })
-  const [assignForm, setAssignForm] = useState({ template: 'Бар — вечерняя инвентаризация', assignee: 'Старший бармен', date: '2026-06-10' })
+  const [assignForm, setAssignForm] = useState({ template: 'Вечерняя инвентаризация', assignee: 'Старший бармен', date: new Date().toISOString().slice(0, 10) })
+
+  async function loadInventory() {
+    const [productsResult, assignmentsResult] = await Promise.all([api.list<InventoryProduct>('inventory-products'), api.list<InventoryAssignment>('inventory-assignments')])
+    setProducts(productsResult.items.filter((item) => item.active !== false))
+    setAssignments(assignmentsResult.items)
+  }
+
+  useEffect(() => { void loadInventory() }, [])
 
   const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0]
   const filteredProducts = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    return products.filter((product) => product.section === selectedSectionId && (!normalized || product.name.toLowerCase().includes(normalized) || product.category.toLowerCase().includes(normalized)))
+    return products.filter((product) => (sectionIdsByName[product.section] || product.section) === selectedSectionId && (!normalized || product.name.toLowerCase().includes(normalized) || product.category.toLowerCase().includes(normalized)))
   }, [products, query, selectedSectionId])
 
-  function addProduct() {
-    if (!productForm.name.trim() || !productForm.unit.trim() || !productForm.category.trim()) {
-      setNotice('Заполните название, единицу и категорию товара.')
-      return
-    }
-    setProducts((items) => [{ id: `p_${Date.now()}`, name: productForm.name.trim(), unit: productForm.unit.trim(), category: productForm.category.trim(), templatesCount: 1, updatedAt: 'только что', section: selectedSectionId }, ...items])
+  const sectionAssignments = assignments.filter((assignment) => (sectionIdsByName[assignment.section] || assignment.section) === selectedSectionId)
+  const assigned = sectionAssignments.filter((assignment) => assignment.status !== 'completed' && assignment.status !== 'submitted')
+  const submitted = sectionAssignments.filter((assignment) => assignment.status === 'completed' || assignment.status === 'submitted')
+
+  async function addProduct() {
+    if (!productForm.name.trim()) { setNotice('Введите название товара.'); return }
+    const created = await api.create<InventoryProduct>('inventory-products', { name: productForm.name.trim(), unit: productForm.unit.trim() || 'шт', category: productForm.category.trim() || 'Без категории', section: sectionNames[selectedSectionId], minBalance: 0, active: true })
+    setProducts((items) => [created, ...items])
     setProductForm({ name: '', unit: '', category: '' })
-    setNotice('Товар добавлен в выбранный раздел.')
+    setNotice('Товар добавлен.')
   }
 
-  function importTemplate() {
-    const sample = [
-      { name: 'Импорт: позиция 1', unit: 'шт.', category: 'Импорт' },
-      { name: 'Импорт: позиция 2', unit: 'кг', category: 'Импорт' },
-      { name: 'Импорт: позиция 3', unit: 'л', category: 'Импорт' },
-    ]
-    setProducts((items) => [...sample.map((item, index) => ({ id: `import_${Date.now()}_${index}`, ...item, templatesCount: 1, updatedAt: 'только что', section: selectedSectionId })), ...items])
-    setNotice('Бланк проверен: добавлены 3 тестовые позиции импорта.')
-  }
-
-  function assignInventory() {
-    setAssignments((items) => [{ id: `a_${Date.now()}`, template: assignForm.template, assignee: assignForm.assignee, date: new Date(assignForm.date).toLocaleDateString('ru-RU'), status: 'assigned' }, ...items])
-    setActiveTab('assigned')
+  async function assignInventory() {
+    const created = await api.create<InventoryAssignment>('inventory-assignments', { title: assignForm.template, template: assignForm.template, section: sectionNames[selectedSectionId], assignedPosition: assignForm.assignee, assignee: assignForm.assignee, dueDate: assignForm.date, date: assignForm.date, status: 'assigned', rowsCount: filteredProducts.length })
+    setAssignments((items) => [created, ...items])
     setNotice('Инвентаризация назначена.')
   }
 
-  function completeAssignment(id: string) {
-    const assignment = assignments.find((item) => item.id === id)
-    if (!assignment) return
-    setAssignments((items) => items.filter((item) => item.id !== id))
-    setRuns((items) => [{ id: `r_${Date.now()}`, template: assignment.template, employee: assignment.assignee, completedAt: 'только что', rows: filteredProducts.length || 1 }, ...items])
+  async function completeAssignment(id: string) {
+    const updated = await api.update<InventoryAssignment>('inventory-assignments', id, { status: 'completed' })
+    setAssignments((items) => items.map((item) => item.id === updated.id ? updated : item))
     setNotice('Инвентаризация отмечена как сданная.')
+  }
+
+  function importTemplate() {
+    setNotice('Импорт бланка будет подключён через загрузку файла. Сейчас добавьте товары вручную.')
+  }
+
+  function downloadSubmitted() {
+    const rows = [['Название', 'Раздел', 'Ответственный', 'Статус'], ...submitted.map((item) => [item.title || item.template || 'Инвентаризация', item.section, item.assignee || item.assignedPosition || '—', item.status])]
+    downloadCsv('inventory-submitted.csv', rows)
   }
 
   return (
     <section className="inventory-page">
-      {notice ? <div className="inventory-notice">{notice}</div> : null}
-      <div className="inventory-tabs" role="tablist" aria-label="Разделы инвентаризации">
-        <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')}>Товары и бланки</TabButton>
-        <TabButton active={activeTab === 'assigned'} count={assignments.length} onClick={() => setActiveTab('assigned')}>Назначенные</TabButton>
-        <TabButton active={activeTab === 'submitted'} count={runs.length} onClick={() => setActiveTab('submitted')}>Сданные</TabButton>
-      </div>
+      <aside className="inventory-sections-panel">
+        <div className="inventory-sections-panel__header"><h2>Разделы</h2><p>Выберите группу для товаров и назначений.</p></div>
+        <div className="inventory-sections-list">{sections.map((section) => <button className={section.id === selectedSectionId ? 'inventory-section inventory-section--active' : 'inventory-section'} type="button" key={section.id} onClick={() => setSelectedSectionId(section.id)}><span>{section.icon}</span><div><strong>{section.title}</strong><p>{products.filter((product) => (sectionIdsByName[product.section] || product.section) === section.id).length} товаров</p></div></button>)}</div>
+      </aside>
 
-      <div className="inventory-layout">
-        <aside className="inventory-sections-card">
-          <div className="inventory-panel-title"><h2>Разделы</h2><button type="button" onClick={() => setNotice('Новый раздел добавляется через настройки инвентаризации. В MVP используются четыре базовых раздела.')}>+ Добавить раздел</button></div>
-          <div className="inventory-sections-list">
-            {sections.map((section) => {
-              const sectionProducts = products.filter((item) => item.section === section.id)
-              return <button key={section.id} className={section.id === selectedSectionId ? 'inventory-section inventory-section--active' : 'inventory-section'} type="button" onClick={() => setSelectedSectionId(section.id)}><span className="inventory-section__icon">{section.icon}</span><div><strong>{section.title}</strong><p>{sectionProducts.length} позиций <span>·</span> 1 бланк</p><small>Обновлено в интерфейсе</small></div></button>
-            })}
-          </div>
-          <div className="inventory-sections-footer">Всего позиций: {products.filter((product) => product.section === selectedSectionId).length}</div>
-        </aside>
+      <main className="inventory-main-panel">
+        {notice ? <div className="inventory-notice">{notice}</div> : null}
+        <div className="inventory-tabs"><TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} count={filteredProducts.length}>Товары и бланки</TabButton><TabButton active={activeTab === 'assigned'} onClick={() => setActiveTab('assigned')} count={assigned.length}>Назначенные</TabButton><TabButton active={activeTab === 'submitted'} onClick={() => setActiveTab('submitted')} count={submitted.length}>Сданные</TabButton></div>
+        <div className="inventory-search-row"><label><SearchIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Поиск: ${selectedSection.title}`} /></label></div>
 
-        <section className="inventory-table-area">
-          {activeTab === 'products' ? (
-            <>
-              <div className="inventory-table-header"><div><h2>Товары раздела: {selectedSection.title}</h2></div><label className="inventory-local-search"><SearchIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск в списке..." /></label></div>
-              <div className="inventory-table-scroll"><table className="inventory-table"><thead><tr><th>Товар</th><th>Единица</th><th>Категория</th><th>В бланках</th><th>Изменение</th></tr></thead><tbody>{filteredProducts.map((product) => <tr key={product.id}><td>{product.name}</td><td>{product.unit}</td><td>{product.category}</td><td>{product.templatesCount} бланка</td><td>{product.updatedAt}</td></tr>)}</tbody></table></div>
-              <div className="inventory-table-footer"><span>Всего позиций: {filteredProducts.length}</span></div>
-            </>
-          ) : activeTab === 'assigned' ? (
-            <><div className="inventory-table-header"><h2>Назначенные инвентаризации</h2></div><div className="inventory-assignment-list">{assignments.map((item) => <article className="inventory-assignment" key={item.id}><div><strong>{item.template}</strong><span>{item.assignee} · {item.date}</span></div><span className="inventory-status">Назначена</span><button type="button" onClick={() => completeAssignment(item.id)}>Отметить сданной</button></article>)}</div></>
-          ) : (
-            <><div className="inventory-table-header"><h2>Сданные остатки</h2></div><div className="inventory-assignment-list">{runs.map((item) => <article className="inventory-assignment" key={item.id}><div><strong>{item.template}</strong><span>{item.employee} · {item.completedAt}</span></div><button type="button" onClick={() => downloadCsv('inventory.csv', [['Бланк', item.template], ['Сотрудник', item.employee], ['Строк', String(item.rows)]])}>Скачать Excel</button></article>)}</div></>
-          )}
-        </section>
+        {activeTab === 'products' ? <div className="inventory-table-card"><div className="inventory-table-card__header"><div><h2>{selectedSection.title}</h2><p>Товары текущего ресторана из backend.</p></div></div><table className="inventory-table"><thead><tr><th>Название</th><th>Ед.</th><th>Категория</th><th>Раздел</th><th>Обновлено</th></tr></thead><tbody>{filteredProducts.map((product) => <tr key={product.id}><td>{product.name}</td><td>{product.unit}</td><td>{product.category}</td><td>{product.section}</td><td>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('ru-RU') : '—'}</td></tr>)}{filteredProducts.length === 0 ? <tr><td colSpan={5}>Товаров пока нет.</td></tr> : null}</tbody></table></div> : null}
 
-        <aside className="inventory-actions-card">
-          <h2>Действия</h2>
-          <div className="inventory-action-list">
-            <ActionItem mode="addProduct" activeMode={actionMode} title="Добавить товар" text="Ручное добавление позиции в выбранный раздел." icon={<BoxIcon />} onClick={() => setActionMode('addProduct')} />
-            <ActionItem mode="importTemplate" activeMode={actionMode} title="Импорт бланка" text="Загрузка PDF, Excel или CSV с предпросмотром." icon={<AlertCircleIcon />} onClick={() => setActionMode('importTemplate')} />
-            <ActionItem mode="assignInventory" activeMode={actionMode} title="Назначить инвентаризацию" text="Выберите бланк, сотрудника или должность и дату." icon={<CalendarIcon />} onClick={() => setActionMode('assignInventory')} />
-            <ActionItem mode="submittedRuns" activeMode={actionMode} title="Сданные инвентаризации" text="Просмотр отправленных остатков и скачивание Excel." icon={<ChecklistIcon />} onClick={() => setActionMode('submittedRuns')} />
-          </div>
-          {actionMode === 'addProduct' ? <div className="inventory-action-form"><h3>Добавить товар</h3><label><span>Название товара</span><input value={productForm.name} onChange={(e) => setProductForm((value) => ({ ...value, name: e.target.value }))} placeholder="Введите название" /></label><label><span>Единица измерения</span><input value={productForm.unit} onChange={(e) => setProductForm((value) => ({ ...value, unit: e.target.value }))} placeholder="бут., кг, шт." /></label><label><span>Категория</span><input value={productForm.category} onChange={(e) => setProductForm((value) => ({ ...value, category: e.target.value }))} placeholder="Категория" /></label><button className="inventory-primary-button" type="button" onClick={addProduct}>Сохранить товар</button></div> : null}
-          {actionMode === 'importTemplate' ? <div className="inventory-action-form"><h3>Импорт бланка</h3><div className="inventory-upload-box"><BoxIcon /><strong>PDF / Excel / CSV</strong><p>Проверка бланка добавит новые позиции в выбранный раздел.</p><button type="button" onClick={() => setNotice('Файл выбран. Нажмите «Проверить бланк», чтобы добавить найденные позиции.')}>Выбрать файл</button></div><div className="inventory-import-preview"><span>Найдено: 48</span><span>Новых: 3</span><span>Дублей: 0</span></div><button className="inventory-primary-button" type="button" onClick={importTemplate}>Проверить бланк</button></div> : null}
-          {actionMode === 'assignInventory' ? <div className="inventory-action-form"><h3>Назначить инвентаризацию</h3><label><span>Бланк</span><select value={assignForm.template} onChange={(e) => setAssignForm((value) => ({ ...value, template: e.target.value }))}><option>Бар — вечерняя инвентаризация</option><option>Кухня — заготовки</option><option>Посуда — зал</option></select></label><label><span>Кому назначить</span><select value={assignForm.assignee} onChange={(e) => setAssignForm((value) => ({ ...value, assignee: e.target.value }))}><option>Старший бармен</option><option>Су-шеф</option><option>Администратор</option><option>Клининг</option></select></label><label><span>Дата выполнения</span><input type="date" value={assignForm.date} onChange={(e) => setAssignForm((value) => ({ ...value, date: e.target.value }))} /></label><button className="inventory-primary-button" type="button" onClick={assignInventory}>Назначить</button></div> : null}
-          {actionMode === 'submittedRuns' ? <div className="inventory-action-form inventory-submitted-panel"><h3>Сданные инвентаризации</h3>{runs.map((run) => <div className="inventory-run" key={run.id}><div><strong>{run.template}</strong><span>{run.employee} · {run.completedAt}</span><small>{run.rows} строк заполнено</small></div><button type="button" onClick={() => downloadCsv('inventory.csv', [['Бланк', run.template], ['Сотрудник', run.employee]])}>Excel</button></div>)}</div> : null}
-        </aside>
-      </div>
+        {activeTab === 'assigned' ? <div className="inventory-table-card"><div className="inventory-table-card__header"><div><h2>Назначенные инвентаризации</h2><p>Активные задания сотрудникам.</p></div></div><table className="inventory-table"><thead><tr><th>Бланк</th><th>Дата</th><th>Ответственный</th><th>Статус</th><th></th></tr></thead><tbody>{assigned.map((assignment) => <tr key={assignment.id}><td>{assignment.title || assignment.template}</td><td>{assignment.dueDate || assignment.date || '—'}</td><td>{assignment.assignee || assignment.assignedPosition || '—'}</td><td>{assignment.status}</td><td><button type="button" onClick={() => void completeAssignment(assignment.id)}>Сдано</button></td></tr>)}{assigned.length === 0 ? <tr><td colSpan={5}>Назначений нет.</td></tr> : null}</tbody></table></div> : null}
 
-      <div className="inventory-help-card"><AlertCircleIcon /><p>Все кнопки на этой странице теперь дают действие на экране: добавляют товары, имитируют импорт, назначают и закрывают инвентаризацию, скачивают CSV-файл.</p></div>
+        {activeTab === 'submitted' ? <div className="inventory-table-card"><div className="inventory-table-card__header"><div><h2>Сданные инвентаризации</h2><p>История отправленных остатков.</p></div><button type="button" onClick={downloadSubmitted}>Скачать CSV</button></div><table className="inventory-table"><thead><tr><th>Бланк</th><th>Дата</th><th>Сотрудник</th><th>Строк</th></tr></thead><tbody>{submitted.map((run) => <tr key={run.id}><td>{run.title || run.template}</td><td>{run.dueDate || run.date || '—'}</td><td>{run.assignee || run.assignedPosition || '—'}</td><td>{run.rowsCount || 0}</td></tr>)}{submitted.length === 0 ? <tr><td colSpan={4}>Сданных инвентаризаций нет.</td></tr> : null}</tbody></table></div> : null}
+      </main>
+
+      <aside className="inventory-actions-panel"><div className="inventory-actions-panel__header"><h2>Действия</h2><p>Все действия относятся к разделу «{selectedSection.title}».</p></div><ActionItem mode="addProduct" activeMode={actionMode} title="Добавить товар" text="Создать позицию вручную" icon={<BoxIcon />} onClick={() => setActionMode('addProduct')} /><ActionItem mode="importTemplate" activeMode={actionMode} title="Импорт бланка" text="PDF / Excel / CSV позже" icon={<ChecklistIcon />} onClick={() => { setActionMode('importTemplate'); importTemplate() }} /><ActionItem mode="assignInventory" activeMode={actionMode} title="Назначить" text="Отправить сотруднику" icon={<CalendarIcon />} onClick={() => setActionMode('assignInventory')} /><ActionItem mode="submittedRuns" activeMode={actionMode} title="Сданные" text="Скачать историю" icon={<ChevronRightIcon />} onClick={() => { setActionMode('submittedRuns'); setActiveTab('submitted') }} />
+        {actionMode === 'addProduct' ? <div className="inventory-action-form"><label><span>Название</span><input value={productForm.name} onChange={(e) => setProductForm((v) => ({ ...v, name: e.target.value }))} placeholder="Например, Лимон" /></label><label><span>Единица</span><input value={productForm.unit} onChange={(e) => setProductForm((v) => ({ ...v, unit: e.target.value }))} placeholder="кг, шт, л" /></label><label><span>Категория</span><input value={productForm.category} onChange={(e) => setProductForm((v) => ({ ...v, category: e.target.value }))} placeholder="Овощи, алкоголь..." /></label><button type="button" onClick={() => void addProduct()}>Добавить товар</button></div> : null}
+        {actionMode === 'assignInventory' ? <div className="inventory-action-form"><label><span>Бланк</span><input value={assignForm.template} onChange={(e) => setAssignForm((v) => ({ ...v, template: e.target.value }))} /></label><label><span>Кому</span><input value={assignForm.assignee} onChange={(e) => setAssignForm((v) => ({ ...v, assignee: e.target.value }))} /></label><label><span>Дата</span><input type="date" value={assignForm.date} onChange={(e) => setAssignForm((v) => ({ ...v, date: e.target.value }))} /></label><button type="button" onClick={() => void assignInventory()}>Назначить</button></div> : null}
+      </aside>
     </section>
   )
 }

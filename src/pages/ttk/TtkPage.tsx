@@ -1,486 +1,123 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { BookIcon, SearchIcon } from '../../shared/ui/Icon'
+import { api } from '../../shared/api/client'
 
-type TtkGroup = {
-  id: string
-  name: string
-  itemsCount: number
-}
-
-type RecipeLine = {
-  ingredient: string
-  amount: string
-}
+type RecipeLine = { ingredient: string; amount?: string; quantity?: string }
 
 type TtkItem = {
   id: string
-  groupId: string
-  photoLabel: string
+  group?: string
+  groupId?: string
+  photoLabel?: string
   name: string
   unit: string
   price: number
-  tag: string
-  description: string
-  recipe: RecipeLine[]
-  cookingTime: number
-  output: string
-  additives: string
-  pairings: string
-  kcal: number
-  proteins: number
-  fats: number
-  carbs: number
-  takeaway: boolean
-  online: boolean
-  discounts: boolean
-  marked: boolean
-  requiresScan: boolean
-  excise: boolean
+  tag?: string
+  description?: string
+  recipe?: RecipeLine[]
+  cookingTime?: number | string
+  output?: string
+  additions?: string
+  additives?: string
+  pairs?: string
+  pairings?: string
+  kbju?: { kcal?: number; protein?: number; proteins?: number; fat?: number; fats?: number; carbs?: number }
+  kcal?: number
+  proteins?: number
+  fats?: number
+  carbs?: number
+  takeaway?: boolean
+  online?: boolean
+  discounts?: boolean
+  marked?: boolean
+  requiresScan?: boolean
+  excise?: boolean
 }
+
+type TtkGroup = { id: string; name: string }
 
 const groups: TtkGroup[] = [
-  { id: 'burgers', name: 'Бургеры', itemsCount: 4 },
-  { id: 'pizza', name: 'Пицца', itemsCount: 6 },
-  { id: 'salads', name: 'Салаты', itemsCount: 8 },
-  { id: 'hot', name: 'Горячее', itemsCount: 12 },
-  { id: 'desserts', name: 'Десерты', itemsCount: 7 },
-  { id: 'drinks', name: 'Напитки', itemsCount: 15 },
-  { id: 'bar', name: 'Бар', itemsCount: 24 },
-  { id: 'breakfasts', name: 'Завтраки', itemsCount: 9 },
-  { id: 'addons', name: 'Добавки', itemsCount: 16 },
+  { id: 'Бургеры', name: 'Бургеры' },
+  { id: 'Пицца', name: 'Пицца' },
+  { id: 'Салаты', name: 'Салаты' },
+  { id: 'Горячее', name: 'Горячее' },
+  { id: 'Десерты', name: 'Десерты' },
+  { id: 'Напитки', name: 'Напитки' },
+  { id: 'Бар', name: 'Бар' },
+  { id: 'Завтраки', name: 'Завтраки' },
+  { id: 'Добавки', name: 'Добавки' },
 ]
 
-const items: TtkItem[] = [
-  {
-    id: 'b1',
-    groupId: 'burgers',
-    photoLabel: '🍔',
-    name: 'Бургер с говядиной',
-    unit: 'шт.',
-    price: 590,
-    tag: 'Хит',
-    description: 'Сочная говяжья котлета, свежие овощи, фирменный соус, сыр чеддер.',
-    recipe: [
-      { ingredient: 'Булка', amount: '1 шт.' },
-      { ingredient: 'Котлета говяжья', amount: '150 г' },
-      { ingredient: 'Сыр чеддер', amount: '20 г' },
-      { ingredient: 'Соус фирменный', amount: '30 г' },
-    ],
-    cookingTime: 15,
-    output: '360 г',
-    additives: 'Картофель фри, Луковые кольца, Халапеньо',
-    pairings: 'Крафтовый эль, Лимонад цитрусовый',
-    kcal: 650,
-    proteins: 32,
-    fats: 34,
-    carbs: 55,
-    takeaway: true,
-    online: true,
-    discounts: true,
-    marked: false,
-    requiresScan: false,
-    excise: false,
-  },
-  {
-    id: 'b2',
-    groupId: 'burgers',
-    photoLabel: '🍔',
-    name: 'Чизбургер',
-    unit: 'шт.',
-    price: 520,
-    tag: 'Хит',
-    description: 'Классический бургер с сыром чеддер, томатами и маринованными огурцами.',
-    recipe: [
-      { ingredient: 'Булка', amount: '1 шт.' },
-      { ingredient: 'Котлета говяжья', amount: '130 г' },
-      { ingredient: 'Сыр чеддер', amount: '25 г' },
-      { ingredient: 'Огурцы маринованные', amount: '18 г' },
-    ],
-    cookingTime: 12,
-    output: '330 г',
-    additives: 'Картофель фри, Бекон',
-    pairings: 'Кола, Лагер светлый',
-    kcal: 610,
-    proteins: 29,
-    fats: 31,
-    carbs: 50,
-    takeaway: true,
-    online: true,
-    discounts: true,
-    marked: false,
-    requiresScan: false,
-    excise: false,
-  },
-  {
-    id: 'b3',
-    groupId: 'burgers',
-    photoLabel: '🌶️',
-    name: 'Бургер BBQ',
-    unit: 'шт.',
-    price: 570,
-    tag: 'Острый',
-    description: 'Бургер с BBQ-соусом, хрустящим луком и острым перцем халапеньо.',
-    recipe: [
-      { ingredient: 'Булка', amount: '1 шт.' },
-      { ingredient: 'Котлета говяжья', amount: '150 г' },
-      { ingredient: 'Соус BBQ', amount: '35 г' },
-      { ingredient: 'Лук crispy', amount: '15 г' },
-    ],
-    cookingTime: 16,
-    output: '350 г',
-    additives: 'Сырный соус, Халапеньо',
-    pairings: 'Томатный лимонад, Pale Ale',
-    kcal: 670,
-    proteins: 31,
-    fats: 36,
-    carbs: 54,
-    takeaway: true,
-    online: true,
-    discounts: true,
-    marked: false,
-    requiresScan: false,
-    excise: false,
-  },
-  {
-    id: 'b4',
-    groupId: 'burgers',
-    photoLabel: '🥬',
-    name: 'Бургер с курицей',
-    unit: 'шт.',
-    price: 480,
-    tag: 'Новинка',
-    description: 'Нежная куриная котлета, салат айсберг и соус айоли.',
-    recipe: [
-      { ingredient: 'Булка', amount: '1 шт.' },
-      { ingredient: 'Куриная котлета', amount: '140 г' },
-      { ingredient: 'Айсберг', amount: '15 г' },
-      { ingredient: 'Соус айоли', amount: '20 г' },
-    ],
-    cookingTime: 14,
-    output: '320 г',
-    additives: 'Картофель по-деревенски',
-    pairings: 'Лимонад, Пшеничное пиво',
-    kcal: 540,
-    proteins: 30,
-    fats: 24,
-    carbs: 47,
-    takeaway: true,
-    online: true,
-    discounts: false,
-    marked: false,
-    requiresScan: false,
-    excise: false,
-  },
-  {
-    id: 'p1',
-    groupId: 'pizza',
-    photoLabel: '🍕',
-    name: 'Пепперони',
-    unit: 'шт.',
-    price: 690,
-    tag: 'Хит',
-    description: 'Тонкое тесто, сыр моцарелла, томатный соус и пепперони.',
-    recipe: [
-      { ingredient: 'Тесто', amount: '250 г' },
-      { ingredient: 'Пепперони', amount: '80 г' },
-      { ingredient: 'Моцарелла', amount: '120 г' },
-      { ingredient: 'Соус томатный', amount: '60 г' },
-    ],
-    cookingTime: 12,
-    output: '480 г',
-    additives: 'Доп. сыр, Халапеньо',
-    pairings: 'Кола, Пшеничное пиво',
-    kcal: 720,
-    proteins: 28,
-    fats: 30,
-    carbs: 82,
-    takeaway: true,
-    online: true,
-    discounts: true,
-    marked: false,
-    requiresScan: false,
-    excise: false,
-  },
-]
-
-function GroupButton({ group, active, onClick }: { group: TtkGroup; active: boolean; onClick: () => void }) {
-  return (
-    <button className={active ? 'ttk-group ttk-group--active' : 'ttk-group'} type="button" onClick={onClick}>
-      <span>{group.name}</span>
-      <strong>{group.itemsCount}</strong>
-    </button>
-  )
-}
-
-function TagBadge({ value }: { value: string }) {
-  const tone = value === 'Хит' ? 'orange' : value === 'Острый' ? 'red' : 'green'
-  return <span className={`ttk-tag ttk-tag--${tone}`}>{value}</span>
-}
+function getItemGroup(item: TtkItem) { return item.group || item.groupId || 'Бургеры' }
+function getKcal(item: TtkItem) { return item.kbju?.kcal ?? item.kcal ?? 0 }
+function getProtein(item: TtkItem) { return item.kbju?.protein ?? item.kbju?.proteins ?? item.proteins ?? 0 }
+function getFat(item: TtkItem) { return item.kbju?.fat ?? item.kbju?.fats ?? item.fats ?? 0 }
+function getCarbs(item: TtkItem) { return item.kbju?.carbs ?? item.carbs ?? 0 }
 
 export function TtkPage() {
+  const [items, setItems] = useState<TtkItem[]>([])
+  const [selectedGroupId, setSelectedGroupId] = useState(groups[0].id)
+  const [selectedItemId, setSelectedItemId] = useState('')
+  const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(groups[0].id)
-  const [selectedItemId, setSelectedItemId] = useState<string>(items[0].id)
 
-  const filteredItems = useMemo(() => items.filter((item) => item.groupId === selectedGroupId), [selectedGroupId])
-  const selectedItem = useMemo(
-    () => filteredItems.find((item) => item.id === selectedItemId) ?? filteredItems[0],
-    [filteredItems, selectedItemId],
-  )
+  async function loadItems() {
+    const result = await api.list<TtkItem>('ttk')
+    setItems(result.items)
+    setSelectedItemId((current) => current || result.items[0]?.id || '')
+    if (result.items[0]) setSelectedGroupId(getItemGroup(result.items[0]))
+  }
+
+  useEffect(() => { void loadItems() }, [])
 
   const selectedGroup = groups.find((group) => group.id === selectedGroupId) ?? groups[0]
+  const filteredItems = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    return items.filter((item) => getItemGroup(item) === selectedGroupId && (!normalized || item.name.toLowerCase().includes(normalized) || String(item.tag || '').toLowerCase().includes(normalized) || String(item.description || '').toLowerCase().includes(normalized)))
+  }, [items, query, selectedGroupId])
+  const selectedItem = items.find((item) => item.id === selectedItemId) || filteredItems[0]
+
+  async function createItem() {
+    const created = await api.create<TtkItem>('ttk', { name: 'Новая позиция', group: selectedGroupId, unit: 'шт', price: 0, tag: '', description: '', recipe: [], cookingTime: '0 мин', output: '', takeaway: true, online: true, discounts: true, marked: false, requiresScan: false, excise: false })
+    setItems((current) => [created, ...current])
+    setSelectedItemId(created.id)
+    setNotice('Позиция создана. Откройте карточку и заполните данные.')
+  }
+
+  async function saveSelected() {
+    if (!selectedItem) return
+    const saved = await api.update<TtkItem>('ttk', selectedItem.id, selectedItem)
+    setItems((current) => current.map((item) => item.id === saved.id ? saved : item))
+    setNotice('Карточка сохранена.')
+  }
+
+  function updateSelected(patch: Partial<TtkItem>) {
+    if (!selectedItem) return
+    setItems((current) => current.map((item) => item.id === selectedItem.id ? { ...item, ...patch } : item))
+  }
 
   return (
     <section className="ttk-page">
       {notice ? <div className="ttk-notice">{notice}</div> : null}
-      <div className="ttk-layout">
-        <aside className="ttk-groups-card">
-          <div className="ttk-panel-title">
-            <h2>Группы</h2>
-            <button type="button" onClick={() => setNotice('Добавление группы будет сохранено после подключения формы группы.')}>Добавить группу</button>
-          </div>
-          <div className="ttk-groups-list">
-            {groups.map((group) => (
-              <GroupButton
-                key={group.id}
-                group={group}
-                active={group.id === selectedGroupId}
-                onClick={() => {
-                  setSelectedGroupId(group.id)
-                  const firstItem = items.find((item) => item.groupId === group.id)
-                  if (firstItem) setSelectedItemId(firstItem.id)
-                }}
-              />
-            ))}
-          </div>
-        </aside>
+      <aside className="ttk-groups-panel">
+        <div className="ttk-groups-panel__header"><h2>Группы</h2><p>Выберите категорию позиции.</p></div>
+        <div className="ttk-groups-list">{groups.map((group) => <button className={group.id === selectedGroupId ? 'ttk-group ttk-group--active' : 'ttk-group'} type="button" key={group.id} onClick={() => { setSelectedGroupId(group.id); setSelectedItemId(items.find((item) => getItemGroup(item) === group.id)?.id || '') }}><span><BookIcon /></span><div><strong>{group.name}</strong><p>{items.filter((item) => getItemGroup(item) === group.id).length} позиций</p></div></button>)}</div>
+      </aside>
 
-        <section className="ttk-table-area">
-          <div className="ttk-table-header">
-            <div>
-              <h2>Позиции</h2>
-              <p>{selectedGroup.name}</p>
-            </div>
-            <div className="ttk-table-header__actions">
-              <label className="ttk-local-search">
-                <SearchIcon />
-                <input placeholder="Поиск по списку..." />
-              </label>
-              <button className="ttk-outline-button" type="button" onClick={() => setNotice('Новая позиция создаётся через карточку справа. Выберите группу и заполните поля.')}>Добавить позицию</button>
-            </div>
-          </div>
+      <div className="ttk-content-grid">
+        <main className="ttk-list-panel">
+          <div className="ttk-list-toolbar"><label><SearchIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по позициям, ингредиентам, тэгам..." /></label><button className="ttk-primary-button" type="button" onClick={() => void createItem()}>+ Позиция</button></div>
+          <div className="ttk-table-wrap"><table className="ttk-table ttk-table--clickable"><thead><tr><th>Фото</th><th>Наименование</th><th>Ед.</th><th>Цена</th><th>Тэг</th><th>Скидки</th><th>Онлайн</th><th>На вынос</th></tr></thead><tbody>{filteredItems.map((item) => <tr className={item.id === selectedItem?.id ? 'ttk-row--active' : ''} key={item.id} onClick={() => setSelectedItemId(item.id)}><td><span className="ttk-photo-cell">{item.photoLabel || '🍽'}</span></td><td><strong>{item.name}</strong></td><td>{item.unit}</td><td>{Number(item.price || 0).toLocaleString('ru-RU')} ₽</td><td>{item.tag || '—'}</td><td>{item.discounts ? 'Да' : 'Нет'}</td><td>{item.online ? 'Да' : 'Нет'}</td><td>{item.takeaway ? 'Да' : 'Нет'}</td></tr>)}{filteredItems.length === 0 ? <tr><td colSpan={8}>В этой группе пока нет позиций.</td></tr> : null}</tbody></table></div>
+        </main>
 
-          <div className="ttk-table-scroll">
-            <table className="ttk-table">
-              <thead>
-                <tr>
-                  <th>Фото</th>
-                  <th>Наименование</th>
-                  <th>Ед.</th>
-                  <th>Цена</th>
-                  <th>Тэг</th>
-                  <th>Скидки</th>
-                  <th>Онлайн</th>
-                  <th>На вынос</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => {
-                  const active = selectedItem?.id === item.id
-                  return (
-                    <tr key={item.id} className={active ? 'ttk-table__row ttk-table__row--active ttk-table__row--clickable' : 'ttk-table__row ttk-table__row--clickable'} onClick={() => setSelectedItemId(item.id)}>
-                      <td>
-                        <span className="ttk-photo-pill">{item.photoLabel}</span>
-                      </td>
-                      <td>
-                        <button className="ttk-name-button" type="button" onClick={() => setSelectedItemId(item.id)}>
-                          {item.name}
-                        </button>
-                      </td>
-                      <td>{item.unit}</td>
-                      <td>{item.price} ₽</td>
-                      <td><TagBadge value={item.tag} /></td>
-                      <td>{item.discounts ? 'Да' : 'Нет'}</td>
-                      <td>{item.online ? '✓' : '—'}</td>
-                      <td>{item.takeaway ? '✓' : '—'}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <aside className="ttk-editor-card">
-          <div className="ttk-editor-card__header">
-            <h2>Карточка позиции</h2>
-          </div>
-
-          {selectedItem ? (
-            <div className="ttk-editor-sections">
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>Основное</h3></div>
-                <div className="ttk-basic-grid">
-                  <div className="ttk-photo-card">
-                    <div className="ttk-photo-preview">{selectedItem.photoLabel}</div>
-                    <button type="button">Загрузить фото</button>
-                    <small>JPG, PNG, до 5 МБ</small>
-                  </div>
-
-                  <div className="ttk-form-grid ttk-form-grid--basic">
-                    <label>
-                      <span>Наименование</span>
-                      <input defaultValue={selectedItem.name} />
-                    </label>
-                    <label>
-                      <span>Единица измерения</span>
-                      <select defaultValue={selectedItem.unit}>
-                        <option>шт.</option>
-                        <option>порц.</option>
-                        <option>мл</option>
-                        <option>г</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>Цена</span>
-                      <input defaultValue={selectedItem.price} />
-                    </label>
-                    <label>
-                      <span>Группа</span>
-                      <select defaultValue={selectedGroup.name}>
-                        {groups.map((group) => <option key={group.id}>{group.name}</option>)}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Тэг</span>
-                      <select defaultValue={selectedItem.tag}>
-                        <option>Хит</option>
-                        <option>Новинка</option>
-                        <option>Острый</option>
-                        <option>Без тэга</option>
-                      </select>
-                    </label>
-                    <label className="ttk-form-grid__full">
-                      <span>Описание</span>
-                      <textarea defaultValue={selectedItem.description} rows={3} />
-                    </label>
-                  </div>
-                </div>
-              </section>
-
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>Технология</h3></div>
-                <div className="ttk-tech-grid">
-                  <div>
-                    <span className="ttk-field-label">Раскладка</span>
-                    <div className="ttk-recipe-table">
-                      {selectedItem.recipe.map((line) => (
-                        <div className="ttk-recipe-row" key={line.ingredient}>
-                          <span>{line.ingredient}</span>
-                          <strong>{line.amount}</strong>
-                        </div>
-                      ))}
-                      <button className="ttk-inline-link" type="button">Добавить ингредиент</button>
-                    </div>
-                  </div>
-                  <div className="ttk-form-grid ttk-form-grid--tech">
-                    <label>
-                      <span>Время приготовления</span>
-                      <input defaultValue={`${selectedItem.cookingTime} мин`} />
-                    </label>
-                    <label>
-                      <span>Выход готового блюда</span>
-                      <input defaultValue={selectedItem.output} />
-                    </label>
-                  </div>
-                </div>
-              </section>
-
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>Добавки и пары</h3></div>
-                <div className="ttk-form-grid ttk-form-grid--pairs">
-                  <label>
-                    <span>Добавки</span>
-                    <input defaultValue={selectedItem.additives} />
-                  </label>
-                  <label>
-                    <span>Гастрономические пары</span>
-                    <input defaultValue={selectedItem.pairings} />
-                  </label>
-                </div>
-              </section>
-
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>КБЖУ</h3></div>
-                <div className="ttk-kbju-grid">
-                  <label><span>Ккал</span><input defaultValue={selectedItem.kcal} /></label>
-                  <label><span>Белки</span><input defaultValue={`${selectedItem.proteins} г`} /></label>
-                  <label><span>Жиры</span><input defaultValue={`${selectedItem.fats} г`} /></label>
-                  <label><span>Углеводы</span><input defaultValue={`${selectedItem.carbs} г`} /></label>
-                </div>
-              </section>
-
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>Продажа</h3></div>
-                <div className="ttk-switch-grid">
-                  <label className="ttk-switch-row"><input type="checkbox" defaultChecked={selectedItem.takeaway} /><span>Доступно на вынос</span></label>
-                  <label className="ttk-switch-row"><input type="checkbox" defaultChecked={selectedItem.online} /><span>Доступно для онлайн-заказа</span></label>
-                  <label className="ttk-switch-row"><input type="checkbox" defaultChecked={selectedItem.discounts} /><span>Скидки применяются</span></label>
-                </div>
-              </section>
-
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>Ограничения и контроль</h3></div>
-                <div className="ttk-switch-grid ttk-switch-grid--three">
-                  <label className="ttk-switch-row"><input type="checkbox" defaultChecked={selectedItem.marked} /><span>Маркировочный товар</span></label>
-                  <label className="ttk-switch-row"><input type="checkbox" defaultChecked={selectedItem.requiresScan} /><span>Нельзя взять без пика / сканирования</span></label>
-                  <label className="ttk-switch-row"><input type="checkbox" defaultChecked={selectedItem.excise} /><span>Подакцизный товар</span></label>
-                </div>
-              </section>
-
-              <section className="ttk-section-card">
-                <div className="ttk-section-card__header"><h3>Групповые операции</h3></div>
-                <div className="ttk-group-ops">
-                  <label>
-                    <span>Группа</span>
-                    <select defaultValue={selectedGroup.name}>
-                      {groups.map((group) => <option key={group.id}>{group.name}</option>)}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Действие</span>
-                    <select defaultValue="Скидки не применяются">
-                      <option>Скидки не применяются</option>
-                      <option>Скидки применяются</option>
-                      <option>Доступно для онлайн-заказа</option>
-                      <option>Недоступно для онлайн-заказа</option>
-                      <option>Доступно на вынос</option>
-                      <option>Недоступно на вынос</option>
-                      <option>Пометить как маркировочный</option>
-                      <option>Снять маркировку</option>
-                      <option>Подакцизный товар</option>
-                      <option>Снять подакцизность</option>
-                      <option>Запретить без пика / сканирования</option>
-                      <option>Разрешить без пика / сканирования</option>
-                    </select>
-                  </label>
-                  <button className="ttk-outline-button" type="button">Применить к группе</button>
-                </div>
-              </section>
-
-              <div className="ttk-editor-actions">
-                <button className="ttk-primary-button" type="button" onClick={() => setNotice('Изменения в карточке зафиксированы на экране. Постоянное сохранение подключается через API ТТК.')}>Сохранить изменения</button>
-                <button className="ttk-outline-button" type="button" onClick={() => setNotice('Дублирование позиции будет добавлено как отдельное действие карточки.')}>Дублировать</button>
-                <button className="ttk-danger-button" type="button" onClick={() => setNotice('Удаление позиции требует подтверждения. Пока позиция не удалена.')}>Удалить</button>
-              </div>
-            </div>
-          ) : (
-            <div className="ttk-empty">
-              <span><BookIcon /></span>
-              <strong>Выберите позицию</strong>
-              <p>Откройте блюдо или товар из списка, чтобы посмотреть и отредактировать карточку.</p>
-            </div>
-          )}
+        <aside className="ttk-editor-panel">
+          {selectedItem ? <div className="ttk-editor-scroll"><section className="ttk-card-hero"><div className="ttk-card-hero__photo">{selectedItem.photoLabel || '🍽'}</div><div><span>{selectedGroup.name}</span><h2>{selectedItem.name}</h2><p>{selectedItem.description || 'Описание позиции пока не заполнено.'}</p></div></section>
+            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Основное</h3></div><div className="ttk-form-grid"><label><span>Наименование</span><input value={selectedItem.name} onChange={(e) => updateSelected({ name: e.target.value })} /></label><label><span>Единица измерения</span><input value={selectedItem.unit} onChange={(e) => updateSelected({ unit: e.target.value })} /></label><label><span>Цена</span><input value={selectedItem.price} type="number" onChange={(e) => updateSelected({ price: Number(e.target.value || 0) })} /></label><label><span>Тэг</span><input value={selectedItem.tag || ''} onChange={(e) => updateSelected({ tag: e.target.value })} /></label><label className="ttk-field-wide"><span>Описание</span><textarea value={selectedItem.description || ''} onChange={(e) => updateSelected({ description: e.target.value })} /></label></div></section>
+            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Технология</h3></div><div className="ttk-recipe-list">{(selectedItem.recipe || []).map((line, index) => <div className="ttk-recipe-line" key={`${line.ingredient}-${index}`}><span>{index + 1}</span><input value={line.ingredient} readOnly /><input value={line.amount || line.quantity || ''} readOnly /></div>)}{!selectedItem.recipe?.length ? <p className="ttk-empty-small">Раскладка ещё не заполнена.</p> : null}<div className="ttk-form-grid ttk-form-grid--two"><label><span>Время приготовления</span><input value={String(selectedItem.cookingTime || '')} onChange={(e) => updateSelected({ cookingTime: e.target.value })} /></label><label><span>Выход готового блюда</span><input value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} /></label></div></div></section>
+            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>КБЖУ</h3></div><div className="ttk-kbju-grid"><label><span>Ккал</span><input value={getKcal(selectedItem)} readOnly /></label><label><span>Белки</span><input value={`${getProtein(selectedItem)} г`} readOnly /></label><label><span>Жиры</span><input value={`${getFat(selectedItem)} г`} readOnly /></label><label><span>Углеводы</span><input value={`${getCarbs(selectedItem)} г`} readOnly /></label></div></section>
+            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Продажа и контроль</h3></div><div className="ttk-switch-grid"><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.takeaway)} onChange={(e) => updateSelected({ takeaway: e.target.checked })} /><span>Доступно на вынос</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.online)} onChange={(e) => updateSelected({ online: e.target.checked })} /><span>Доступно для онлайн-заказа</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.discounts)} onChange={(e) => updateSelected({ discounts: e.target.checked })} /><span>Скидки применяются</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.marked)} onChange={(e) => updateSelected({ marked: e.target.checked })} /><span>Маркировочный товар</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.requiresScan)} onChange={(e) => updateSelected({ requiresScan: e.target.checked })} /><span>Нельзя взять без пика / сканирования</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.excise)} onChange={(e) => updateSelected({ excise: e.target.checked })} /><span>Подакцизный товар</span></label></div></section>
+            <div className="ttk-editor-actions"><button className="ttk-primary-button" type="button" onClick={() => void saveSelected()}>Сохранить изменения</button></div>
+          </div> : <div className="ttk-empty"><span><BookIcon /></span><strong>Выберите позицию</strong><p>Откройте блюдо или товар из списка, чтобы посмотреть и отредактировать карточку.</p></div>}
         </aside>
       </div>
     </section>

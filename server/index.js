@@ -725,14 +725,37 @@ async function handleDashboard(req, res, state, pathname, auth) {
   const subscriptionEndsAt = payload.restaurant.subscriptionEndsAt || payload.restaurant.trialEndsAt
   const daysLeft = subscriptionEndsAt ? Math.ceil((new Date(subscriptionEndsAt).getTime() - Date.now()) / 86400000) : null
 
+  const employees = state.employees.filter((item) => item.restaurantId === restaurantId)
+  const tasks = state.tasks.filter((item) => item.restaurantId === restaurantId)
+  const checklists = state.checklistTemplates.filter((item) => item.restaurantId === restaurantId)
+  const bookings = state.bookings.filter((item) => item.restaurantId === restaurantId)
+  const technicalRequests = state.technicalRequests.filter((item) => item.restaurantId === restaurantId)
+  const inventoryAssignments = state.inventoryAssignments.filter((item) => item.restaurantId === restaurantId)
+  const inventoryProducts = state.inventoryProducts.filter((item) => item.restaurantId === restaurantId)
+  const ttkItems = state.ttkItems.filter((item) => item.restaurantId === restaurantId)
+  const payments = state.payments.filter((item) => item.restaurantId === restaurantId)
+  const halls = state.halls.filter((item) => item.restaurantId === restaurantId)
+  const tables = state.tables.filter((item) => item.restaurantId === restaurantId)
+  const knowledgeMaterials = state.knowledgeMaterials.filter((item) => item.restaurantId === restaurantId)
+  const guests = state.regularGuests.filter((item) => item.restaurantId === restaurantId)
+
   send(res, 200, {
     restaurant: payload.restaurant,
     paymentNotice: daysLeft !== null && daysLeft <= 5 ? { subscriptionEndsAt, daysLeft: Math.max(0, daysLeft) } : null,
-    employeesOnShift: state.employees.filter((item) => item.restaurantId === restaurantId && item.shiftStatus === 'open').length,
-    tasks: state.tasks.filter((item) => item.restaurantId === restaurantId),
-    checklists: state.checklistTemplates.filter((item) => item.restaurantId === restaurantId),
-    bookings: state.bookings.filter((item) => item.restaurantId === restaurantId),
-    technicalRequests: state.technicalRequests.filter((item) => item.restaurantId === restaurantId),
+    employeesOnShift: employees.filter((item) => item.shiftStatus === 'open').length,
+    employees,
+    tasks,
+    checklists,
+    bookings,
+    technicalRequests,
+    inventoryAssignments,
+    inventoryProducts,
+    ttkItems,
+    payments,
+    halls,
+    tables,
+    knowledgeMaterials,
+    guests,
   })
   return true
 }

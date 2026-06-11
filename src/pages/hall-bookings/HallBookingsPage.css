@@ -743,3 +743,10 @@
 .hall-list-panel__header {
   min-height: 42px;
 }
+
+.hall-empty-text {
+  margin: 14px 0;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 650;
+}

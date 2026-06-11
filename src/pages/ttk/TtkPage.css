@@ -567,3 +567,10 @@
   font-size: 13px;
   font-weight: 750;
 }
+
+.ttk-empty-small {
+  margin: 0 0 12px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 650;
+}
