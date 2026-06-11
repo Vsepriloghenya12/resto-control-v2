@@ -308,6 +308,87 @@ function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: strin
 }
 
 
+function DonutSegment({ value, offset, color, active, index, onHover }: { value: number; offset: number; color: string; active: boolean; index: number; onHover: (index: number) => void }) {
+  const safeValue = Math.max(1, Math.min(100, value))
+  return (
+    <circle
+      className={active ? 'owner-donut-widget__segment owner-donut-widget__segment--active' : 'owner-donut-widget__segment'}
+      cx="130"
+      cy="130"
+      r="96"
+      stroke={color}
+      strokeDasharray={`${safeValue} ${100 - safeValue}`}
+      strokeDashoffset={String(-offset)}
+      onMouseEnter={() => onHover(index)}
+      onFocus={() => onHover(index)}
+      tabIndex={0}
+    />
+  )
+}
+
+function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof buildDashboardModel>; onOpen: (section: OwnerSection) => void }) {
+  const rows = model.operationRows.map((row, index) => ({
+    ...row,
+    color: index === 0 ? '#22c55e' : index === 1 ? '#3b82f6' : index === 2 ? '#f97316' : '#8b5cf6',
+    share: Math.max(1, Math.round(row.percent || 1)),
+  }))
+  const [activeIndex, setActiveIndex] = useState(0)
+  let offset = 0
+  const active = rows[activeIndex] || rows[0]
+
+  return (
+    <section className="owner-donut-widget" aria-label="Инфографика рабочих действий">
+      <header className="owner-donut-widget__header">
+        <div>
+          <h2>Рабочие действия</h2>
+          <p>Операционная картина смены</p>
+        </div>
+        <div className="owner-donut-widget__tabs" aria-label="Период">
+          <button type="button">Сегодня</button>
+          <button type="button" className="is-active">7 дней</button>
+          <button type="button">30 дней</button>
+        </div>
+      </header>
+
+      <div className="owner-donut-widget__body">
+        <div className="owner-donut-widget__chart" aria-label="Диаграмма рабочих действий">
+          <svg viewBox="0 0 260 260" role="img">
+            <circle className="owner-donut-widget__track" cx="130" cy="130" r="96" />
+            {rows.map((row, index) => {
+              const currentOffset = offset
+              offset += row.share
+              return <DonutSegment key={row.label} value={row.share} offset={currentOffset} color={row.color} active={index === activeIndex} index={index} onHover={setActiveIndex} />
+            })}
+          </svg>
+          <div className="owner-donut-widget__center">
+            <strong>{active?.percent ?? model.readinessPercent}%</strong>
+            <span>{active?.label || 'Смена'}</span>
+          </div>
+        </div>
+
+        <div className="owner-donut-widget__list">
+          {rows.map((row, index) => (
+            <button
+              className={index === activeIndex ? 'owner-donut-widget__item owner-donut-widget__item--active' : 'owner-donut-widget__item'}
+              type="button"
+              key={row.label}
+              onMouseEnter={() => setActiveIndex(index)}
+              onFocus={() => setActiveIndex(index)}
+              onClick={() => onOpen(row.target)}
+            >
+              <span className="owner-donut-widget__dot" style={{ background: row.color }} />
+              <span className="owner-donut-widget__percent">{row.percent}%</span>
+              <span className="owner-donut-widget__name">{row.label}</span>
+              <span className="owner-donut-widget__value">{row.value}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
 function RestaurantHeader({ restaurants, currentRestaurantId, onSwitch, onAdd }: { restaurants: Array<Restaurant & { isCurrent?: boolean }>; currentRestaurantId?: string; onSwitch: (id: string) => void; onAdd: () => void }) {
   return (
     <section className="owner-restaurant-row" aria-label="Рестораны владельца">
@@ -461,36 +542,7 @@ function DashboardContent({ summary, onOpen }: { summary: DashboardSummary | nul
 
   return (
     <>
-      <section className="owner-overview-card" aria-label="Операционная сводка за сегодня">
-        <div className="owner-overview-card__left">
-          <h2>Операционная сводка за сегодня</h2>
-          <div className="owner-readiness-ring" aria-label={`Готовность смены ${model.readinessPercent} процентов`}>
-            <div>
-              <strong>{model.readinessPercent}%</strong>
-              <span>Готовность смены</span>
-              <p>{model.completedProcesses} из {model.totalProcesses} процессов завершено</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="owner-operation-list">
-          {model.operationRows.map((row) => (
-            <button className="owner-operation-row owner-clickable-row" type="button" key={row.label} onClick={() => onOpen(row.target)}>
-              <div className={`owner-operation-row__icon owner-operation-row__icon--${row.tone}`}>{row.icon}</div>
-              <div className="owner-operation-row__content">
-                <div>
-                  <span>{row.label}</span>
-                  <strong>{row.value}</strong>
-                </div>
-                <div className="owner-operation-row__track" aria-hidden="true">
-                  <span className={`owner-operation-row__bar owner-operation-row__bar--${row.tone}`} style={{ width: `${row.percent}%` }} />
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-      </section>
+      <OperationalDonutWidget model={model} onOpen={onOpen} />
 
       <section className="owner-metrics-grid" aria-label="Ключевые показатели смены">
         {model.metrics.map((item) => <SummaryMetricCard item={item} key={item.label} onClick={() => onOpen(item.target)} />)}
