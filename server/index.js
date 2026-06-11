@@ -241,8 +241,10 @@ function createSeedState() {
       { id: 'guest_1', restaurantId: restaurant.id, name: 'Анна Смирнова', preferences: 'Стол у окна', restrictions: 'Без кинзы', favoriteTable: 'Стол 2', favoriteItems: ['Чизкейк', 'Капучино'], serviceComment: 'Приходит с ребёнком, нужен детский стул.', createdAt, updatedAt: createdAt },
     ],
     pushSubscriptions: [],
+    staffSchedules: [],
   }
 }
+
 
 
 function ensureServiceOwner(state) {
@@ -464,6 +466,7 @@ function collectionByPath(state, name) {
     knowledge: 'knowledgeMaterials',
     guests: 'regularGuests',
     'push-subscriptions': 'pushSubscriptions',
+    'staff-schedules': 'staffSchedules',
     'inventory-assignments': 'inventoryAssignments',
     'inventory-products': 'inventoryProducts',
     ttk: 'ttkItems',
@@ -715,7 +718,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
     state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
 
-    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'inventoryAssignments', 'inventoryProducts', 'ttkItems']
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems']
     for (const key of keys) {
       if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
     }
@@ -729,7 +732,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
 }
 
 async function handleCollections(req, res, state, pathname, auth) {
-  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|inventory-assignments|inventory-products|ttk)(?:\/([^/]+))?(?:\/([^/]+))?$/)
+  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk)(?:\/([^/]+))?(?:\/([^/]+))?$/)
   if (!match) return false
   const [, name, itemId, action] = match
   const collection = collectionByPath(state, name)
@@ -948,6 +951,7 @@ async function handleDashboard(req, res, state, pathname, auth) {
   const inventoryAssignments = state.inventoryAssignments.filter((item) => item.restaurantId === restaurantId)
   const inventoryProducts = state.inventoryProducts.filter((item) => item.restaurantId === restaurantId)
   const ttkItems = state.ttkItems.filter((item) => item.restaurantId === restaurantId)
+  const staffSchedules = (state.staffSchedules || []).filter((item) => item.restaurantId === restaurantId)
   const payments = state.payments.filter((item) => item.restaurantId === restaurantId)
   const halls = state.halls.filter((item) => item.restaurantId === restaurantId)
   const tables = state.tables.filter((item) => item.restaurantId === restaurantId)
@@ -967,6 +971,7 @@ async function handleDashboard(req, res, state, pathname, auth) {
     inventoryAssignments,
     inventoryProducts,
     ttkItems,
+    staffSchedules,
     payments,
     halls,
     tables,

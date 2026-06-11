@@ -1,7 +1,7 @@
 {
-  "name": "resto-control-v2-railway-prebuilt",
+  "name": "resto-control-v2",
   "private": true,
-  "version": "0.25.0",
+  "version": "0.26.1",
   "type": "module",
   "scripts": {
     "start": "node server/index.js",

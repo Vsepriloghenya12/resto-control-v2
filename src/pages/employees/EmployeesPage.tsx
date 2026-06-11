@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AlertCircleIcon, ChecklistIcon, SearchIcon, TeamIcon, UserIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 
@@ -16,6 +16,15 @@ type Employee = {
   attestationPercent?: number
   createdAt?: string
   updatedAt?: string
+}
+
+type StaffSchedule = {
+  id: string
+  employeeId: string
+  month: string
+  day: number
+  value?: string
+  note?: string
 }
 
 const positions = ['Все', 'Официант', 'Старший официант', 'Бармен', 'Старший бармен', 'Повар', 'Су-шеф', 'Шеф-повар', 'Хостес', 'Администратор', 'Управляющий', 'Курьер', 'Мойщик', 'Уборщик', 'Клининг']
@@ -41,6 +50,47 @@ function getAttestationTone(value: number): AttestationTone {
   if (value >= 55) return 'medium'
   return 'low'
 }
+
+function getCurrentMonth() {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getDaysInMonth(month: string) {
+  const [year, monthIndex] = month.split('-').map(Number)
+  return new Date(year, monthIndex, 0).getDate()
+}
+
+function getMonthLabel(month: string) {
+  const [year, monthIndex] = month.split('-').map(Number)
+  return new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(new Date(year, monthIndex - 1, 1)).toUpperCase()
+}
+
+function getWeekdayLabel(month: string, day: number) {
+  const [year, monthIndex] = month.split('-').map(Number)
+  return new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(new Date(year, monthIndex - 1, day)).replace('.', '')
+}
+
+function getDepartment(position: string) {
+  const value = position.toLowerCase()
+  if (value.includes('бар')) return 'Бар'
+  if (value.includes('повар') || value.includes('су-шеф') || value.includes('шеф')) return 'Кухня'
+  if (value.includes('клининг') || value.includes('убор') || value.includes('мойщик')) return 'Клининг'
+  return 'Зал'
+}
+
+function getNextScheduleValue(value?: string) {
+  if (value === '1') return '0.5'
+  if (value === '0.5') return ''
+  return '1'
+}
+
+function getScheduleNumber(value?: string) {
+  const normalized = String(value || '').replace(',', '.')
+  const number = Number(normalized)
+  return Number.isFinite(number) ? number : 0
+}
+
 
 function EmployeeMetric({ icon, value, label, hint, tone }: { icon: ReactNode; value: string; label: string; hint: string; tone: 'blue' | 'green' | 'purple' }) {
   return (
@@ -74,6 +124,8 @@ export function EmployeesPage() {
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<string>('')
   const [form, setForm] = useState(emptyForm)
+  const [scheduleMonth, setScheduleMonth] = useState(getCurrentMonth())
+  const [schedules, setSchedules] = useState<StaffSchedule[]>([])
 
   async function loadEmployees() {
     setIsLoading(true)
@@ -100,7 +152,18 @@ export function EmployeesPage() {
     }
   }
 
-  useEffect(() => { void loadEmployees() }, [])
+
+  async function loadSchedule() {
+    try {
+      const result = await api.list<StaffSchedule>('staff-schedules')
+      setSchedules(result.items)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось загрузить график')
+    }
+  }
+
+  useEffect(() => { void loadEmployees(); void loadSchedule() }, [])
+  useEffect(() => { void loadSchedule() }, [scheduleMonth])
 
   const filteredEmployees = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -116,6 +179,17 @@ export function EmployeesPage() {
   const onShiftCount = employees.filter((item) => item.shiftStatus === 'open').length
   const avgAttestation = employees.length ? Math.round(employees.reduce((sum, item) => sum + (item.attestationPercent || 0), 0) / employees.length) : 0
   const managersCount = employees.filter((item) => ['Управляющий', 'Администратор', 'Старший официант', 'Старший бармен', 'Су-шеф', 'Шеф-повар'].includes(item.position)).length
+  const scheduleDays = Array.from({ length: getDaysInMonth(scheduleMonth) }, (_, index) => index + 1)
+  const currentMonth = getCurrentMonth()
+  const todayDay = new Date().getDate()
+  const employeesByDepartment = useMemo(() => {
+    return employees.reduce<Record<string, Employee[]>>((groups, employee) => {
+      const department = getDepartment(employee.position)
+      groups[department] = groups[department] || []
+      groups[department].push(employee)
+      return groups
+    }, {})
+  }, [employees])
 
   function startCreate() {
     setSelectedId('')
@@ -191,6 +265,121 @@ export function EmployeesPage() {
     }
   }
 
+  function getScheduleEntry(employeeId: string, day: number) {
+    return schedules.find((item) => item.employeeId === employeeId && item.month === scheduleMonth && Number(item.day) === day)
+  }
+
+  async function toggleScheduleCell(employee: Employee, day: number) {
+    const entry = getScheduleEntry(employee.id, day)
+    const nextValue = getNextScheduleValue(entry?.value)
+
+    try {
+      if (entry && !nextValue) {
+        await api.remove('staff-schedules', entry.id)
+        setSchedules((items) => items.filter((item) => item.id !== entry.id))
+        return
+      }
+
+      if (entry) {
+        const updated = await api.update<StaffSchedule>('staff-schedules', entry.id, { value: nextValue })
+        setSchedules((items) => items.map((item) => item.id === entry.id ? updated : item))
+        return
+      }
+
+      const created = await api.create<StaffSchedule>('staff-schedules', {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        position: employee.position,
+        month: scheduleMonth,
+        day,
+        value: nextValue,
+      })
+      setSchedules((items) => [...items, created])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить график')
+    }
+  }
+
+  function getScheduleTotal(employeeId: string) {
+    return schedules
+      .filter((item) => item.employeeId === employeeId && item.month === scheduleMonth)
+      .reduce((sum, item) => sum + getScheduleNumber(item.value), 0)
+  }
+
+  function getScheduleCellClass(employee: Employee, day: number, value?: string) {
+    const classes = ['employees-schedule__cell-button']
+    if (value) classes.push('is-filled')
+    if (scheduleMonth === currentMonth && day === todayDay) {
+      if (value && employee.shiftStatus !== 'open') classes.push('is-missed-shift')
+      if (!value && employee.shiftStatus === 'open') classes.push('is-open-out-of-schedule')
+    }
+    return classes.join(' ')
+  }
+
+  function renderScheduleTable() {
+    const departments = ['Зал', 'Бар', 'Кухня', 'Клининг'].filter((department) => employeesByDepartment[department]?.length)
+    return (
+      <section className="employees-schedule-card" aria-label="График персонала">
+        <div className="employees-schedule-card__header">
+          <div>
+            <h3>График персонала</h3>
+            <p>Смены сотрудников на месяц</p>
+          </div>
+          <label>
+            <span>Месяц</span>
+            <input type="month" value={scheduleMonth} onChange={(event) => setScheduleMonth(event.target.value || getCurrentMonth())} />
+          </label>
+        </div>
+
+        <div className="employees-schedule-legend">
+          <span><i className="legend-full" /> 1 — полная смена</span>
+          <span><i className="legend-half" /> 0.5 — половина смены</span>
+          <span><i className="legend-warning" /> открыта не по графику</span>
+        </div>
+
+        <div className="employees-schedule-wrap">
+          <table className="employees-schedule-table">
+            <thead>
+              <tr>
+                <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
+                {scheduleDays.map((day) => <th key={day}>{day}</th>)}
+                <th>Итог</th>
+              </tr>
+              <tr>
+                <th className="employees-schedule-table__name" />
+                {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {departments.length ? departments.map((department) => (
+                <Fragment key={department}>
+                  <tr className="employees-schedule-table__group"><td colSpan={scheduleDays.length + 2}>{department}</td></tr>
+                  {employeesByDepartment[department].map((employee) => (
+                    <tr key={employee.id}>
+                      <th className="employees-schedule-table__employee">{employee.name}</th>
+                      {scheduleDays.map((day) => {
+                        const entry = getScheduleEntry(employee.id, day)
+                        return (
+                          <td key={day}>
+                            <button type="button" className={getScheduleCellClass(employee, day, entry?.value)} onClick={() => void toggleScheduleCell(employee, day)}>
+                              {entry?.value || ''}
+                            </button>
+                          </td>
+                        )
+                      })}
+                      <td className="employees-schedule-table__total">{getScheduleTotal(employee.id).toLocaleString('ru-RU')}</td>
+                    </tr>
+                  ))}
+                </Fragment>
+              )) : <tr><td colSpan={scheduleDays.length + 2}>Добавьте сотрудников, чтобы составить график.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="employees-page">
       <section className="employees-metrics-grid" aria-label="Сводка по сотрудникам">
@@ -257,6 +446,9 @@ export function EmployeesPage() {
           {selectedEmployee ? <button className="employees-cancel-button" type="button" onClick={fireEmployee}>Удалить сотрудника</button> : <button className="employees-cancel-button" type="button" onClick={startCreate}>Очистить</button>}
         </aside>
       </div>
+
+      {renderScheduleTable()}
     </section>
   )
 }
+

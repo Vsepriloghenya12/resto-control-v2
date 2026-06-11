@@ -34,6 +34,7 @@ type Knowledge = { id: string; title: string; section?: string; type?: string; d
 type TtkItem = { id: string; name: string; group?: string; unit?: string; price?: number; tag?: string; description?: string; cookingTime?: string; output?: string; online?: boolean; takeaway?: boolean; stopList?: boolean; inStopList?: boolean; isStopped?: boolean; status?: string }
 type Guest = { id: string; name: string; phone?: string; preferences?: string; restrictions?: string; favoriteTable?: string; serviceComment?: string }
 type TechRequest = { id: string; title: string; description?: string; priority?: string; status?: string }
+type StaffSchedule = { id: string; employeeId: string; employeeName?: string; position?: string; month: string; day: number; value?: string; note?: string }
 
 type DashboardSummary = {
   restaurant: { id: string; name: string }
@@ -46,6 +47,7 @@ type DashboardSummary = {
   knowledgeMaterials?: Knowledge[]
   guests?: Guest[]
   ttkItems?: TtkItem[]
+  staffSchedules?: StaffSchedule[]
 }
 
 type MobileHall = { id: string; name: string; tablesCount: number }
@@ -91,6 +93,21 @@ function samePosition(itemPosition: string | undefined, employeePosition: string
   if (!itemPosition) return true
   return itemPosition.toLowerCase() === employeePosition.toLowerCase()
 }
+
+function getCurrentMonth() {
+  const date = new Date()
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function getScheduleDateLabel(month: string, day: number) {
+  const [year, monthIndex] = month.split('-').map(Number)
+  return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' }).format(new Date(year, monthIndex - 1, day))
+}
+
+function getScheduleSortValue(item: StaffSchedule) {
+  return Number(String(item.month).replace('-', '') + String(item.day).padStart(2, '0'))
+}
+
 
 function getTone(status?: string): 'green' | 'orange' | 'blue' | 'red' | 'purple' {
   if (status === 'done' || status === 'closed') return 'green'
@@ -181,6 +198,24 @@ export function EmployeeStartPage() {
     if (employee.isManager) return assignments.filter((item) => item.status !== 'submitted' && item.status !== 'done')
     return assignments.filter((item) => samePosition(item.assignedPosition, employee.position) && item.status !== 'submitted' && item.status !== 'done')
   }, [employee.isManager, employee.position, summary?.inventoryAssignments])
+
+
+  const currentEmployee = useMemo(() => {
+    return summary?.employees?.find((item) => item.userId === session?.user.id || item.name === session?.user.name || item.position === employee.position) || null
+  }, [employee.position, session?.user.id, session?.user.name, summary?.employees])
+
+  const userSchedule = useMemo(() => {
+    if (!currentEmployee) return []
+    return (summary?.staffSchedules || [])
+      .filter((item) => item.employeeId === currentEmployee.id && item.value)
+      .sort((a, b) => getScheduleSortValue(a) - getScheduleSortValue(b))
+  }, [currentEmployee, summary?.staffSchedules])
+
+  const todaySchedule = useMemo(() => {
+    const month = getCurrentMonth()
+    const day = new Date().getDate()
+    return userSchedule.find((item) => item.month === month && Number(item.day) === day)
+  }, [userSchedule])
 
   const notifications = useMemo(() => {
     const items: Array<{ title: string; text: string; target: MobileTab; detail: DetailState }> = []
@@ -669,13 +704,28 @@ export function EmployeeStartPage() {
   }
 
   function renderSchedule() {
+    const visibleSchedule = userSchedule.filter((item) => item.month >= getCurrentMonth()).slice(0, 20)
     return (
       <section className="employee-mobile__section employee-mobile__section--tight">
         <div className="employee-mobile__section-title"><h2>График</h2></div>
-        <div className="employee-mobile__schedule-card">
-          <CalendarIcon />
-          <strong>График смен</strong>
-          <p>Раздел будет добавлен следующим этапом.</p>
+        {todaySchedule ? (
+          <div className="employee-mobile__schedule-today">
+            <CalendarIcon />
+            <div><strong>Сегодня смена по графику</strong><p>{todaySchedule.value === '0.5' ? 'Половина смены' : 'Полная смена'}</p></div>
+          </div>
+        ) : shiftOpen ? (
+          <div className="employee-mobile__schedule-today employee-mobile__schedule-today--warning">
+            <AlertCircleIcon />
+            <div><strong>Смена открыта вне графика</strong><p>Уточните смену у управляющего</p></div>
+          </div>
+        ) : null}
+        <div className="employee-mobile__plain-list">
+          {visibleSchedule.length ? visibleSchedule.map((item) => (
+            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail({ kind: 'schedule', title: 'Смена по графику', subtitle: getScheduleDateLabel(item.month, Number(item.day)), body: <div className="employee-mobile__detail-text"><span>{item.value === '0.5' ? 'Половина смены' : 'Полная смена'}</span>{item.note ? <p>{item.note}</p> : null}</div> })}>
+              <div><strong>{getScheduleDateLabel(item.month, Number(item.day))}</strong><p>{item.value === '0.5' ? '0.5 смены' : '1 смена'}</p><small>{item.position || employee.position}</small></div>
+              <ChevronRightIcon />
+            </button>
+          )) : <p className="employee-mobile__empty">Смены по графику ещё не назначены.</p>}
         </div>
       </section>
     )

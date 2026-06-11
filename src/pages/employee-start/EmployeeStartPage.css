@@ -1016,3 +1016,42 @@
     border: 0;
   }
 }
+
+.employee-mobile__schedule-today {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 16px;
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.employee-mobile__schedule-today--warning {
+  border-color: #fed7aa;
+  color: #9a3412;
+  background: #fff7ed;
+}
+
+.employee-mobile__schedule-today svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.employee-mobile__schedule-today strong {
+  display: block;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.employee-mobile__schedule-today p {
+  margin: 3px 0 0;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: .82;
+}
