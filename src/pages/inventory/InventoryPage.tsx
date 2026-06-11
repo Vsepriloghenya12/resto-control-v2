@@ -4,7 +4,7 @@ import { api } from '../../shared/api/client'
 
 type InventoryTab = 'products' | 'assigned' | 'submitted'
 type SectionKey = 'bar' | 'kitchen' | 'household' | 'dishes'
-type ActionMode = 'addProduct' | 'importTemplate' | 'assignInventory' | 'submittedRuns'
+type ActionMode = 'addProduct' | 'assignInventory' | 'submittedRuns'
 type InventorySection = { id: SectionKey; title: string; icon: ReactNode }
 type InventoryProduct = { id: string; name: string; unit: string; category: string; section: string; minBalance?: number; active?: boolean; updatedAt?: string }
 type InventoryAssignment = { id: string; title?: string; template?: string; section: string; assignedPosition?: string; assignee?: string; dueDate?: string; date?: string; status: 'assigned' | 'completed' | 'draft' | 'submitted' | 'in_progress'; rowsCount?: number }
@@ -87,9 +87,6 @@ export function InventoryPage() {
     setNotice('Инвентаризация отмечена как сданная.')
   }
 
-  function importTemplate() {
-    setNotice('Импорт бланка будет подключён через загрузку файла. Сейчас добавьте товары вручную.')
-  }
 
   function downloadSubmitted() {
     const rows = [['Название', 'Раздел', 'Ответственный', 'Статус'], ...submitted.map((item) => [item.title || item.template || 'Инвентаризация', item.section, item.assignee || item.assignedPosition || '—', item.status])]
@@ -115,7 +112,7 @@ export function InventoryPage() {
         {activeTab === 'submitted' ? <div className="inventory-table-card"><div className="inventory-table-card__header"><div><h2>Сданные инвентаризации</h2><p>История отправленных остатков.</p></div><button type="button" onClick={downloadSubmitted}>Скачать CSV</button></div><table className="inventory-table"><thead><tr><th>Бланк</th><th>Дата</th><th>Сотрудник</th><th>Строк</th></tr></thead><tbody>{submitted.map((run) => <tr key={run.id}><td>{run.title || run.template}</td><td>{run.dueDate || run.date || '—'}</td><td>{run.assignee || run.assignedPosition || '—'}</td><td>{run.rowsCount || 0}</td></tr>)}{submitted.length === 0 ? <tr><td colSpan={4}>Сданных инвентаризаций нет.</td></tr> : null}</tbody></table></div> : null}
       </main>
 
-      <aside className="inventory-actions-panel"><div className="inventory-actions-panel__header"><h2>Действия</h2><p>Все действия относятся к разделу «{selectedSection.title}».</p></div><ActionItem mode="addProduct" activeMode={actionMode} title="Добавить товар" text="Создать позицию вручную" icon={<BoxIcon />} onClick={() => setActionMode('addProduct')} /><ActionItem mode="importTemplate" activeMode={actionMode} title="Импорт бланка" text="PDF / Excel / CSV позже" icon={<ChecklistIcon />} onClick={() => { setActionMode('importTemplate'); importTemplate() }} /><ActionItem mode="assignInventory" activeMode={actionMode} title="Назначить" text="Отправить сотруднику" icon={<CalendarIcon />} onClick={() => setActionMode('assignInventory')} /><ActionItem mode="submittedRuns" activeMode={actionMode} title="Сданные" text="Скачать историю" icon={<ChevronRightIcon />} onClick={() => { setActionMode('submittedRuns'); setActiveTab('submitted') }} />
+      <aside className="inventory-actions-panel"><div className="inventory-actions-panel__header"><h2>Действия</h2><p>Все действия относятся к разделу «{selectedSection.title}».</p></div><ActionItem mode="addProduct" activeMode={actionMode} title="Добавить товар" text="Создать позицию вручную" icon={<BoxIcon />} onClick={() => setActionMode('addProduct')} /><ActionItem mode="assignInventory" activeMode={actionMode} title="Назначить" text="Отправить сотруднику" icon={<CalendarIcon />} onClick={() => setActionMode('assignInventory')} /><ActionItem mode="submittedRuns" activeMode={actionMode} title="Сданные" text="Скачать историю" icon={<ChevronRightIcon />} onClick={() => { setActionMode('submittedRuns'); setActiveTab('submitted') }} />
         {actionMode === 'addProduct' ? <div className="inventory-action-form"><label><span>Название</span><input value={productForm.name} onChange={(e) => setProductForm((v) => ({ ...v, name: e.target.value }))} placeholder="Например, Лимон" /></label><label><span>Единица</span><input value={productForm.unit} onChange={(e) => setProductForm((v) => ({ ...v, unit: e.target.value }))} placeholder="кг, шт, л" /></label><label><span>Категория</span><input value={productForm.category} onChange={(e) => setProductForm((v) => ({ ...v, category: e.target.value }))} placeholder="Овощи, алкоголь..." /></label><button type="button" onClick={() => void addProduct()}>Добавить товар</button></div> : null}
         {actionMode === 'assignInventory' ? <div className="inventory-action-form"><label><span>Бланк</span><input value={assignForm.template} onChange={(e) => setAssignForm((v) => ({ ...v, template: e.target.value }))} /></label><label><span>Кому</span><input value={assignForm.assignee} onChange={(e) => setAssignForm((v) => ({ ...v, assignee: e.target.value }))} /></label><label><span>Дата</span><input type="date" value={assignForm.date} onChange={(e) => setAssignForm((v) => ({ ...v, date: e.target.value }))} /></label><button type="button" onClick={() => void assignInventory()}>Назначить</button></div> : null}
       </aside>

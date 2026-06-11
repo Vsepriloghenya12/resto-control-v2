@@ -203,6 +203,7 @@ function createSeedState() {
       { id: 'task_1', restaurantId: restaurant.id, title: 'Проверить резерв на вечер', description: 'Проверить брони и подготовить зал.', assignmentType: 'position', assignedPosition: 'Администратор', status: 'not_started', dueDate: new Date().toISOString().slice(0, 10), dueTime: '17:00', requiresPhoto: false, active: true, createdAt, updatedAt: createdAt },
       { id: 'task_2', restaurantId: restaurant.id, title: 'Протереть столы на террасе', description: 'Фото не отдельный раздел, а часть задачи.', assignmentType: 'position', assignedPosition: 'Клининг', status: 'overdue', dueDate: new Date().toISOString().slice(0, 10), dueTime: '10:30', requiresPhoto: true, active: true, createdAt, updatedAt: createdAt },
     ],
+    checklistRuns: [],
     checklistTemplates: [
       { id: 'checklist_1', restaurantId: restaurant.id, title: 'Открытие зала', type: 'opening', position: 'Администратор', active: true, startTime: '09:00', endTime: '11:00', createdAt, updatedAt: createdAt, items: [
         { id: 'checklist_item_1', title: 'Проверить чистоту входной зоны', required: true, requiresCompletionPhoto: false, order: 1 },
@@ -454,6 +455,7 @@ function collectionByPath(state, name) {
     employees: 'employees',
     tasks: 'tasks',
     checklists: 'checklistTemplates',
+    'checklist-runs': 'checklistRuns',
     halls: 'halls',
     tables: 'tables',
     bookings: 'bookings',
@@ -713,7 +715,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
     state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
 
-    const keys = ['employees', 'tasks', 'checklistTemplates', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'inventoryAssignments', 'inventoryProducts', 'ttkItems']
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'inventoryAssignments', 'inventoryProducts', 'ttkItems']
     for (const key of keys) {
       if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
     }
@@ -727,7 +729,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
 }
 
 async function handleCollections(req, res, state, pathname, auth) {
-  const match = pathname.match(/^\/api\/(employees|tasks|checklists|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|inventory-assignments|inventory-products|ttk)(?:\/([^/]+))?(?:\/([^/]+))?$/)
+  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|inventory-assignments|inventory-products|ttk)(?:\/([^/]+))?(?:\/([^/]+))?$/)
   if (!match) return false
   const [, name, itemId, action] = match
   const collection = collectionByPath(state, name)
@@ -940,6 +942,7 @@ async function handleDashboard(req, res, state, pathname, auth) {
   const employees = state.employees.filter((item) => item.restaurantId === restaurantId)
   const tasks = state.tasks.filter((item) => item.restaurantId === restaurantId)
   const checklists = state.checklistTemplates.filter((item) => item.restaurantId === restaurantId)
+  const checklistRuns = (state.checklistRuns || []).filter((item) => item.restaurantId === restaurantId)
   const bookings = state.bookings.filter((item) => item.restaurantId === restaurantId)
   const technicalRequests = state.technicalRequests.filter((item) => item.restaurantId === restaurantId)
   const inventoryAssignments = state.inventoryAssignments.filter((item) => item.restaurantId === restaurantId)
@@ -958,6 +961,7 @@ async function handleDashboard(req, res, state, pathname, auth) {
     employees,
     tasks,
     checklists,
+    checklistRuns,
     bookings,
     technicalRequests,
     inventoryAssignments,
@@ -991,6 +995,36 @@ async function handleMobile(req, res, state, pathname, auth) {
         hallPlan: state.bookings.filter((item) => item.restaurantId === restaurantId),
       },
     })
+    return true
+  }
+
+
+  if (pathname === '/api/mobile/shift' && req.method === 'PATCH') {
+    const body = await readBody(req)
+    const isOpen = Boolean(body.open)
+    let employee = state.employees.find((item) => item.restaurantId === restaurantId && item.userId === payload.user.id)
+    if (!employee) {
+      const createdAt = nowIso()
+      employee = {
+        id: id('employee'),
+        restaurantId,
+        userId: payload.user.id,
+        name: payload.user.name,
+        login: payload.user.login,
+        position: payload.membership.position || 'Сотрудник',
+        status: 'active',
+        shiftStatus: 'closed',
+        attestationPercent: 0,
+        createdAt,
+        updatedAt: createdAt,
+      }
+      state.employees.push(employee)
+    }
+    employee.shiftStatus = isOpen ? 'open' : 'closed'
+    employee.shiftUpdatedAt = nowIso()
+    employee.updatedAt = nowIso()
+    await saveState(state)
+    send(res, 200, { ok: true, shiftStatus: employee.shiftStatus, employee })
     return true
   }
 

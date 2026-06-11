@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { api } from '../../shared/api/client'
 import {
   BookIcon,
   CalendarIcon,
@@ -7,9 +8,10 @@ import {
   TeamIcon,
   UserIcon,
 } from '../../shared/ui/Icon'
+import './KnowledgeBasePage.css'
 
 type KnowledgeSectionId =
-  | 'intro'
+  | 'company_intro'
   | 'hierarchy'
   | 'documents'
   | 'guests_events'
@@ -17,174 +19,49 @@ type KnowledgeSectionId =
   | 'team_wall'
 
 type MaterialStatus = 'published' | 'draft' | 'hidden' | 'planned'
-type MaterialType = 'photo' | 'video' | 'scheme' | 'document' | 'event' | 'guest' | 'team_post'
+type MaterialType = 'photo' | 'video' | 'scheme' | 'pdf' | 'instruction' | 'event' | 'guest' | 'team_post'
+
+type KnowledgeMaterial = {
+  id: string
+  section: KnowledgeSectionId
+  title: string
+  type: MaterialType
+  status: MaterialStatus
+  description?: string
+  author?: string
+  updatedAt?: string
+  fileName?: string
+  eventDate?: string
+  eventTime?: string
+  guestPhone?: string
+  guestPreferences?: string
+  guestRestrictions?: string
+  guestComment?: string
+}
 
 type KnowledgeSection = {
   id: KnowledgeSectionId
   title: string
-  count: number
   description: string
   icon: ReactNode
   parent?: string
 }
 
-type KnowledgeMaterial = {
-  id: string
-  sectionId: KnowledgeSectionId
-  title: string
-  type: MaterialType
-  status: MaterialStatus
-  updatedAt: string
-  author: string
-  summary: string
-}
-
 const sections: KnowledgeSection[] = [
-  {
-    id: 'intro',
-    title: 'Знакомство с компанией',
-    count: 12,
-    description: 'Фото, видео и короткие карточки адаптации',
-    icon: <UserIcon />,
-  },
-  {
-    id: 'hierarchy',
-    title: 'Иерархия и ответственность',
-    count: 8,
-    description: 'Команда, должности и зоны ответственности',
-    icon: <TeamIcon />,
-  },
-  {
-    id: 'documents',
-    title: 'Документы компании',
-    count: 9,
-    description: 'Обучающие PDF, инструкции и правила',
-    icon: <BookIcon />,
-  },
-  {
-    id: 'guests_events',
-    title: 'Мы и гости',
-    count: 5,
-    description: 'События с гостями: были, есть и будут',
-    icon: <CalendarIcon />,
-    parent: 'Корпоративная жизнь',
-  },
-  {
-    id: 'regular_guests',
-    title: 'Постоянные гости',
-    count: 6,
-    description: 'Предпочтения, ограничения и сервисные заметки',
-    icon: <UserIcon />,
-    parent: 'Корпоративная жизнь',
-  },
-  {
-    id: 'team_wall',
-    title: 'Мы — команда',
-    count: 4,
-    description: 'Корпоративы, дни рождения и внутренняя стена',
-    icon: <TeamIcon />,
-    parent: 'Корпоративная жизнь',
-  },
-]
-
-const materials: KnowledgeMaterial[] = [
-  {
-    id: 'm1',
-    sectionId: 'intro',
-    title: 'Первый день в ресторане',
-    type: 'video',
-    status: 'published',
-    updatedAt: 'сегодня',
-    author: 'Иван Петров',
-    summary: 'Короткое видео для нового сотрудника: куда прийти, к кому обратиться, что сделать в первую смену.',
-  },
-  {
-    id: 'm2',
-    sectionId: 'intro',
-    title: 'Как устроен ресторан',
-    type: 'photo',
-    status: 'published',
-    updatedAt: 'вчера',
-    author: 'Анна Смирнова',
-    summary: 'Фото основных зон ресторана и короткие пояснения для адаптации.',
-  },
-  {
-    id: 'm3',
-    sectionId: 'hierarchy',
-    title: 'Схема команды смены',
-    type: 'scheme',
-    status: 'published',
-    updatedAt: 'сегодня',
-    author: 'Иван Петров',
-    summary: 'Кто кому подчиняется, обязательные зоны со звёздочкой и комментарии по ответственности.',
-  },
-  {
-    id: 'm4',
-    sectionId: 'documents',
-    title: 'Стандарты сервиса для зала',
-    type: 'document',
-    status: 'published',
-    updatedAt: '10 июня',
-    author: 'Анна Смирнова',
-    summary: 'Обучающий PDF для официантов и хостес: приветствие, посадка, коммуникация с гостем.',
-  },
-  {
-    id: 'm5',
-    sectionId: 'documents',
-    title: 'Правила безопасности на кухне',
-    type: 'document',
-    status: 'published',
-    updatedAt: '8 июня',
-    author: 'Мария Иванова',
-    summary: 'Инструкция для сотрудников кухни: санитария, оборудование, хранение и безопасная работа.',
-  },
-  {
-    id: 'm6',
-    sectionId: 'guests_events',
-    title: 'День рождения ресторана',
-    type: 'event',
-    status: 'planned',
-    updatedAt: '15 июня',
-    author: 'Иван Петров',
-    summary: 'Вечер для команды и гостей: живая музыка, специальное меню и фотографии события.',
-  },
-  {
-    id: 'm7',
-    sectionId: 'guests_events',
-    title: 'Дегустация нового меню',
-    type: 'event',
-    status: 'published',
-    updatedAt: '10 июня',
-    author: 'Анна Смирнова',
-    summary: 'Событие с постоянными гостями и командой зала.',
-  },
-  {
-    id: 'm8',
-    sectionId: 'regular_guests',
-    title: 'Анна Смирнова',
-    type: 'guest',
-    status: 'published',
-    updatedAt: 'сегодня',
-    author: 'Мария Иванова',
-    summary: 'Любит стол у окна, без кинзы, часто приходит с ребёнком — нужен детский стул.',
-  },
-  {
-    id: 'm9',
-    sectionId: 'team_wall',
-    title: 'День рождения Сергея',
-    type: 'team_post',
-    status: 'published',
-    updatedAt: '9 июня',
-    author: 'Анна Смирнова',
-    summary: 'Фото команды и поздравление старшего бармена.',
-  },
+  { id: 'company_intro', title: 'Знакомство с компанией', description: 'Фото, видео и материалы адаптации', icon: <UserIcon /> },
+  { id: 'hierarchy', title: 'Иерархия и ответственность', description: 'Команда, должности и зоны ответственности', icon: <TeamIcon /> },
+  { id: 'documents', title: 'Документы компании', description: 'Обучающие PDF, инструкции и правила', icon: <BookIcon /> },
+  { id: 'guests_events', title: 'Мы и гости', description: 'События с гостями: были, есть и будут', icon: <CalendarIcon />, parent: 'Корпоративная жизнь' },
+  { id: 'regular_guests', title: 'Постоянные гости', description: 'Предпочтения, ограничения и заметки', icon: <UserIcon />, parent: 'Корпоративная жизнь' },
+  { id: 'team_wall', title: 'Мы — команда', description: 'Корпоративы, дни рождения и внутренняя стена', icon: <TeamIcon />, parent: 'Корпоративная жизнь' },
 ]
 
 const typeLabels: Record<MaterialType, string> = {
   photo: 'Фото',
   video: 'Видео',
   scheme: 'Схема',
-  document: 'Документ',
+  pdf: 'PDF',
+  instruction: 'Инструкция',
   event: 'Событие',
   guest: 'Гость',
   team_post: 'Пост команды',
@@ -197,259 +74,193 @@ const statusLabels: Record<MaterialStatus, string> = {
   planned: 'Запланировано',
 }
 
+function defaultTypeForSection(section: KnowledgeSectionId): MaterialType {
+  if (section === 'hierarchy') return 'scheme'
+  if (section === 'documents') return 'pdf'
+  if (section === 'guests_events') return 'event'
+  if (section === 'regular_guests') return 'guest'
+  if (section === 'team_wall') return 'team_post'
+  return 'video'
+}
+
+function defaultTitleForSection(section: KnowledgeSectionId) {
+  if (section === 'company_intro') return 'Новый материал адаптации'
+  if (section === 'hierarchy') return 'Новая схема ответственности'
+  if (section === 'documents') return 'Новый обучающий документ'
+  if (section === 'guests_events') return 'Новое событие'
+  if (section === 'regular_guests') return 'Новый постоянный гость'
+  return 'Новая запись команды'
+}
+
 function StatusBadge({ status }: { status: MaterialStatus }) {
   return <span className={`knowledge-status knowledge-status--${status}`}>{statusLabels[status]}</span>
 }
 
 function TypeBadge({ type }: { type: MaterialType }) {
-  return <span className="knowledge-type">{typeLabels[type]}</span>
-}
-
-function SectionCard({ section, active, onClick }: { section: KnowledgeSection; active: boolean; onClick: () => void }) {
-  return (
-    <button className={active ? 'knowledge-section knowledge-section--active' : 'knowledge-section'} type="button" onClick={onClick}>
-      <span className="knowledge-section__icon">{section.icon}</span>
-      <div>
-        <strong>{section.title}</strong>
-        <p>{section.description}</p>
-      </div>
-      <small>{section.count}</small>
-    </button>
-  )
-}
-
-function CorporateSubsection({ section, active, onClick }: { section: KnowledgeSection; active: boolean; onClick: () => void }) {
-  return (
-    <button className={active ? 'knowledge-corporate-item knowledge-corporate-item--active' : 'knowledge-corporate-item'} type="button" onClick={onClick}>
-      <span />
-      <strong>{section.title}</strong>
-      <small>{section.count}</small>
-    </button>
-  )
-}
-
-function EditorIntro({ material }: { material: KnowledgeMaterial }) {
-  return (
-    <div className="knowledge-editor-form">
-      <label>
-        <span>Название материала</span>
-        <input defaultValue={material.title} />
-      </label>
-      <label>
-        <span>Тип</span>
-        <select defaultValue={material.type}>
-          <option value="photo">Фото</option>
-          <option value="video">Видео</option>
-          <option value="scheme">Схема</option>
-        </select>
-      </label>
-      <label>
-        <span>Короткое описание</span>
-        <textarea defaultValue={material.summary} rows={4} />
-      </label>
-      <div className="knowledge-media-row">
-        <div className="knowledge-media-thumb">Фото</div>
-        <div className="knowledge-media-thumb">Видео</div>
-        <button type="button">Добавить медиа</button>
-      </div>
-    </div>
-  )
-}
-
-function EditorHierarchy() {
-  return (
-    <div className="knowledge-editor-form">
-      <label>
-        <span>Название схемы</span>
-        <input defaultValue="Схема команды смены" />
-      </label>
-      <div className="knowledge-hierarchy-list">
-        <div className="knowledge-hierarchy-node">
-          <strong>Иван Петров</strong>
-          <span>Управляющий</span>
-          <p>* Контроль смены<br />* Сотрудники</p>
-          <small>Комментарий: отвечает за запуск смены и связь с владельцем</small>
-        </div>
-        <div className="knowledge-hierarchy-node">
-          <strong>Сергей Петров</strong>
-          <span>Старший бармен</span>
-          <p>* Бар<br />* Инвентаризация бара</p>
-          <small>Комментарий: обучает новых барменов</small>
-        </div>
-      </div>
-      <button className="knowledge-outline-button" type="button">Добавить сотрудника в схему</button>
-    </div>
-  )
-}
-
-function EditorDocument({ material }: { material: KnowledgeMaterial }) {
-  return (
-    <div className="knowledge-editor-form">
-      <label>
-        <span>Название документа</span>
-        <input defaultValue={material.title} />
-      </label>
-      <label>
-        <span>Тип документа</span>
-        <select defaultValue="Обучающий PDF">
-          <option>Обучающий PDF</option>
-          <option>Инструкция</option>
-          <option>Регламент</option>
-          <option>Правила компании</option>
-          <option>Философия компании</option>
-          <option>Видеоинструкция</option>
-        </select>
-      </label>
-      <div className="knowledge-upload-box">
-        <BookIcon />
-        <strong>PDF / видео / инструкция</strong>
-        <p>Загрузите обучающий материал для сотрудников. Чек-листы сюда не добавляются.</p>
-        <button type="button">Выбрать файл</button>
-      </div>
-      <label>
-        <span>Описание для сотрудника</span>
-        <textarea defaultValue={material.summary} rows={3} />
-      </label>
-    </div>
-  )
-}
-
-function EditorEvent({ material }: { material: KnowledgeMaterial }) {
-  return (
-    <div className="knowledge-editor-form">
-      <label>
-        <span>Название события</span>
-        <input defaultValue={material.title} />
-      </label>
-      <div className="knowledge-two-cols">
-        <label>
-          <span>Дата</span>
-          <input defaultValue="15.06.2026" />
-        </label>
-        <label>
-          <span>Время</span>
-          <input defaultValue="19:00" />
-        </label>
-      </div>
-      <label>
-        <span>Статус</span>
-        <select defaultValue="planned">
-          <option value="published">Опубликовано</option>
-          <option value="planned">Запланировано</option>
-          <option value="draft">Черновик</option>
-          <option value="hidden">Скрыто</option>
-        </select>
-      </label>
-      <label>
-        <span>Описание</span>
-        <textarea defaultValue={material.summary} rows={4} />
-      </label>
-      <div className="knowledge-media-row">
-        <div className="knowledge-media-thumb">Фото</div>
-        <div className="knowledge-media-thumb">Видео</div>
-        <button type="button">Добавить</button>
-      </div>
-    </div>
-  )
-}
-
-function EditorGuest({ material }: { material: KnowledgeMaterial }) {
-  return (
-    <div className="knowledge-editor-form">
-      <label>
-        <span>Имя гостя</span>
-        <input defaultValue={material.title} />
-      </label>
-      <label>
-        <span>Телефон</span>
-        <input placeholder="Необязательно" />
-      </label>
-      <label>
-        <span>Предпочтения</span>
-        <textarea defaultValue="Любит стол у окна, часто заказывает чизкейк и капучино." rows={3} />
-      </label>
-      <label>
-        <span>Ограничения / аллергии</span>
-        <input defaultValue="Без кинзы" />
-      </label>
-      <label>
-        <span>Комментарий для сервиса</span>
-        <textarea defaultValue="Приходит с ребёнком, нужен детский стул." rows={3} />
-      </label>
-    </div>
-  )
-}
-
-function EditorTeamPost({ material }: { material: KnowledgeMaterial }) {
-  return (
-    <div className="knowledge-editor-form">
-      <label>
-        <span>Заголовок</span>
-        <input defaultValue={material.title} />
-      </label>
-      <label>
-        <span>Описание</span>
-        <textarea defaultValue={material.summary} rows={4} />
-      </label>
-      <div className="knowledge-media-row">
-        <div className="knowledge-media-thumb">Фото</div>
-        <div className="knowledge-media-thumb">Видео</div>
-        <button type="button">Добавить</button>
-      </div>
-    </div>
-  )
-}
-
-function EditorContent({ material }: { material: KnowledgeMaterial }) {
-  if (material.sectionId === 'hierarchy') return <EditorHierarchy />
-  if (material.sectionId === 'documents') return <EditorDocument material={material} />
-  if (material.sectionId === 'guests_events') return <EditorEvent material={material} />
-  if (material.sectionId === 'regular_guests') return <EditorGuest material={material} />
-  if (material.sectionId === 'team_wall') return <EditorTeamPost material={material} />
-  return <EditorIntro material={material} />
+  return <span className="knowledge-type">{typeLabels[type] || type}</span>
 }
 
 export function KnowledgeBasePage() {
-  const [selectedSectionId, setSelectedSectionId] = useState<KnowledgeSectionId>('guests_events')
-  const [selectedMaterialId, setSelectedMaterialId] = useState('m6')
+  const [items, setItems] = useState<KnowledgeMaterial[]>([])
+  const [selectedSectionId, setSelectedSectionId] = useState<KnowledgeSectionId>('company_intro')
+  const [selectedMaterialId, setSelectedMaterialId] = useState('')
+  const [query, setQuery] = useState('')
+  const [draft, setDraft] = useState<KnowledgeMaterial | null>(null)
+  const [notice, setNotice] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+
+  async function loadMaterials(nextSelectedId?: string) {
+    setIsLoading(true)
+    const response = await api.list<KnowledgeMaterial>('knowledge')
+    const normalized = response.items.map((item) => ({
+      ...item,
+      section: (item.section || 'company_intro') as KnowledgeSectionId,
+      type: (item.type || defaultTypeForSection((item.section || 'company_intro') as KnowledgeSectionId)) as MaterialType,
+      status: (item.status || 'draft') as MaterialStatus,
+      description: item.description || '',
+    }))
+    setItems(normalized)
+    const selectedId = nextSelectedId || selectedMaterialId
+    const selected = normalized.find((item) => item.id === selectedId) || normalized.find((item) => item.section === selectedSectionId) || normalized[0]
+    if (selected) {
+      setSelectedSectionId(selected.section)
+      setSelectedMaterialId(selected.id)
+      setDraft(selected)
+    } else {
+      setDraft(null)
+      setSelectedMaterialId('')
+    }
+    setIsLoading(false)
+  }
+
+  useEffect(() => {
+    void loadMaterials().catch(() => {
+      setNotice('Не удалось загрузить базу знаний.')
+      setIsLoading(false)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const counts = useMemo(() => {
+    return items.reduce<Record<string, number>>((acc, item) => {
+      acc[item.section] = (acc[item.section] || 0) + 1
+      return acc
+    }, {})
+  }, [items])
 
   const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0]
-  const visibleMaterials = useMemo(() => materials.filter((material) => material.sectionId === selectedSectionId), [selectedSectionId])
-  const selectedMaterial = visibleMaterials.find((material) => material.id === selectedMaterialId) ?? visibleMaterials[0]
+  const visibleMaterials = useMemo(() => {
+    const lowerQuery = query.trim().toLowerCase()
+    return items.filter((item) => {
+      if (item.section !== selectedSectionId) return false
+      if (!lowerQuery) return true
+      return [item.title, item.description, item.author, item.fileName]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(lowerQuery))
+    })
+  }, [items, query, selectedSectionId])
+
   const mainSections = sections.filter((section) => !section.parent)
   const corporateSections = sections.filter((section) => section.parent === 'Корпоративная жизнь')
 
-  const handleSelectSection = (sectionId: KnowledgeSectionId) => {
+  function selectSection(sectionId: KnowledgeSectionId) {
     setSelectedSectionId(sectionId)
-    const firstMaterial = materials.find((material) => material.sectionId === sectionId)
-    if (firstMaterial) setSelectedMaterialId(firstMaterial.id)
+    const material = items.find((item) => item.section === sectionId)
+    if (material) {
+      setSelectedMaterialId(material.id)
+      setDraft(material)
+    } else {
+      const blank: KnowledgeMaterial = {
+        id: '',
+        section: sectionId,
+        title: defaultTitleForSection(sectionId),
+        type: defaultTypeForSection(sectionId),
+        status: 'draft',
+        description: '',
+        author: 'Управляющий',
+      }
+      setSelectedMaterialId('')
+      setDraft(blank)
+    }
+  }
+
+  function selectMaterial(material: KnowledgeMaterial) {
+    setSelectedMaterialId(material.id)
+    setDraft(material)
+  }
+
+  async function createMaterial() {
+    const payload: Omit<KnowledgeMaterial, 'id'> = {
+      section: selectedSectionId,
+      title: defaultTitleForSection(selectedSectionId),
+      type: defaultTypeForSection(selectedSectionId),
+      status: 'draft',
+      description: '',
+      author: 'Управляющий',
+    }
+    const created = await api.create<KnowledgeMaterial>('knowledge', payload)
+    setNotice('Материал создан.')
+    await loadMaterials(created.id)
+  }
+
+  async function saveMaterial(statusOverride?: MaterialStatus) {
+    if (!draft) return
+    const payload = { ...draft, status: statusOverride || draft.status }
+    if (!draft.id) {
+      const created = await api.create<KnowledgeMaterial>('knowledge', payload)
+      setNotice(statusOverride === 'published' ? 'Материал создан и опубликован.' : 'Материал создан.')
+      await loadMaterials(created.id)
+      return
+    }
+    const updated = await api.update<KnowledgeMaterial>('knowledge', draft.id, payload)
+    setNotice(statusOverride === 'published' ? 'Материал опубликован.' : 'Изменения сохранены.')
+    await loadMaterials(updated.id)
+  }
+
+  async function deleteMaterial() {
+    if (!draft?.id) return
+    if (!window.confirm('Удалить материал из базы знаний?')) return
+    await api.remove('knowledge', draft.id)
+    setNotice('Материал удалён.')
+    setDraft(null)
+    setSelectedMaterialId('')
+    await loadMaterials()
+  }
+
+  function updateDraft(patch: Partial<KnowledgeMaterial>) {
+    setDraft((current) => current ? { ...current, ...patch } : current)
   }
 
   return (
     <section className="knowledge-page">
+      {notice ? <button className="knowledge-notice" type="button" onClick={() => setNotice('')}>{notice}</button> : null}
       <div className="knowledge-layout">
         <aside className="knowledge-sections-card">
           <div className="knowledge-panel-title">
             <h2>Разделы</h2>
-            <button type="button">+</button>
           </div>
 
           <div className="knowledge-section-list">
             {mainSections.map((section) => (
-              <SectionCard key={section.id} section={section} active={section.id === selectedSectionId} onClick={() => handleSelectSection(section.id)} />
+              <button key={section.id} className={section.id === selectedSectionId ? 'knowledge-section knowledge-section--active' : 'knowledge-section'} type="button" onClick={() => selectSection(section.id)}>
+                <span className="knowledge-section__icon">{section.icon}</span>
+                <div><strong>{section.title}</strong><p>{section.description}</p></div>
+                <small>{counts[section.id] || 0}</small>
+              </button>
             ))}
 
             <div className={corporateSections.some((section) => section.id === selectedSectionId) ? 'knowledge-corporate knowledge-corporate--active' : 'knowledge-corporate'}>
               <div className="knowledge-corporate__header">
                 <span><BookIcon /></span>
-                <div>
-                  <strong>Корпоративная жизнь</strong>
-                  <p>События, гости и команда</p>
-                </div>
+                <div><strong>Корпоративная жизнь</strong><p>События, гости и команда</p></div>
               </div>
               <div className="knowledge-corporate__list">
                 {corporateSections.map((section) => (
-                  <CorporateSubsection key={section.id} section={section} active={section.id === selectedSectionId} onClick={() => handleSelectSection(section.id)} />
+                  <button key={section.id} className={section.id === selectedSectionId ? 'knowledge-corporate-item knowledge-corporate-item--active' : 'knowledge-corporate-item'} type="button" onClick={() => selectSection(section.id)}>
+                    <span />
+                    <strong>{section.title}</strong>
+                    <small>{counts[section.id] || 0}</small>
+                  </button>
                 ))}
               </div>
             </div>
@@ -457,49 +268,37 @@ export function KnowledgeBasePage() {
 
           <div className="knowledge-info-card">
             <strong>Что хранится здесь</strong>
-            <p>Фото, видео, схемы, обучающие PDF, инструкции, иерархия, гости и события команды.</p>
+            <p>Материалы адаптации, схемы ответственности, обучающие PDF, гости и события команды.</p>
           </div>
         </aside>
 
         <section className="knowledge-list-card">
           <div className="knowledge-list-header">
-            <div>
-              <h2>Материалы раздела</h2>
-              <p>{selectedSection.parent ? `${selectedSection.parent} › ${selectedSection.title}` : selectedSection.title}</p>
-            </div>
-            <button className="knowledge-primary-button" type="button">Добавить материал</button>
+            <div><h2>Материалы раздела</h2><p>{selectedSection.parent ? `${selectedSection.parent} › ${selectedSection.title}` : selectedSection.title}</p></div>
+            <button className="knowledge-primary-button" type="button" onClick={createMaterial}>Добавить материал</button>
           </div>
 
           <label className="knowledge-local-search">
             <SearchIcon />
-            <input placeholder="Поиск по материалам..." />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по материалам..." />
           </label>
 
           <div className="knowledge-table-scroll">
             <table className="knowledge-table">
               <thead>
-                <tr>
-                  <th>Название</th>
-                  <th>Тип</th>
-                  <th>Статус</th>
-                  <th>Обновлено</th>
-                  <th>Автор</th>
-                  <th>Действия</th>
-                </tr>
+                <tr><th>Название</th><th>Тип</th><th>Статус</th><th>Обновлено</th><th>Автор</th></tr>
               </thead>
               <tbody>
                 {visibleMaterials.map((material) => (
-                  <tr key={material.id} className={selectedMaterial?.id === material.id ? 'knowledge-table__row knowledge-table__row--active' : 'knowledge-table__row'}>
-                    <td>
-                      <button className="knowledge-material-name" type="button" onClick={() => setSelectedMaterialId(material.id)}>{material.title}</button>
-                    </td>
+                  <tr key={material.id} className={selectedMaterialId === material.id ? 'knowledge-table__row knowledge-table__row--active' : 'knowledge-table__row'} onClick={() => selectMaterial(material)}>
+                    <td><button className="knowledge-material-name" type="button" onClick={(event) => { event.stopPropagation(); selectMaterial(material) }}>{material.title}</button></td>
                     <td><TypeBadge type={material.type} /></td>
                     <td><StatusBadge status={material.status} /></td>
-                    <td>{material.updatedAt}</td>
-                    <td>{material.author}</td>
-                    <td><button className="knowledge-dots-button" type="button"><ChevronRightIcon /></button></td>
+                    <td>{material.updatedAt ? new Date(material.updatedAt).toLocaleDateString('ru-RU') : '—'}</td>
+                    <td>{material.author || '—'}</td>
                   </tr>
                 ))}
+                {!visibleMaterials.length ? <tr><td colSpan={5}><div className="knowledge-empty-row">В разделе пока нет материалов. Нажмите «Добавить материал».</div></td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -507,28 +306,40 @@ export function KnowledgeBasePage() {
 
         <aside className="knowledge-editor-card">
           <div className="knowledge-editor-card__header">
-            <div>
-              <h2>Редактор материала</h2>
-              <p>{selectedMaterial ? typeLabels[selectedMaterial.type] : 'Материал'}</p>
-            </div>
-            <button type="button">×</button>
+            <div><h2>Редактор материала</h2><p>{draft ? typeLabels[draft.type] || 'Материал' : 'Материал не выбран'}</p></div>
           </div>
 
-          {selectedMaterial ? (
+          {draft ? (
             <>
-              <EditorContent material={selectedMaterial} />
+              <div className="knowledge-editor-form">
+                <label><span>Название</span><input value={draft.title} onChange={(event) => updateDraft({ title: event.target.value })} /></label>
+                <div className="knowledge-two-cols">
+                  <label><span>Тип</span><select value={draft.type} onChange={(event) => updateDraft({ type: event.target.value as MaterialType })}><option value="photo">Фото</option><option value="video">Видео</option><option value="scheme">Схема</option><option value="pdf">PDF</option><option value="instruction">Инструкция</option><option value="event">Событие</option><option value="guest">Гость</option><option value="team_post">Пост команды</option></select></label>
+                  <label><span>Статус</span><select value={draft.status} onChange={(event) => updateDraft({ status: event.target.value as MaterialStatus })}><option value="draft">Черновик</option><option value="published">Опубликовано</option><option value="planned">Запланировано</option><option value="hidden">Скрыто</option></select></label>
+                </div>
+                <label><span>Автор / ответственный</span><input value={draft.author || ''} onChange={(event) => updateDraft({ author: event.target.value })} placeholder="Кто добавил материал" /></label>
+                <label><span>Описание</span><textarea value={draft.description || ''} onChange={(event) => updateDraft({ description: event.target.value })} rows={4} placeholder="Что должен понять сотрудник" /></label>
+
+                {draft.section === 'hierarchy' ? <div className="knowledge-hierarchy-list"><div className="knowledge-hierarchy-node"><strong>Обязательные зоны отмечайте звёздочкой</strong><span>Пример: * Зал, * Бар, комментарий без звёздочки</span><p>{draft.description || '* Зона ответственности\nКомментарий без звёздочки'}</p></div></div> : null}
+                {draft.section === 'regular_guests' ? <><label><span>Телефон гостя</span><input value={draft.guestPhone || ''} onChange={(event) => updateDraft({ guestPhone: event.target.value })} /></label><label><span>Предпочтения</span><textarea value={draft.guestPreferences || ''} onChange={(event) => updateDraft({ guestPreferences: event.target.value })} rows={3} /></label><label><span>Ограничения / аллергии</span><input value={draft.guestRestrictions || ''} onChange={(event) => updateDraft({ guestRestrictions: event.target.value })} /></label><label><span>Комментарий для сервиса</span><textarea value={draft.guestComment || ''} onChange={(event) => updateDraft({ guestComment: event.target.value })} rows={3} /></label></> : null}
+                {draft.section === 'guests_events' ? <div className="knowledge-two-cols"><label><span>Дата</span><input value={draft.eventDate || ''} onChange={(event) => updateDraft({ eventDate: event.target.value })} placeholder="15.06.2026" /></label><label><span>Время</span><input value={draft.eventTime || ''} onChange={(event) => updateDraft({ eventTime: event.target.value })} placeholder="19:00" /></label></div> : null}
+
+                <div className="knowledge-upload-box">
+                  <BookIcon />
+                  <strong>{draft.fileName || 'Файл не выбран'}</strong>
+                  <p>Укажите название файла или ссылку на материал, чтобы сотрудник понимал, что открыть или запросить у управляющего.</p>
+                  <button type="button" onClick={() => { const name = window.prompt('Название файла или ссылка на материал'); if (name) updateDraft({ fileName: name }) }}>Указать файл / ссылку</button>
+                </div>
+              </div>
+
               <div className="knowledge-editor-actions">
-                <button className="knowledge-primary-button" type="button">Сохранить</button>
-                <button className="knowledge-outline-button" type="button">Опубликовать</button>
-                <button className="knowledge-danger-button" type="button">Удалить</button>
+                <button className="knowledge-primary-button" type="button" onClick={() => saveMaterial()}>Сохранить</button>
+                <button className="knowledge-outline-button" type="button" onClick={() => saveMaterial('published')}>Опубликовать</button>
+                <button className="knowledge-danger-button" type="button" onClick={deleteMaterial} disabled={!draft.id}>Удалить</button>
               </div>
             </>
           ) : (
-            <div className="knowledge-empty-editor">
-              <BookIcon />
-              <strong>Выберите материал</strong>
-              <p>Откройте материал из списка, чтобы отредактировать его.</p>
-            </div>
+            <div className="knowledge-empty-editor"><BookIcon /><strong>{isLoading ? 'Загрузка...' : 'Выберите или создайте материал'}</strong><p>Материалы базы знаний будут доступны сотрудникам в мобильной версии.</p></div>
           )}
         </aside>
       </div>

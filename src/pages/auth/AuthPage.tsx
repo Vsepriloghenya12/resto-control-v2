@@ -89,6 +89,7 @@ function MobileHeader() {
 
 export function AuthPage() {
   const [activeTab, setActiveTab] = useState<AuthTab>('login')
+  const [supportOpen, setSupportOpen] = useState(false)
 
   return (
     <main className="auth-page">
@@ -132,7 +133,7 @@ export function AuthPage() {
             <button
               className="auth-support-button"
               type="button"
-              onClick={() => { window.location.href = 'mailto:support@resto-control.ru?subject=Поддержка Resto Control' }}
+              onClick={() => setSupportOpen(true)}
             >
               <MailIcon />
               <span>Поддержка</span>
@@ -140,6 +141,26 @@ export function AuthPage() {
           </div>
         </section>
       </div>
+      {supportOpen ? (
+        <div className="auth-support-modal" role="presentation" onMouseDown={() => setSupportOpen(false)}>
+          <section className="auth-support-dialog" role="dialog" aria-modal="true" aria-label="Поддержка" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="auth-support-dialog__header">
+              <div>
+                <h2>Поддержка</h2>
+                <p>Напишите вопрос управляющему или владельцу сервиса. На публичной странице обращение не отправляется автоматически.</p>
+              </div>
+              <button type="button" onClick={() => setSupportOpen(false)} aria-label="Закрыть">×</button>
+            </div>
+            <label>
+              <span>Ваш вопрос</span>
+              <textarea rows={4} placeholder="Например: не получается войти, нужен доступ сотрудника..." />
+            </label>
+            <div className="auth-support-dialog__actions">
+              <button type="button" onClick={() => setSupportOpen(false)}>Понятно</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }

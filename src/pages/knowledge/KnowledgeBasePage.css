@@ -593,3 +593,52 @@
     min-height: auto;
   }
 }
+
+.knowledge-notice {
+  position: fixed;
+  right: 24px;
+  top: 24px;
+  z-index: 100;
+  min-height: 44px;
+  border: 1px solid #ffd9b0;
+  border-radius: 14px;
+  padding: 0 16px;
+  background: #fff8f0;
+  color: #c75d00;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 16px 32px rgba(16, 24, 40, 0.08);
+}
+
+.knowledge-table__row {
+  cursor: pointer;
+}
+
+.knowledge-empty-row {
+  padding: 24px 0;
+  color: #667085;
+  font-weight: 750;
+}
+
+.knowledge-danger-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.knowledge-editor-form input,
+.knowledge-editor-form textarea,
+.knowledge-editor-form select {
+  pointer-events: auto;
+}
+
+.knowledge-upload-box button,
+.knowledge-primary-button,
+.knowledge-outline-button,
+.knowledge-danger-button,
+.knowledge-panel-title button,
+.knowledge-section,
+.knowledge-corporate-item,
+.knowledge-material-name {
+  cursor: pointer;
+}

@@ -1869,3 +1869,13 @@ button.owner-employee {
   font-size: 13px;
   font-weight: 800;
 }
+
+.owner-form-message {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 800;
+}

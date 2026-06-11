@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import type { Restaurant } from '../../features/auth/authTypes'
-import { apiRequest } from '../../shared/api/client'
+import { api, apiRequest } from '../../shared/api/client'
 import {
   AlertCircleIcon,
   BellIcon,
@@ -384,26 +384,49 @@ function AddRestaurantDialog({ onClose, onCreated }: { onClose: () => void; onCr
 }
 
 function SupportDialog({ onClose }: { onClose: () => void }) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function submitSupport() {
+    if (!title.trim() && !description.trim()) {
+      setMessage('Опишите вопрос.')
+      return
+    }
+    await api.create('technical-requests', {
+      title: title.trim() || 'Обращение в поддержку',
+      description: description.trim(),
+      area: 'Поддержка',
+      priority: 'medium',
+      status: 'new',
+      createdByPosition: 'Владелец / управляющий',
+    })
+    setMessage('Обращение создано. Оно появится в тех. заявках ресторана.')
+    setTitle('')
+    setDescription('')
+  }
+
   return (
     <div className="owner-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="owner-support-dialog" role="dialog" aria-modal="true" aria-label="Поддержка" onMouseDown={(event) => event.stopPropagation()}>
         <div className="owner-support-dialog__header">
           <div>
             <h2>Поддержка</h2>
-            <p>Опишите вопрос. Сообщение можно отправить на почту поддержки.</p>
+            <p>Создайте обращение. Оно сохранится как тех. заявка в текущем ресторане.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
         </div>
         <label>
           <span>Тема</span>
-          <input defaultValue="Вопрос по Resto Control" />
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: проблема с чек-листом" />
         </label>
         <label>
           <span>Сообщение</span>
-          <textarea rows={5} placeholder="Например: не открывается чек-лист, нужно помочь с оплатой, сотрудник не видит задачу..." />
+          <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={5} placeholder="Опишите, что нужно исправить или проверить" />
         </label>
+        {message ? <p className="owner-form-message">{message}</p> : null}
         <div className="owner-support-dialog__actions">
-          <button type="button" onClick={() => window.location.href = 'mailto:support@resto-control.ru?subject=Поддержка Resto Control'}>Написать на email</button>
+          <button type="button" onClick={() => void submitSupport()}>Создать обращение</button>
           <button type="button" onClick={onClose}>Закрыть</button>
         </div>
       </section>
@@ -470,17 +493,6 @@ function DashboardContent({ summary, onOpen }: { summary: DashboardSummary | nul
           ))}
         </div>
 
-        <div className="owner-zones-card">
-          <div className="owner-zones-card__header">
-            <h2>Чек-листы по должностям</h2>
-            <button type="button" onClick={() => onOpen('checklists')}>Открыть</button>
-          </div>
-          {model.zones.length ? (
-            <div className="owner-zones-list">
-              {model.zones.map((item) => <ProgressLine item={item} key={item.label} />)}
-            </div>
-          ) : <p className="owner-empty-text">Чек-листы ещё не созданы.</p>}
-        </div>
       </section>
 
       <section className="owner-metrics-grid" aria-label="Ключевые показатели смены">
@@ -488,19 +500,6 @@ function DashboardContent({ summary, onOpen }: { summary: DashboardSummary | nul
       </section>
 
       <section className="owner-lower-grid">
-        <article className="owner-section-card owner-zone-details">
-          <div className="owner-section-card__header">
-            <h2>Процессы ресторана</h2>
-            <button type="button" onClick={() => onOpen('checklists')}>Сегодня</button>
-          </div>
-          {model.zones.length ? (
-            <div className="owner-zone-details__list">
-              {model.zones.map((item) => <ProgressLine item={item} compact key={item.label} />)}
-            </div>
-          ) : <p className="owner-empty-text">Нет настроенных чек-листов. Создайте первый шаблон во вкладке «Чек-листы».</p>}
-          <button className="owner-link-button" type="button" onClick={() => onOpen('checklists')}>Перейти ко всем чек-листам</button>
-        </article>
-
         <article className="owner-section-card owner-attention-card">
           <div className="owner-section-card__header">
             <h2>Требует внимания</h2>
@@ -551,7 +550,6 @@ function DashboardContent({ summary, onOpen }: { summary: DashboardSummary | nul
 export function OwnerDashboardPage() {
   const { session, logout } = useSession()
   const [section, setSection] = useState<OwnerSection>('dashboard')
-  const [shiftOpen, setShiftOpen] = useState(true)
   const [globalSearch, setGlobalSearch] = useState('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
@@ -664,12 +662,7 @@ export function OwnerDashboardPage() {
           <span>Поддержка</span>
         </button>
 
-        <div className="owner-sidebar-status">
-          <span />
-          <strong>{shiftOpen ? 'Смена открыта' : 'Смена закрыта'}</strong>
-          <p>{shiftOpen ? 'Сегодня до 23:00' : 'Откройте смену перед работой'}</p>
-          <button type="button" onClick={() => setShiftOpen((value) => !value)}>{shiftOpen ? 'Закрыть смену' : 'Открыть смену'}</button>
-        </div>
+
       </aside>
 
       <section className="owner-main">

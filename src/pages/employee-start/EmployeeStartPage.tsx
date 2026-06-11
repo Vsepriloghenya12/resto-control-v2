@@ -14,14 +14,14 @@ import {
   ClockIcon,
   LogoutIcon,
   MailIcon,
-  MoreIcon,
   OverviewIcon,
   PlusIcon,
   SearchIcon,
+  UserIcon,
 } from '../../shared/ui/Icon'
 import './EmployeeStartPage.css'
 
-type MobileTab = 'overview' | 'tasks' | 'request' | 'checklists' | 'hallPlan' | 'more'
+type MobileTab = 'overview' | 'tasks' | 'request' | 'checklists' | 'hallPlan'
 type DetailKind = 'task' | 'checklist' | 'inventory' | 'notification' | 'knowledge' | 'guest' | 'support' | null
 type HallStatus = 'free' | 'reserved' | 'arrived' | 'occupied' | 'disabled'
 type HallMode = 'tables' | 'bookings'
@@ -36,7 +36,7 @@ type TechRequest = { id: string; title: string; description?: string; priority?:
 
 type DashboardSummary = {
   restaurant: { id: string; name: string }
-  employees?: Array<{ id: string; name: string; position: string; shiftStatus?: string; status?: string }>
+  employees?: Array<{ id: string; userId?: string; name: string; position: string; shiftStatus?: string; status?: string }>
   tasks?: Task[]
   checklists?: Checklist[]
   bookings?: Array<{ id: string; guestName?: string; status?: string; time?: string; guestsCount?: number }>
@@ -98,6 +98,47 @@ function getTone(status?: string): 'green' | 'orange' | 'blue' | 'red' | 'purple
   return 'blue'
 }
 
+
+function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSaved: () => Promise<void> }) {
+  const [progress, setProgress] = useState<Record<string, boolean>>({})
+  const [saving, setSaving] = useState(false)
+  const items = checklist.items || []
+  const doneCount = items.filter((item) => progress[item.id]).length
+
+  async function saveRun() {
+    setSaving(true)
+    await api.create('checklist-runs', {
+      checklistId: checklist.id,
+      title: checklist.title,
+      position: checklist.position,
+      status: doneCount === items.length ? 'completed' : 'in_progress',
+      completedItems: doneCount,
+      totalItems: items.length,
+      items: items.map((item) => ({ ...item, done: Boolean(progress[item.id]) })),
+      submittedAt: new Date().toISOString(),
+    })
+    await onSaved()
+    setSaving(false)
+  }
+
+  return (
+    <div className="employee-mobile__checklist-run">
+      <p className="employee-mobile__run-progress">Выполнено {doneCount} из {items.length}</p>
+      <div className="employee-mobile__detail-list">
+        {items.length ? items.map((item, index) => (
+          <button key={item.id || item.title} className={progress[item.id] ? 'employee-mobile__detail-item employee-mobile__detail-item--done' : 'employee-mobile__detail-item'} type="button" onClick={() => setProgress((current) => ({ ...current, [item.id]: !current[item.id] }))}>
+            <strong>{index + 1}. {item.title}</strong>
+            <span>{progress[item.id] ? 'Выполнено' : item.required ? 'Обязательный' : 'Необязательный'}{item.requiresCompletionPhoto ? ' · нужно фото' : ''}</span>
+          </button>
+        )) : <p>Пункты чек-листа ещё не настроены.</p>}
+      </div>
+      <div className="employee-mobile__sheet-actions">
+        <button type="button" onClick={() => void saveRun()} disabled={!items.length || saving}>{saving ? 'Сохраняю...' : 'Сохранить прохождение'}</button>
+      </div>
+    </div>
+  )
+}
+
 export function EmployeeStartPage() {
   const { session, logout } = useSession()
   const [activeTab, setActiveTab] = useState<MobileTab>('overview')
@@ -157,6 +198,8 @@ export function EmployeeStartPage() {
   async function loadData() {
     const nextSummary = await apiRequest<DashboardSummary>('/api/dashboard/summary')
     setSummary(nextSummary)
+    const currentEmployee = nextSummary.employees?.find((item) => item.userId === session?.user.id || item.name === session?.user.name)
+    if (currentEmployee?.shiftStatus) setShiftOpen(currentEmployee.shiftStatus === 'open')
   }
 
   async function loadHallPlan() {
@@ -169,6 +212,21 @@ export function EmployeeStartPage() {
     setHalls(nextHalls)
     setHallTables(nextTables)
     setSelectedHallId((current) => current && nextHalls.some((hall) => hall.id === current) ? current : nextHalls[0]?.id || '')
+  }
+
+
+
+  async function toggleShift() {
+    const nextOpen = !shiftOpen
+    setShiftOpen(nextOpen)
+    try {
+      await apiRequest('/api/mobile/shift', { method: 'PATCH', body: JSON.stringify({ open: nextOpen }) })
+      setNotice(nextOpen ? 'Смена открыта.' : 'Смена закрыта.')
+      await loadData()
+    } catch (error) {
+      setShiftOpen(!nextOpen)
+      setNotice(error instanceof Error ? error.message : 'Не удалось сохранить смену.')
+    }
   }
 
   useEffect(() => {
@@ -198,17 +256,7 @@ export function EmployeeStartPage() {
       kind: 'checklist',
       title: checklist.title,
       subtitle: `${checklist.startTime || '—'} — ${checklist.endTime || '—'}`,
-      body: (
-        <div className="employee-mobile__detail-list">
-          {(checklist.items || []).length ? checklist.items?.map((item, index) => (
-            <button key={item.id || item.title} type="button" onClick={() => setNotice(`Пункт отмечен: ${item.title}`)}>
-              <strong>{index + 1}. {item.title}</strong>
-              <span>{item.required ? 'Обязательный' : 'Необязательный'}{item.requiresCompletionPhoto ? ' · нужно фото' : ''}</span>
-            </button>
-          )) : <p>Пункты чек-листа ещё не настроены.</p>}
-        </div>
-      ),
-      actions: <button type="button" onClick={() => setNotice('Прохождение чек-листа сохранено.')}>Сохранить прохождение</button>,
+      body: <ChecklistRunPanel checklist={checklist} onSaved={async () => { setNotice('Прохождение чек-листа сохранено.'); setDetail(null); await loadData() }} />,
     }
   }
 
@@ -225,6 +273,86 @@ export function EmployeeStartPage() {
         </div>
       ),
       actions: <button type="button" onClick={() => submitInventory(item.id)}>Отметить как сданную</button>,
+    }
+  }
+
+  function knowledgeDetail(item: Knowledge): DetailState {
+    return {
+      kind: 'knowledge',
+      title: item.title,
+      subtitle: item.type || 'Материал базы знаний',
+      body: (
+        <div className="employee-mobile__detail-text">
+          <p>{item.description || 'Описание материала не заполнено.'}</p>
+          <span>Раздел: {item.section || 'база знаний'}</span>
+          <span>Статус: {statusText(item.status)}</span>
+        </div>
+      ),
+    }
+  }
+
+  function guestDetail(guest: Guest): DetailState {
+    return {
+      kind: 'guest',
+      title: guest.name,
+      subtitle: guest.phone || 'Постоянный гость',
+      body: (
+        <div className="employee-mobile__detail-text">
+          <span>Предпочтения: {guest.preferences || 'не указаны'}</span>
+          <span>Ограничения: {guest.restrictions || 'нет'}</span>
+          <span>Любимый стол: {guest.favoriteTable || 'не указан'}</span>
+          <p>{guest.serviceComment || 'Комментарий для сервиса не заполнен.'}</p>
+        </div>
+      ),
+      actions: guest.phone ? <button type="button" onClick={() => window.location.href = `tel:${guest.phone}`}>Позвонить</button> : undefined,
+    }
+  }
+
+  function knowledgeListDetail(): DetailState {
+    const materials = summary?.knowledgeMaterials || []
+    return {
+      kind: 'knowledge',
+      title: 'База знаний',
+      subtitle: employee.restaurantName,
+      body: (
+        <div className="employee-mobile__detail-list">
+          {materials.length ? materials.map((item) => (
+            <button key={item.id} type="button" onClick={() => setDetail(knowledgeDetail(item))}>
+              <strong>{item.title}</strong>
+              <span>{item.description || item.type || 'Материал'}</span>
+            </button>
+          )) : <p>Материалы ещё не добавлены управляющим.</p>}
+        </div>
+      ),
+    }
+  }
+
+  function guestsListDetail(): DetailState {
+    const guests = summary?.guests || []
+    return {
+      kind: 'guest',
+      title: 'Постоянные гости',
+      subtitle: employee.restaurantName,
+      body: (
+        <div className="employee-mobile__detail-list">
+          {guests.length ? guests.map((guest) => (
+            <button key={guest.id} type="button" onClick={() => setDetail(guestDetail(guest))}>
+              <strong>{guest.name}</strong>
+              <span>{guest.preferences || guest.serviceComment || guest.phone || 'Карточка гостя'}</span>
+            </button>
+          )) : <p>Постоянные гости ещё не добавлены.</p>}
+        </div>
+      ),
+    }
+  }
+
+  function supportDetail(): DetailState {
+    return {
+      kind: 'support',
+      title: 'Поддержка',
+      subtitle: 'Создайте заявку или напишите управляющему',
+      body: <div className="employee-mobile__detail-text"><p>Для технической проблемы нажмите центральную кнопку «Тех. заявка». По срочному вопросу можно написать в поддержку.</p></div>,
+      actions: <button type="button" onClick={async () => { await api.create('technical-requests', { title: 'Обращение в поддержку', description: 'Запрос помощи из мобильного приложения', area: 'Поддержка', priority: 'medium', status: 'new', createdByPosition: employee.position }); setNotice('Обращение создано.'); setDetail(null) }}>Создать обращение</button>,
     }
   }
 
@@ -249,6 +377,25 @@ export function EmployeeStartPage() {
     setSelectedTable(null)
   }
 
+  async function seatWalkIn(table: MobileHallTable | null) {
+    if (!table) return
+    const booking = await api.create<MobileBooking>('bookings', {
+      hallId: table.hallId,
+      tableId: table.id,
+      guestName: 'Гости без брони',
+      phone: '',
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toTimeString().slice(0, 5),
+      guestsCount: table.seats || 1,
+      status: 'seated',
+      comment: 'Посадка без предварительной брони',
+    })
+    await api.bookingStatus(booking.id, 'seated')
+    setNotice('Гости посажены за стол.')
+    await loadHallPlan()
+    setSelectedTable(null)
+  }
+
   const selectedHall = halls.find((hall) => hall.id === selectedHallId) ?? halls[0]
   const visibleHallTables = hallTables.filter((table) => {
     if (table.hallId !== selectedHallId) return false
@@ -264,6 +411,12 @@ export function EmployeeStartPage() {
     { id: 'hall', title: 'План зала', subtitle: `${(summary?.bookings || []).length} броней`, meta: `${halls.length} залов`, tone: 'purple' as const, icon: <CalendarIcon />, onClick: () => setActiveTab('hallPlan') },
   ]
 
+  const infoCards = [
+    { id: 'knowledge', title: 'База знаний', subtitle: `${summary?.knowledgeMaterials?.length || 0} материалов`, meta: 'обучение и правила', tone: 'blue' as const, icon: <BookIcon />, onClick: () => setDetail(knowledgeListDetail()) },
+    { id: 'guests', title: 'Постоянные гости', subtitle: `${summary?.guests?.length || 0} гостей`, meta: 'предпочтения и заметки', tone: 'green' as const, icon: <UserIcon />, onClick: () => setDetail(guestsListDetail()) },
+    { id: 'support', title: 'Поддержка', subtitle: 'заявки и помощь', meta: 'открыть диалог', tone: 'orange' as const, icon: <MailIcon />, onClick: () => setDetail(supportDetail()) },
+  ]
+
   function renderOverview() {
     return (
       <>
@@ -275,7 +428,7 @@ export function EmployeeStartPage() {
               <span>{shiftOpen ? 'Рабочий день активен' : 'Откройте смену перед работой'}</span>
             </div>
           </div>
-          <button className={shiftOpen ? 'employee-mobile__shift-button' : 'employee-mobile__shift-button employee-mobile__shift-button--primary'} type="button" onClick={() => setShiftOpen((value) => !value)}>
+          <button className={shiftOpen ? 'employee-mobile__shift-button' : 'employee-mobile__shift-button employee-mobile__shift-button--primary'} type="button" onClick={() => void toggleShift()}>
             {shiftOpen ? 'Закрыть смену' : 'Открыть смену'}
           </button>
         </section>
@@ -291,6 +444,19 @@ export function EmployeeStartPage() {
                   <p>{card.subtitle}</p>
                   <small>{card.meta}</small>
                 </div>
+                <ChevronRightIcon />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="employee-mobile__section">
+          <div className="employee-mobile__section-title"><h2>Материалы и связь</h2></div>
+          <div className="employee-mobile__card-list">
+            {infoCards.map((card) => (
+              <button key={card.id} className={`employee-mobile__work-card employee-mobile__work-card--${card.tone}`} type="button" onClick={card.onClick}>
+                <div className="employee-mobile__work-icon">{card.icon}</div>
+                <div className="employee-mobile__work-content"><strong>{card.title}</strong><p>{card.subtitle}</p><small>{card.meta}</small></div>
                 <ChevronRightIcon />
               </button>
             ))}
@@ -400,31 +566,6 @@ export function EmployeeStartPage() {
     )
   }
 
-  function renderMore() {
-    const tiles = [
-      { title: 'План зала', text: 'Столы и брони', icon: <CalendarIcon />, onClick: () => setActiveTab('hallPlan') },
-      { title: 'База знаний', text: `${summary?.knowledgeMaterials?.length || 0} материалов`, icon: <BookIcon />, onClick: () => setDetail({ kind: 'knowledge', title: 'База знаний', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-list">{(summary?.knowledgeMaterials || []).length ? summary?.knowledgeMaterials?.map((item) => <button key={item.id} type="button"><strong>{item.title}</strong><span>{item.description || item.type || 'Материал'}</span></button>) : <p>Материалы ещё не добавлены.</p>}</div> }) },
-      { title: 'Постоянные гости', text: `${summary?.guests?.length || 0} гостей`, icon: <BookIcon />, onClick: () => setDetail({ kind: 'guest', title: 'Постоянные гости', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-list">{(summary?.guests || []).length ? summary?.guests?.map((guest) => <button key={guest.id} type="button"><strong>{guest.name}</strong><span>{guest.preferences || guest.serviceComment || 'Карточка гостя'}</span></button>) : <p>Постоянные гости ещё не добавлены.</p>}</div> }) },
-      { title: 'Инвентаризация', text: `${userInventory.length} назначено`, icon: <BoxIcon />, onClick: () => userInventory[0] ? setDetail(inventoryDetail(userInventory[0])) : setNotice('Назначенных инвентаризаций нет.') },
-      { title: 'Поддержка', text: 'Написать управляющему', icon: <MailIcon />, onClick: () => setDetail({ kind: 'support', title: 'Поддержка', subtitle: 'Опишите вопрос управляющему', body: <div className="employee-mobile__detail-text"><p>Если что-то не работает, создайте тех. заявку через центральную кнопку или напишите на почту поддержки.</p></div>, actions: <button type="button" onClick={() => window.location.href = 'mailto:support@resto-control.ru'}>Написать</button> }) },
-    ]
-
-    return (
-      <section className="employee-mobile__section employee-mobile__section--tight">
-        <div className="employee-mobile__section-title"><h2>Ещё</h2></div>
-        <div className="employee-mobile__plain-list">
-          {tiles.map((item) => (
-            <button key={item.title} type="button" className="employee-mobile__list-card employee-mobile__list-card--chevron" onClick={item.onClick}>
-              <span className="employee-mobile__more-icon">{item.icon}</span>
-              <div><strong>{item.title}</strong><p>{item.text}</p></div>
-              <ChevronRightIcon />
-            </button>
-          ))}
-          <button className="employee-mobile__logout-row" type="button" onClick={logout}><LogoutIcon /><span>Выйти</span></button>
-        </div>
-      </section>
-    )
-  }
 
   return (
     <main className="employee-mobile">
@@ -442,15 +583,14 @@ export function EmployeeStartPage() {
         {activeTab === 'tasks' && renderTasks()}
         {activeTab === 'checklists' && renderChecklists()}
         {activeTab === 'hallPlan' && renderHallPlan()}
-        {activeTab === 'more' && renderMore()}
       </section>
 
-      <nav className="employee-mobile__bottom-nav" aria-label="Нижнее меню">
+      <nav className="employee-mobile__bottom-nav employee-mobile__bottom-nav--compact" aria-label="Нижнее меню">
         <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}><OverviewIcon /><span>Обзор</span></button>
         <button type="button" className={activeTab === 'tasks' ? 'is-active' : ''} onClick={() => setActiveTab('tasks')}><ClipboardIcon /><span>Задачи</span></button>
-        <button type="button" className="employee-mobile__plus-button" onClick={() => setShowRequestModal(true)}><span><PlusIcon /></span><strong>Тех. заявка</strong></button>
+        <button type="button" className="employee-mobile__plus-button" onClick={() => setShowRequestModal(true)}><span><PlusIcon /></span><strong>Заявка</strong></button>
         <button type="button" className={activeTab === 'checklists' ? 'is-active' : ''} onClick={() => setActiveTab('checklists')}><ChecklistIcon /><span>Чек-листы</span></button>
-        <button type="button" className={activeTab === 'more' ? 'is-active' : ''} onClick={() => setActiveTab('more')}><MoreIcon /><span>Ещё</span></button>
+        <button type="button" className={activeTab === 'hallPlan' ? 'is-active' : ''} onClick={() => setActiveTab('hallPlan')}><CalendarIcon /><span>Зал</span></button>
       </nav>
 
       {selectedTable ? (
@@ -463,9 +603,9 @@ export function EmployeeStartPage() {
               {selectedTable.booking ? <>
                 <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus('arrived')}>Пришли</button>
                 <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus('seated')}>Гости сели</button>
-                <button type="button" onClick={() => { if (selectedTable?.booking?.phone) window.location.href = `tel:${selectedTable.booking.phone}` }}>Позвонить</button>
+                {selectedTable.booking.phone ? <button type="button" onClick={() => { window.location.href = `tel:${selectedTable.booking?.phone}` }}>Позвонить</button> : null}
                 <button type="button" className="employee-mobile__hall-actions-red" onClick={() => updateSelectedBookingStatus('no_show')}>Не пришли</button>
-              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => { setNotice('Свободный стол выбран. Создание новой брони будет в следующем шаге.'); setSelectedTable(null) }}>Выбрать стол</button>}
+              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => { void seatWalkIn(selectedTable) }}>Посадить гостей</button>}
             </div>
           </div>
         </div>

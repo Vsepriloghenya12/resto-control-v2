@@ -142,7 +142,7 @@ export function ChecklistsPage() {
       <section className="checklists-editor">
         <div className="checklists-editor-toolbar">
           <div><h2>Основные настройки</h2><p>Шаблон сохраняется в backend и доступен сотрудникам в заданный период.</p></div>
-          <div className="checklists-editor-toolbar__actions"><button className="checklists-secondary-button" type="button" onClick={createChecklist}>Новый</button><button className="checklists-danger-button" type="button" onClick={deleteChecklist}>Удалить</button><button className="checklists-save-button" type="button" onClick={saveChecklist}>Сохранить изменения</button></div>
+          <div className="checklists-editor-toolbar__actions"><button className="checklists-danger-button" type="button" onClick={deleteChecklist}>Удалить</button><button className="checklists-save-button" type="button" onClick={saveChecklist}>Сохранить изменения</button></div>
         </div>
         {error ? <div className="checklists-hint"><AlertCircleIcon /><p>{error}</p></div> : null}
         <section className="checklists-settings-card">

@@ -307,7 +307,7 @@ function PaymentsTab({
           <label><span>Ресторан</span><select onChange={(event) => { const restaurant = restaurants.find((item) => item.id === event.target.value); if (restaurant) onIssueInvoice(restaurant) }} defaultValue=""><option value="" disabled>Выберите ресторан</option>{restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</select></label>
         </div>
         <div className="service-owner-plan-grid">
-          {plans.map((plan) => <button type="button" className={plan.id === 'standard' ? 'service-owner-plan service-owner-plan--active' : 'service-owner-plan'} key={plan.id}><strong>{plan.name}</strong><span>{plan.employees}</span><b>{money(plan.amount)}</b></button>)}
+          {plans.map((plan) => <article className={plan.id === 'standard' ? 'service-owner-plan service-owner-plan--active' : 'service-owner-plan'} key={plan.id}><strong>{plan.name}</strong><span>{plan.employees}</span><b>{money(plan.amount)}</b></article>)}
         </div>
       </section>
 
@@ -321,7 +321,7 @@ function PaymentsTab({
               <article className="service-owner-invoice" key={invoice.id}>
                 <div className="service-owner-invoice__summary"><div><strong>№ {invoice.invoiceNumber || invoice.number || invoice.id.slice(0, 6)} · {invoice.restaurantName}</strong><small>{invoice.plan || 'Тариф'} · {money(invoice.amount)} · {invoice.period || 'период не указан'}</small></div><StatusBadge status={status}>{invoiceStatusLabels[status] || status}</StatusBadge></div>
                 <div className="service-owner-invoice__meta"><span>Выставлен: {formatDate(invoice.issuedAt)}</span><span>Поручение: {invoice.receiptName || invoice.paymentOrderName || 'не прикреплено'}</span><span>Закрывающий документ: {invoice.closingDocument || 'ещё нет'}</span></div>
-                <div className="service-owner-row-actions"><button type="button" onClick={() => alert('Скачивание PDF будет подключено после шаблона счёта.')}>Скачать счёт</button>{(invoice.receiptName || invoice.paymentOrderName) && <button type="button" onClick={() => alert(invoice.receiptName || invoice.paymentOrderName)}>Открыть поручение</button>}{status !== 'paid' && <button type="button" onClick={() => onInvoiceStatus(invoice, 'paid')}>Оплата есть</button>}{status !== 'paid' && <button type="button" className="service-owner-danger-button" onClick={() => onInvoiceStatus(invoice, 'not_found')}>Нет платежа</button>}</div>
+                <div className="service-owner-row-actions">{status !== 'paid' && <button type="button" onClick={() => onInvoiceStatus(invoice, 'paid')}>Оплата есть</button>}{status !== 'paid' && <button type="button" className="service-owner-danger-button" onClick={() => onInvoiceStatus(invoice, 'not_found')}>Нет платежа</button>}{status === 'paid' ? <span className="service-owner-row-note">Оплачено</span> : null}</div>
               </article>
             )
           })}
@@ -340,7 +340,7 @@ function RequisitesTab({ message, setMessage }: { message: string; setMessage: (
         <div className="service-owner-form-grid service-owner-form-grid--wide">
           <label><span>Юридическое название</span><input defaultValue="ИП Иванов Иван Иванович" /></label><label><span>ИНН</span><input defaultValue="231234567890" /></label><label><span>ОГРН / ОГРНИП</span><input defaultValue="323237500000000" /></label><label><span>Юридический адрес</span><input defaultValue="г. Сочи, ул. Морская, 10" /></label><label><span>Банк</span><input defaultValue="Т-Банк" /></label><label><span>БИК</span><input defaultValue="044525974" /></label><label><span>Расчётный счёт</span><input defaultValue="40802810000000000000" /></label><label><span>Корреспондентский счёт</span><input defaultValue="30101810145250000974" /></label><label><span>Email</span><input defaultValue="billing@restocontrol.ru" /></label><label><span>Телефон</span><input defaultValue="+7 900 000-00-00" /></label><label><span>НДС</span><input defaultValue="Без НДС" /></label><label><span>ЭДО</span><input placeholder="Идентификатор ЭДО, если есть" /></label>
         </div>
-        <button type="button" className="service-owner-primary-button" onClick={() => setMessage('Реквизиты сохранены в интерфейсе. Постоянное хранение реквизитов сервиса подключим отдельной таблицей.')}>Сохранить реквизиты</button>
+        <p className="service-owner-muted-note">Реквизиты сервиса будут редактироваться после подключения отдельного backend-раздела. Сейчас это справочная карточка, без кнопок-муляжей.</p>
       </section>
     </div>
   )

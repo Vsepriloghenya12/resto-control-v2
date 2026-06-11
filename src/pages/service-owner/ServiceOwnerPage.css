@@ -981,3 +981,13 @@
 .owner-brand > span {
   display: none !important;
 }
+
+.service-owner-row-note,
+.service-owner-muted-note {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+}
+.service-owner-plan {
+  cursor: default !important;
+}

@@ -61,10 +61,6 @@ export function LoginForm() {
           />
           <span>Запомнить меня</span>
         </label>
-
-        <button className="auth-link" type="button">
-          Забыли пароль?
-        </button>
       </div>
 
       {error ? <p className="auth-message auth-message--error">{error}</p> : null}
