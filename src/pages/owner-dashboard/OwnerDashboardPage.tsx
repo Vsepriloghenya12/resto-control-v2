@@ -310,14 +310,18 @@ function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: strin
 
 function DonutSegment({ value, offset, color, active, index, onHover }: { value: number; offset: number; color: string; active: boolean; index: number; onHover: (index: number) => void }) {
   const safeValue = Math.max(1, Math.min(100, value))
+  const gap = 1.6
+  const segmentValue = Math.max(0.5, safeValue - gap)
+
   return (
     <circle
       className={active ? 'owner-donut-widget__segment owner-donut-widget__segment--active' : 'owner-donut-widget__segment'}
       cx="130"
       cy="130"
       r="96"
+      pathLength="100"
       stroke={color}
-      strokeDasharray={`${safeValue} ${100 - safeValue}`}
+      strokeDasharray={`${segmentValue} 100`}
       strokeDashoffset={String(-offset)}
       onMouseEnter={() => onHover(index)}
       onFocus={() => onHover(index)}
@@ -353,7 +357,7 @@ function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof bu
       <div className="owner-donut-widget__body">
         <div className="owner-donut-widget__chart" aria-label="Диаграмма рабочих действий">
           <svg viewBox="0 0 260 260" role="img">
-            <circle className="owner-donut-widget__track" cx="130" cy="130" r="96" />
+            <circle className="owner-donut-widget__track" cx="130" cy="130" r="96" pathLength="100" />
             {rows.map((row, index) => {
               const currentOffset = offset
               offset += row.share

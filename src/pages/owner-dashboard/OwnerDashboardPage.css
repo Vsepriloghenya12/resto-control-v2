@@ -1882,21 +1882,21 @@ button.owner-employee {
 
 .owner-donut-widget {
   margin-bottom: 18px;
-  overflow: hidden;
-  border: 1px solid #e5eaf2;
-  border-radius: 22px;
-  background: #ffffff;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .owner-donut-widget__header {
-  min-height: 72px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px 24px;
-  border-bottom: 1px solid #eef2f6;
+  padding: 0 0 16px;
+  border-bottom: 0;
 }
 
 .owner-donut-widget__header h2 {
@@ -1948,9 +1948,9 @@ button.owner-employee {
 .owner-donut-widget__body {
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
-  gap: 30px;
+  gap: 34px;
   align-items: center;
-  padding: 26px 24px 24px;
+  padding: 8px 0 4px;
 }
 
 .owner-donut-widget__chart {
@@ -1975,11 +1975,11 @@ button.owner-employee {
 
 .owner-donut-widget__track {
   stroke: #eef2f6;
-  stroke-width: 28;
+  stroke-width: 30;
 }
 
 .owner-donut-widget__segment {
-  stroke-width: 28;
+  stroke-width: 30;
   stroke-linecap: butt;
   cursor: pointer;
   transition: opacity 0.16s ease, stroke-width 0.16s ease;
@@ -1987,8 +1987,8 @@ button.owner-employee {
 
 .owner-donut-widget__segment:hover,
 .owner-donut-widget__segment--active {
-  opacity: 0.88;
-  stroke-width: 32;
+  opacity: 0.9;
+  stroke-width: 34;
 }
 
 .owner-donut-widget__center {
@@ -2095,17 +2095,17 @@ button.owner-employee {
 
 @media (max-width: 680px) {
   .owner-donut-widget {
-    border-radius: 18px;
+    border-radius: 0;
   }
 
   .owner-donut-widget__header {
     align-items: flex-start;
     flex-direction: column;
-    padding: 18px;
+    padding: 0 0 14px;
   }
 
   .owner-donut-widget__body {
-    padding: 20px 18px;
+    padding: 8px 0 0;
   }
 
   .owner-donut-widget__chart {
