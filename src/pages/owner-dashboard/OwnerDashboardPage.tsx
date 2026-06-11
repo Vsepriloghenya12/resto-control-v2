@@ -309,9 +309,7 @@ function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: strin
 
 
 function DonutSegment({ value, offset, color, active, index, onHover }: { value: number; offset: number; color: string; active: boolean; index: number; onHover: (index: number) => void }) {
-  const safeValue = Math.max(1, Math.min(100, value))
-  const gap = 1.6
-  const segmentValue = Math.max(0.5, safeValue - gap)
+  const safeValue = Math.max(0.1, Math.min(100, value))
 
   return (
     <circle
@@ -321,7 +319,7 @@ function DonutSegment({ value, offset, color, active, index, onHover }: { value:
       r="96"
       pathLength="100"
       stroke={color}
-      strokeDasharray={`${segmentValue} 100`}
+      strokeDasharray={`${safeValue} 100`}
       strokeDashoffset={String(-offset)}
       onMouseEnter={() => onHover(index)}
       onFocus={() => onHover(index)}
@@ -330,12 +328,38 @@ function DonutSegment({ value, offset, color, active, index, onHover }: { value:
   )
 }
 
+function getOperationWeight(value: string) {
+  const firstNumber = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/)
+  return firstNumber ? Number(firstNumber[0]) : 0
+}
+
 function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof buildDashboardModel>; onOpen: (section: OwnerSection) => void }) {
-  const rows = model.operationRows.map((row, index) => ({
+  const palette = ['#22c55e', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444']
+  const baseRows = model.operationRows.map((row, index) => ({
     ...row,
-    color: index === 0 ? '#22c55e' : index === 1 ? '#3b82f6' : index === 2 ? '#f97316' : '#8b5cf6',
-    share: Math.max(1, Math.round(row.percent || 1)),
+    color: palette[index % palette.length],
+    weight: getOperationWeight(row.value),
   }))
+  const positiveRows = baseRows.filter((row) => row.weight > 0)
+  const totalWeight = positiveRows.reduce((sum, row) => sum + row.weight, 0)
+  const gap = positiveRows.length > 1 ? 2.2 : 0
+  const drawableLength = Math.max(0, 100 - gap * positiveRows.length)
+  let preparedLength = 0
+  const rows = positiveRows.length
+    ? positiveRows.map((row, index) => {
+        const isLast = index === positiveRows.length - 1
+        const segmentLength = isLast
+          ? Math.max(0.1, 100 - gap * (positiveRows.length - 1) - preparedLength)
+          : Math.max(0.1, (row.weight / totalWeight) * drawableLength)
+        preparedLength += segmentLength
+        return {
+          ...row,
+          share: segmentLength,
+          displayPercent: Math.round((row.weight / totalWeight) * 100),
+        }
+      })
+    : [{ ...baseRows[0], label: 'Нет данных', value: '0', color: '#cbd5e1', weight: 1, share: 100, displayPercent: 0, target: 'dashboard' as OwnerSection }]
+
   const [activeIndex, setActiveIndex] = useState(0)
   let offset = 0
   const active = rows[activeIndex] || rows[0]
@@ -360,12 +384,12 @@ function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof bu
             <circle className="owner-donut-widget__track" cx="130" cy="130" r="96" pathLength="100" />
             {rows.map((row, index) => {
               const currentOffset = offset
-              offset += row.share
+              offset += row.share + gap
               return <DonutSegment key={row.label} value={row.share} offset={currentOffset} color={row.color} active={index === activeIndex} index={index} onHover={setActiveIndex} />
             })}
           </svg>
           <div className="owner-donut-widget__center">
-            <strong>{active?.percent ?? model.readinessPercent}%</strong>
+            <strong>{active?.displayPercent ?? 0}%</strong>
             <span>{active?.label || 'Смена'}</span>
           </div>
         </div>
@@ -381,7 +405,7 @@ function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof bu
               onClick={() => onOpen(row.target)}
             >
               <span className="owner-donut-widget__dot" style={{ background: row.color }} />
-              <span className="owner-donut-widget__percent">{row.percent}%</span>
+              <span className="owner-donut-widget__percent">{row.displayPercent}%</span>
               <span className="owner-donut-widget__name">{row.label}</span>
               <span className="owner-donut-widget__value">{row.value}</span>
             </button>

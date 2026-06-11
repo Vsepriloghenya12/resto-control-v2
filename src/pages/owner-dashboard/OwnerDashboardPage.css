@@ -1974,21 +1974,21 @@ button.owner-employee {
 }
 
 .owner-donut-widget__track {
-  stroke: #eef2f6;
-  stroke-width: 30;
+  stroke: #ffffff;
+  stroke-width: 32;
 }
 
 .owner-donut-widget__segment {
-  stroke-width: 30;
+  stroke-width: 32;
   stroke-linecap: butt;
   cursor: pointer;
-  transition: opacity 0.16s ease, stroke-width 0.16s ease;
+  transition: opacity 0.16s ease, filter 0.16s ease;
 }
 
 .owner-donut-widget__segment:hover,
 .owner-donut-widget__segment--active {
-  opacity: 0.9;
-  stroke-width: 34;
+  opacity: 0.92;
+  filter: saturate(1.08);
 }
 
 .owner-donut-widget__center {
