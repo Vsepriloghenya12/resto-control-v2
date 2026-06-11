@@ -642,3 +642,137 @@
 .knowledge-material-name {
   cursor: pointer;
 }
+
+.knowledge-hierarchy-card {
+  overflow: hidden;
+}
+
+.knowledge-hierarchy-groups {
+  display: grid;
+  gap: 14px;
+  padding: 0 18px 18px;
+}
+
+.knowledge-hierarchy-group {
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-hierarchy-group h3 {
+  margin: 8px 0 0;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.knowledge-hierarchy-employee-list {
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-hierarchy-employee {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 12px;
+  color: #111827;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.knowledge-hierarchy-employee--active {
+  border-color: #2563eb;
+  background: #f8fbff;
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.knowledge-hierarchy-employee__avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.knowledge-hierarchy-employee__body {
+  min-width: 0;
+}
+
+.knowledge-hierarchy-employee__body strong {
+  display: block;
+  margin: 0 0 3px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.knowledge-hierarchy-employee__body span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.knowledge-hierarchy-employee__body ul {
+  display: grid;
+  gap: 4px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.knowledge-hierarchy-employee__body li {
+  position: relative;
+  padding-left: 13px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.knowledge-hierarchy-employee__body li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #98a2b3;
+}
+
+.knowledge-hierarchy-employee__body li.is-required::before {
+  background: #f97316;
+}
+
+.knowledge-hierarchy-employee__body p {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.knowledge-hierarchy-employee svg {
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  color: #98a2b3;
+}
+
+.knowledge-hierarchy-editor textarea {
+  min-height: 92px;
+}

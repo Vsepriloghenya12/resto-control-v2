@@ -38,7 +38,7 @@ type StaffSchedule = { id: string; employeeId: string; employeeName?: string; po
 
 type DashboardSummary = {
   restaurant: { id: string; name: string }
-  employees?: Array<{ id: string; userId?: string; name: string; position: string; shiftStatus?: string; status?: string }>
+  employees?: Array<{ id: string; userId?: string; name: string; position: string; shiftStatus?: string; status?: string; responsibilities?: string; responsibilityComment?: string; reportsTo?: string }>
   tasks?: Task[]
   checklists?: Checklist[]
   bookings?: Array<{ id: string; guestName?: string; status?: string; time?: string; guestsCount?: number }>
@@ -106,6 +106,39 @@ function getScheduleDateLabel(month: string, day: number) {
 
 function getScheduleSortValue(item: StaffSchedule) {
   return Number(String(item.month).replace('-', '') + String(item.day).padStart(2, '0'))
+}
+
+const mobileLeaderPositions = ['Владелец', 'Управляющий', 'Администратор', 'Шеф-повар', 'Су-шеф', 'Старший официант', 'Старший бармен']
+const mobileHierarchyOrder = ['Руководители', 'Зал', 'Бар', 'Кухня', 'Клининг', 'Доставка', 'Остальные']
+
+function getMobileHierarchyGroup(position: string) {
+  if (mobileLeaderPositions.includes(position)) return 'Руководители'
+  const value = position.toLowerCase()
+  if (value.includes('бар')) return 'Бар'
+  if (value.includes('повар') || value.includes('шеф')) return 'Кухня'
+  if (value.includes('клининг') || value.includes('убор') || value.includes('мойщик')) return 'Клининг'
+  if (value.includes('курьер')) return 'Доставка'
+  if (value.includes('официант') || value.includes('хостес')) return 'Зал'
+  return 'Остальные'
+}
+
+function getMobileDefaultResponsibilities(position: string) {
+  if (position === 'Управляющий') return '* Контроль смены\n* Команда и дисциплина\n* График и задачи'
+  if (position === 'Администратор') return '* План зала\n* Брони и посадка гостей\n* Открытие и закрытие смены'
+  if (position === 'Старший официант') return '* Официанты на смене\n* Сервис в зале\n* Чек-листы зала'
+  if (position === 'Старший бармен') return '* Бар\n* Заготовки бара\n* Стоп-лист напитков'
+  if (position === 'Шеф-повар') return '* Кухня\n* Качество блюд\n* Стоп-лист кухни'
+  if (position === 'Су-шеф') return '* Заготовки кухни\n* Маркировка\n* Инвентаризация кухни'
+  if (position === 'Бармен') return '* Барная станция\n* Напитки\n* Инвентаризация бара'
+  if (position === 'Повар') return '* Своя станция\n* Заготовки\n* Маркировка'
+  if (position === 'Официант') return '* Свои столы\n* Сервис гостей\n* Передача заказов'
+  if (position === 'Хостес') return '* Встреча гостей\n* Брони\n* Очередь и посадка'
+  if (position === 'Клининг' || position === 'Уборщик' || position === 'Мойщик') return '* Чистота зон\n* Санитарные точки\n* Расходники'
+  return '* Рабочая зона\n* Задачи по должности'
+}
+
+function splitResponsibilityLines(text?: string, position?: string) {
+  return String(text || getMobileDefaultResponsibilities(position || '')).split('\n').map((line) => line.trim()).filter(Boolean)
 }
 
 
@@ -341,6 +374,45 @@ export function EmployeeStartPage() {
         </div>
       ),
       actions: guest.phone ? <button type="button" onClick={() => window.location.href = `tel:${guest.phone}`}>Позвонить</button> : undefined,
+    }
+  }
+
+  function hierarchyDetail(): DetailState {
+    const employees = (summary?.employees || []).filter((item) => item.status !== 'blocked' && item.status !== 'fired' && item.status !== 'deleted')
+    const grouped = mobileHierarchyOrder
+      .map((group) => ({
+        group,
+        employees: employees
+          .filter((item) => getMobileHierarchyGroup(item.position) === group)
+          .sort((a, b) => mobileLeaderPositions.indexOf(a.position) - mobileLeaderPositions.indexOf(b.position) || a.name.localeCompare(b.name, 'ru')),
+      }))
+      .filter((entry) => entry.employees.length)
+
+    return {
+      kind: 'knowledge',
+      title: 'Схема иерархии',
+      subtitle: employee.restaurantName,
+      body: (
+        <div className="employee-mobile__hierarchy">
+          {grouped.length ? grouped.map((entry) => (
+            <section key={entry.group}>
+              <h3>{entry.group}</h3>
+              {entry.employees.map((person) => (
+                <article key={person.id} className="employee-mobile__hierarchy-person">
+                  <strong>{person.name}</strong>
+                  <span>{person.position}{person.reportsTo ? ` · отвечает перед: ${person.reportsTo}` : ''}</span>
+                  <ul>
+                    {splitResponsibilityLines(person.responsibilities, person.position).map((line) => (
+                      <li key={line} className={line.startsWith('*') ? 'is-required' : ''}>{line.replace(/^\*\s*/, '')}</li>
+                    ))}
+                  </ul>
+                  {person.responsibilityComment ? <p>{person.responsibilityComment}</p> : null}
+                </article>
+              ))}
+            </section>
+          )) : <p>Сотрудники ещё не добавлены.</p>}
+        </div>
+      ),
     }
   }
 
@@ -682,7 +754,7 @@ export function EmployeeStartPage() {
 
   function renderKnowledge() {
     const sections = [
-      { id: 'hierarchy', title: 'Схема иерархии', subtitle: 'Кто за что отвечает', icon: <UserIcon />, action: () => setDetail({ kind: 'knowledge', title: 'Схема иерархии', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-text"><p>Иерархия и зоны ответственности будут заполняться управляющим.</p></div> }) },
+      { id: 'hierarchy', title: 'Схема иерархии', subtitle: 'Кто за что отвечает', icon: <UserIcon />, action: () => setDetail(hierarchyDetail()) },
       { id: 'we-guests', title: 'Мы и гости', subtitle: `${summary?.guests?.length || 0} постоянных гостей`, icon: <UserIcon />, action: () => setDetail(guestsListDetail()) },
       { id: 'team', title: 'Мы команда', subtitle: 'События и жизнь ресторана', icon: <MailIcon />, action: () => setDetail({ kind: 'knowledge', title: 'Мы команда', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-text"><p>Корпоративные события, дни рождения и внутренняя жизнь команды.</p></div> }) },
       { id: 'materials', title: 'Материалы', subtitle: `${summary?.knowledgeMaterials?.length || 0} материалов`, icon: <BookIcon />, action: () => setDetail(knowledgeListDetail()) },

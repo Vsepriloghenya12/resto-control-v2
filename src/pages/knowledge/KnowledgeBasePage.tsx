@@ -39,6 +39,24 @@ type KnowledgeMaterial = {
   guestComment?: string
 }
 
+type Employee = {
+  id: string
+  name: string
+  login?: string
+  position: string
+  status?: string
+  shiftStatus?: string
+  responsibilities?: string
+  responsibilityComment?: string
+  reportsTo?: string
+}
+
+type EmployeeDraft = {
+  responsibilities: string
+  responsibilityComment: string
+  reportsTo: string
+}
+
 type KnowledgeSection = {
   id: KnowledgeSectionId
   title: string
@@ -100,12 +118,48 @@ function TypeBadge({ type }: { type: MaterialType }) {
   return <span className="knowledge-type">{typeLabels[type] || type}</span>
 }
 
+const leaderPositions = ['Владелец', 'Управляющий', 'Администратор', 'Шеф-повар', 'Су-шеф', 'Старший официант', 'Старший бармен']
+const hierarchyOrder = ['Руководители', 'Зал', 'Бар', 'Кухня', 'Клининг', 'Доставка', 'Остальные']
+
+function hierarchyGroup(position: string) {
+  if (leaderPositions.includes(position)) return 'Руководители'
+  const value = position.toLowerCase()
+  if (value.includes('бар')) return 'Бар'
+  if (value.includes('повар') || value.includes('шеф')) return 'Кухня'
+  if (value.includes('клининг') || value.includes('убор') || value.includes('мойщик')) return 'Клининг'
+  if (value.includes('курьер')) return 'Доставка'
+  if (value.includes('официант') || value.includes('хостес')) return 'Зал'
+  return 'Остальные'
+}
+
+function defaultResponsibilities(position: string) {
+  if (position === 'Управляющий') return '* Контроль смены\n* Команда и дисциплина\n* График и задачи\nРешает спорные ситуации с гостями'
+  if (position === 'Администратор') return '* План зала\n* Брони и посадка гостей\n* Открытие и закрытие смены\nПередаёт задачи залу'
+  if (position === 'Старший официант') return '* Официанты на смене\n* Сервис в зале\n* Чек-листы зала\nПомогает администратору'
+  if (position === 'Старший бармен') return '* Бар\n* Заготовки бара\n* Стоп-лист напитков\nКонтролирует барменов'
+  if (position === 'Шеф-повар') return '* Кухня\n* Качество блюд\n* Стоп-лист кухни\nКонтролирует поваров'
+  if (position === 'Су-шеф') return '* Заготовки кухни\n* Маркировка\n* Инвентаризация кухни\nПомогает шеф-повару'
+  if (position === 'Бармен') return '* Барная станция\n* Напитки\n* Инвентаризация бара\nСледит за чистотой бара'
+  if (position === 'Повар') return '* Своя станция\n* Заготовки\n* Маркировка\nСоблюдает ТТК'
+  if (position === 'Официант') return '* Свои столы\n* Сервис гостей\n* Передача заказов\nСледит за чистотой зоны'
+  if (position === 'Хостес') return '* Встреча гостей\n* Брони\n* Очередь и посадка\nПередаёт гостей официантам'
+  if (position === 'Клининг' || position === 'Уборщик' || position === 'Мойщик') return '* Чистота зон\n* Санитарные точки\n* Расходники\nФиксирует проблемы через тех. заявку'
+  return '* Рабочая зона\n* Задачи по должности\nКомментарий управляющего'
+}
+
+function formatResponsibilities(text?: string, position?: string) {
+  return String(text || defaultResponsibilities(position || '')).split('\n').map((line) => line.trim()).filter(Boolean)
+}
+
 export function KnowledgeBasePage() {
   const [items, setItems] = useState<KnowledgeMaterial[]>([])
   const [selectedSectionId, setSelectedSectionId] = useState<KnowledgeSectionId>('company_intro')
   const [selectedMaterialId, setSelectedMaterialId] = useState('')
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState<KnowledgeMaterial | null>(null)
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
+  const [employeeDraft, setEmployeeDraft] = useState<EmployeeDraft>({ responsibilities: '', responsibilityComment: '', reportsTo: '' })
   const [notice, setNotice] = useState('')
   const [isLoading, setIsLoading] = useState(true)
 
@@ -133,8 +187,26 @@ export function KnowledgeBasePage() {
     setIsLoading(false)
   }
 
+  async function loadEmployees(nextSelectedEmployeeId?: string) {
+    const response = await api.list<Employee>('employees')
+    const visible = response.items.filter((item) => item.status !== 'blocked' && item.status !== 'fired' && item.status !== 'deleted')
+    setEmployees(visible)
+    const selected = visible.find((item) => item.id === (nextSelectedEmployeeId || selectedEmployeeId)) || visible[0]
+    if (selected) {
+      setSelectedEmployeeId(selected.id)
+      setEmployeeDraft({
+        responsibilities: selected.responsibilities || defaultResponsibilities(selected.position),
+        responsibilityComment: selected.responsibilityComment || '',
+        reportsTo: selected.reportsTo || '',
+      })
+    } else {
+      setSelectedEmployeeId('')
+      setEmployeeDraft({ responsibilities: '', responsibilityComment: '', reportsTo: '' })
+    }
+  }
+
   useEffect(() => {
-    void loadMaterials().catch(() => {
+    void Promise.all([loadMaterials(), loadEmployees()]).catch(() => {
       setNotice('Не удалось загрузить базу знаний.')
       setIsLoading(false)
     })
@@ -162,6 +234,39 @@ export function KnowledgeBasePage() {
 
   const mainSections = sections.filter((section) => !section.parent)
   const corporateSections = sections.filter((section) => section.parent === 'Корпоративная жизнь')
+  const hierarchyEmployees = useMemo(() => {
+    const groups = employees.reduce<Record<string, Employee[]>>((acc, employee) => {
+      const group = hierarchyGroup(employee.position)
+      acc[group] = acc[group] || []
+      acc[group].push(employee)
+      return acc
+    }, {})
+    return hierarchyOrder.map((group) => ({
+      group,
+      employees: (groups[group] || []).sort((a, b) => leaderPositions.indexOf(a.position) - leaderPositions.indexOf(b.position) || a.name.localeCompare(b.name, 'ru')),
+    })).filter((entry) => entry.employees.length)
+  }, [employees])
+  const selectedEmployee = employees.find((employee) => employee.id === selectedEmployeeId)
+
+  function selectHierarchyEmployee(employee: Employee) {
+    setSelectedEmployeeId(employee.id)
+    setEmployeeDraft({
+      responsibilities: employee.responsibilities || defaultResponsibilities(employee.position),
+      responsibilityComment: employee.responsibilityComment || '',
+      reportsTo: employee.reportsTo || '',
+    })
+  }
+
+  async function saveHierarchyEmployee() {
+    if (!selectedEmployee) return
+    const updated = await api.update<Employee>('employees', selectedEmployee.id, {
+      responsibilities: employeeDraft.responsibilities,
+      responsibilityComment: employeeDraft.responsibilityComment,
+      reportsTo: employeeDraft.reportsTo,
+    })
+    setEmployees((items) => items.map((item) => item.id === updated.id ? { ...item, ...updated } : item))
+    setNotice('Ответственность сотрудника сохранена.')
+  }
 
   function selectSection(sectionId: KnowledgeSectionId) {
     setSelectedSectionId(sectionId)
@@ -231,6 +336,59 @@ export function KnowledgeBasePage() {
     setDraft((current) => current ? { ...current, ...patch } : current)
   }
 
+  function renderHierarchyList() {
+    return (
+      <section className="knowledge-list-card knowledge-hierarchy-card">
+        <div className="knowledge-list-header">
+          <div><h2>Схема иерархии</h2><p>Сотрудники, должности и зоны ответственности</p></div>
+        </div>
+        <div className="knowledge-hierarchy-groups">
+          {hierarchyEmployees.length ? hierarchyEmployees.map((entry) => (
+            <section key={entry.group} className="knowledge-hierarchy-group">
+              <h3>{entry.group}</h3>
+              <div className="knowledge-hierarchy-employee-list">
+                {entry.employees.map((employee) => (
+                  <button key={employee.id} type="button" className={employee.id === selectedEmployeeId ? 'knowledge-hierarchy-employee knowledge-hierarchy-employee--active' : 'knowledge-hierarchy-employee'} onClick={() => selectHierarchyEmployee(employee)}>
+                    <div className="knowledge-hierarchy-employee__avatar">{employee.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</div>
+                    <div className="knowledge-hierarchy-employee__body">
+                      <strong>{employee.name}</strong>
+                      <span>{employee.position}{employee.reportsTo ? ` · отвечает перед: ${employee.reportsTo}` : ''}</span>
+                      <ul>
+                        {formatResponsibilities(employee.responsibilities, employee.position).slice(0, 3).map((line) => <li key={line} className={line.startsWith('*') ? 'is-required' : ''}>{line.replace(/^\*\s*/, '')}</li>)}
+                      </ul>
+                      {employee.responsibilityComment ? <p>{employee.responsibilityComment}</p> : null}
+                    </div>
+                    <ChevronRightIcon />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )) : <div className="knowledge-empty-row">Добавьте сотрудников, чтобы сформировать иерархию.</div>}
+        </div>
+      </section>
+    )
+  }
+
+  function renderHierarchyEditor() {
+    return (
+      <aside className="knowledge-editor-card knowledge-hierarchy-editor">
+        <div className="knowledge-editor-card__header">
+          <div><h2>{selectedEmployee ? selectedEmployee.name : 'Сотрудник не выбран'}</h2><p>{selectedEmployee?.position || 'Выберите сотрудника в списке'}</p></div>
+        </div>
+        {selectedEmployee ? (
+          <>
+            <div className="knowledge-editor-form">
+              <label><span>Кому подчиняется / кто руководитель</span><input value={employeeDraft.reportsTo} onChange={(event) => setEmployeeDraft((current) => ({ ...current, reportsTo: event.target.value }))} placeholder="Например: Управляющий / Администратор" /></label>
+              <label><span>Зоны ответственности</span><textarea value={employeeDraft.responsibilities} onChange={(event) => setEmployeeDraft((current) => ({ ...current, responsibilities: event.target.value }))} rows={8} placeholder="* Зал\n* Брони\nКомментарий без звёздочки" /></label>
+              <label><span>Комментарий</span><textarea value={employeeDraft.responsibilityComment} onChange={(event) => setEmployeeDraft((current) => ({ ...current, responsibilityComment: event.target.value }))} rows={3} placeholder="Необязательный комментарий" /></label>
+            </div>
+            <div className="knowledge-editor-actions"><button className="knowledge-primary-button" type="button" onClick={() => void saveHierarchyEmployee()}>Сохранить ответственность</button></div>
+          </>
+        ) : <div className="knowledge-empty-editor"><TeamIcon /><strong>Сотрудники не добавлены</strong></div>}
+      </aside>
+    )
+  }
+
   return (
     <section className="knowledge-page">
       {notice ? <button className="knowledge-notice" type="button" onClick={() => setNotice('')}>{notice}</button> : null}
@@ -268,6 +426,7 @@ export function KnowledgeBasePage() {
 
         </aside>
 
+        {selectedSectionId === 'hierarchy' ? renderHierarchyList() : (
         <section className="knowledge-list-card">
           <div className="knowledge-list-header">
             <div><h2>Материалы раздела</h2><p>{selectedSection.parent ? `${selectedSection.parent} › ${selectedSection.title}` : selectedSection.title}</p></div>
@@ -300,6 +459,9 @@ export function KnowledgeBasePage() {
           </div>
         </section>
 
+        )}
+
+        {selectedSectionId === 'hierarchy' ? renderHierarchyEditor() : (
         <aside className="knowledge-editor-card">
           <div className="knowledge-editor-card__header">
             <div><h2>Редактор материала</h2><p>{draft ? typeLabels[draft.type] || 'Материал' : 'Материал не выбран'}</p></div>
@@ -338,6 +500,7 @@ export function KnowledgeBasePage() {
             <div className="knowledge-empty-editor"><BookIcon /><strong>{isLoading ? 'Загрузка...' : 'Выберите материал'}</strong></div>
           )}
         </aside>
+        )}
       </div>
     </section>
   )
