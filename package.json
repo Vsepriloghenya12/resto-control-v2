@@ -11,15 +11,16 @@
     "dev:server": "node server/index.js"
   },
   "dependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "typescript": "latest",
+    "pg": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "pg": "latest"
+    "typescript": "latest",
+    "vite": "latest"
   },
-  "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest"
+  "engines": {
+    "node": "20.19.0"
   }
 }
