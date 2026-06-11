@@ -253,7 +253,6 @@ function BrandLogo() {
   return (
     <div className="owner-brand">
       <img className="owner-brand__logo-img" src="/resto-control-logo.png" alt="Ресто Контроль" />
-      <span>Панель владельца</span>
     </div>
   )
 }

@@ -975,3 +975,9 @@
     position: static;
   }
 }
+
+/* Logo caption near sidebar logo is intentionally hidden: logo must stand alone. */
+.service-owner-brand > span,
+.owner-brand > span {
+  display: none !important;
+}

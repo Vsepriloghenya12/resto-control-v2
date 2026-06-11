@@ -132,7 +132,6 @@ function ServiceOwnerBrand() {
   return (
     <div className="service-owner-brand">
       <img className="service-owner-brand__logo-img" src="/resto-control-logo.png" alt="Ресто Контроль" />
-      <span>Владелец сервиса</span>
     </div>
   )
 }
