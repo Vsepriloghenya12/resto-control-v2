@@ -1994,66 +1994,72 @@ button.owner-employee {
 .owner-donut-widget__center {
   position: absolute;
   inset: 50%;
-  width: 128px;
-  height: 128px;
+  width: 142px;
+  height: 142px;
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: #ffffff;
+  background: transparent;
+  box-shadow: none;
   text-align: center;
+  pointer-events: none;
 }
 
 .owner-donut-widget__center strong {
   display: block;
   color: #0f172a;
-  font-size: 38px;
+  font-size: 40px;
   line-height: 42px;
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: -0.05em;
 }
 
 .owner-donut-widget__center span {
   display: block;
-  max-width: 104px;
-  margin-top: 4px;
-  color: #64748b;
+  max-width: 116px;
+  margin-top: 6px;
+  color: #0f172a;
+  background: transparent;
+  box-shadow: none;
   font-size: 13px;
-  line-height: 16px;
-  font-weight: 800;
+  line-height: 17px;
+  font-weight: 850;
 }
 
 .owner-donut-widget__list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 14px;
   min-width: 0;
+  padding: 2px 0;
 }
 
 .owner-donut-widget__item {
   width: 100%;
-  min-height: 52px;
+  min-height: 44px;
   display: grid;
-  grid-template-columns: 18px 52px minmax(0, 1fr) auto;
+  grid-template-columns: 18px 58px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   border: 0;
-  border-radius: 14px;
-  padding: 8px 10px;
+  border-radius: 0;
+  padding: 0;
   background: transparent;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.16s ease, transform 0.16s ease;
+  transition: opacity 0.16s ease;
 }
 
 .owner-donut-widget__item:hover,
 .owner-donut-widget__item--active {
-  background: #f8fafc;
+  background: transparent;
 }
 
 .owner-donut-widget__item:hover {
-  transform: translateX(2px);
+  transform: none;
+  opacity: 0.88;
 }
 
 .owner-donut-widget__dot {
