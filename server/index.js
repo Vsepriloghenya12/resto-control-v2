@@ -553,20 +553,166 @@ async function handleAuth(req, res, state, pathname, auth) {
 
 async function handleServiceOwner(req, res, state, pathname, auth) {
   if (!pathname.startsWith('/api/service-owner')) return false
-  requireRole(auth, ['service_owner'])
+  const payload = requireRole(auth, ['service_owner'])
+
+  function restaurantOwner(restaurantId) {
+    const ownerMembership = state.memberships.find((item) => item.restaurantId === restaurantId && item.role === 'owner')
+    const owner = state.users.find((item) => item.id === ownerMembership?.userId)
+    return owner ? cleanUser(owner) : null
+  }
+
+  function serviceHomeRestaurant() {
+    let home = state.restaurants.find((item) => item.isServiceHome)
+    if (!home) {
+      const createdAt = nowIso()
+      home = {
+        id: id('restaurant_service'),
+        name: 'Сервис Resto Control',
+        isServiceHome: true,
+        plan: 'service',
+        subscriptionStatus: 'active',
+        createdAt,
+        updatedAt: createdAt,
+      }
+      state.restaurants.push(home)
+    }
+    return home
+  }
+
+  function publicRestaurants() {
+    return state.restaurants
+      .filter((restaurant) => !restaurant.isServiceHome)
+      .map((restaurant) => {
+        const payments = state.payments.filter((item) => item.restaurantId === restaurant.id)
+        const pendingPayments = payments.filter((item) => ['payment_reported', 'payment_order_attached', 'overdue', 'issued'].includes(String(item.status))).length
+        const latestInvoice = [...payments].sort((a, b) => String(b.issuedAt || b.createdAt || '').localeCompare(String(a.issuedAt || a.createdAt || '')))[0]
+        return {
+          ...restaurant,
+          owner: restaurantOwner(restaurant.id),
+          ownerName: restaurantOwner(restaurant.id)?.name || restaurant.ownerName || '',
+          email: restaurantOwner(restaurant.id)?.login || restaurant.contactEmail || restaurant.email || '',
+          phone: restaurant.contactPhone || restaurant.phone || '',
+          employeesCount: state.employees.filter((item) => item.restaurantId === restaurant.id && item.status !== 'deleted').length,
+          invoicesCount: payments.length,
+          pendingPayments,
+          latestInvoice,
+          payments,
+        }
+      })
+  }
 
   if (pathname === '/api/service-owner/overview' && req.method === 'GET') {
-    const restaurants = state.restaurants.map((restaurant) => {
-      const ownerMembership = state.memberships.find((item) => item.restaurantId === restaurant.id && item.role === 'owner')
-      const owner = state.users.find((item) => item.id === ownerMembership?.userId)
-      return {
-        ...restaurant,
-        owner: owner ? cleanUser(owner) : null,
-        employeesCount: state.employees.filter((item) => item.restaurantId === restaurant.id).length,
-        payments: state.payments.filter((item) => item.restaurantId === restaurant.id),
+    const restaurants = publicRestaurants()
+    const restaurantIds = new Set(restaurants.map((restaurant) => restaurant.id))
+    const payments = state.payments.filter((item) => restaurantIds.has(item.restaurantId))
+    send(res, 200, { restaurants, payments })
+    return true
+  }
+
+  if (pathname === '/api/service-owner/restaurants' && req.method === 'POST') {
+    const body = await readBody(req)
+    const restaurantName = String(body.restaurantName || body.name || '').trim()
+    const ownerName = String(body.ownerName || '').trim()
+    const login = normalizeLogin(body.login)
+    const password = String(body.password || '')
+    if (!restaurantName || !ownerName || !login || password.length < 6) {
+      throw httpError(400, 'Заполните ресторан, владельца, логин и пароль от 6 символов.')
+    }
+    if (state.users.some((user) => user.login === login)) {
+      throw httpError(409, 'Пользователь с таким логином уже существует.')
+    }
+    const createdAt = nowIso()
+    const user = { id: id('user'), name: ownerName, login, passwordHash: hashPassword(password), roleHint: 'owner', createdAt, updatedAt: createdAt }
+    const restaurant = {
+      id: id('restaurant'),
+      name: restaurantName,
+      city: String(body.city || '').trim(),
+      contactPhone: String(body.phone || '').trim(),
+      contactEmail: login,
+      plan: body.plan || 'trial',
+      subscriptionStatus: 'trial',
+      trialStartedAt: createdAt,
+      trialEndsAt: addDays(new Date(), 14),
+      subscriptionEndsAt: addDays(new Date(), 14),
+      createdAt,
+      updatedAt: createdAt,
+    }
+    const membership = { id: id('membership'), userId: user.id, restaurantId: restaurant.id, role: 'owner', position: 'Владелец', status: 'active', createdAt, updatedAt: createdAt }
+    state.users.push(user)
+    state.restaurants.push(restaurant)
+    state.memberships.push(membership)
+    state.halls.push({ id: id('hall'), restaurantId: restaurant.id, name: 'Основной зал', tablesCount: 0, seatsCount: 0, active: true, createdAt, updatedAt: createdAt })
+    await saveState(state)
+    send(res, 201, { restaurant, owner: cleanUser(user), membership })
+    return true
+  }
+
+  const restaurantPatch = pathname.match(/^\/api\/service-owner\/restaurants\/([^/]+)$/)
+  if (restaurantPatch && (req.method === 'PATCH' || req.method === 'PUT')) {
+    const restaurant = state.restaurants.find((item) => item.id === restaurantPatch[1] && !item.isServiceHome)
+    if (!restaurant) throw httpError(404, 'Ресторан не найден.')
+    const body = await readBody(req)
+    Object.assign(restaurant, body, { updatedAt: nowIso() })
+    await saveState(state)
+    send(res, 200, restaurant)
+    return true
+  }
+
+  const restaurantExtend = pathname.match(/^\/api\/service-owner\/restaurants\/([^/]+)\/extend$/)
+  if (restaurantExtend && (req.method === 'PATCH' || req.method === 'PUT')) {
+    const restaurant = state.restaurants.find((item) => item.id === restaurantExtend[1] && !item.isServiceHome)
+    if (!restaurant) throw httpError(404, 'Ресторан не найден.')
+    const body = await readBody(req)
+    const days = Number(body.days || 30)
+    const baseDate = restaurant.subscriptionEndsAt && new Date(restaurant.subscriptionEndsAt).getTime() > Date.now() ? new Date(restaurant.subscriptionEndsAt) : new Date()
+    restaurant.subscriptionEndsAt = addDays(baseDate, days)
+    restaurant.subscriptionStatus = 'active'
+    restaurant.status = 'active'
+    restaurant.updatedAt = nowIso()
+    await saveState(state)
+    send(res, 200, restaurant)
+    return true
+  }
+
+  const restaurantDelete = pathname.match(/^\/api\/service-owner\/restaurants\/([^/]+)$/)
+  if (restaurantDelete && req.method === 'DELETE') {
+    const restaurantId = restaurantDelete[1]
+    const restaurant = state.restaurants.find((item) => item.id === restaurantId && !item.isServiceHome)
+    if (!restaurant) throw httpError(404, 'Ресторан не найден.')
+
+    const home = serviceHomeRestaurant()
+    const removedMembershipIds = new Set()
+    const removedUserIds = new Set()
+
+    for (const membership of state.memberships) {
+      if (membership.restaurantId !== restaurantId) continue
+      if (membership.role === 'service_owner') {
+        membership.restaurantId = home.id
+        membership.updatedAt = nowIso()
+      } else {
+        removedMembershipIds.add(membership.id)
+        removedUserIds.add(membership.userId)
       }
-    })
-    send(res, 200, { restaurants, payments: state.payments })
+    }
+
+    state.sessions = state.sessions
+      .filter((session) => !removedMembershipIds.has(session.membershipId))
+      .map((session) => {
+        if (session.userId === payload.user.id && session.restaurantId === restaurantId) {
+          return { ...session, restaurantId: home.id }
+        }
+        return session
+      })
+    state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
+    state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
+
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'inventoryAssignments', 'inventoryProducts', 'ttkItems']
+    for (const key of keys) {
+      if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
+    }
+    state.restaurants = state.restaurants.filter((item) => item.id !== restaurantId)
+    await saveState(state)
+    send(res, 200, { ok: true })
     return true
   }
 
