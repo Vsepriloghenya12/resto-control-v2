@@ -13,6 +13,9 @@ const jsonFile = path.join(dataDir, 'db.json')
 const PORT = Number(process.env.PORT || 4173)
 const COOKIE_NAME = 'rc_session'
 const DATABASE_URL = process.env.DATABASE_URL || ''
+const SERVICE_OWNER_EMAIL = normalizeLogin(process.env.SERVICE_OWNER_EMAIL || 'admin@resto.local')
+const SERVICE_OWNER_PASSWORD = String(process.env.SERVICE_OWNER_PASSWORD || 'admin123')
+const SERVICE_OWNER_NAME = String(process.env.SERVICE_OWNER_NAME || 'Владелец сервиса')
 
 let pgPool = null
 let memoryState = null
@@ -132,9 +135,9 @@ function createSeedState() {
   const createdAt = nowIso()
   const serviceUser = {
     id: 'user_service_owner',
-    name: 'Владелец сервиса',
-    login: 'admin@resto.local',
-    passwordHash: hashPassword('admin123'),
+    name: SERVICE_OWNER_NAME,
+    login: SERVICE_OWNER_EMAIL,
+    passwordHash: hashPassword(SERVICE_OWNER_PASSWORD),
     roleHint: 'service_owner',
     createdAt,
     updatedAt: createdAt,
@@ -240,6 +243,117 @@ function createSeedState() {
   }
 }
 
+
+function ensureServiceOwner(state) {
+  let changed = false
+
+  if (!Array.isArray(state.users)) state.users = []
+  if (!Array.isArray(state.restaurants)) state.restaurants = []
+  if (!Array.isArray(state.memberships)) state.memberships = []
+
+  if (!state.restaurants.length) {
+    const createdAt = nowIso()
+    state.restaurants.push({
+      id: 'restaurant_service_default',
+      name: 'Resto Control',
+      legalType: '',
+      legalName: '',
+      inn: '',
+      kpp: '',
+      ogrn: '',
+      legalAddress: '',
+      bankName: '',
+      bik: '',
+      account: '',
+      corrAccount: '',
+      contactEmail: SERVICE_OWNER_EMAIL,
+      contactPhone: '',
+      plan: 'standard',
+      subscriptionStatus: 'active',
+      trialStartedAt: createdAt,
+      trialEndsAt: addDays(new Date(), 14),
+      subscriptionEndsAt: addDays(new Date(), 14),
+      createdAt,
+      updatedAt: createdAt,
+    })
+    changed = true
+  }
+
+  const restaurant = state.restaurants[0]
+  const legacyLogin = 'admin@resto.local'
+  let serviceUser = state.users.find((user) => user.roleHint === 'service_owner')
+    || state.users.find((user) => normalizeLogin(user.login) === SERVICE_OWNER_EMAIL)
+    || state.users.find((user) => normalizeLogin(user.login) === legacyLogin)
+
+  if (!serviceUser) {
+    const createdAt = nowIso()
+    serviceUser = {
+      id: 'user_service_owner',
+      name: SERVICE_OWNER_NAME,
+      login: SERVICE_OWNER_EMAIL,
+      passwordHash: hashPassword(SERVICE_OWNER_PASSWORD),
+      roleHint: 'service_owner',
+      createdAt,
+      updatedAt: createdAt,
+    }
+    state.users.push(serviceUser)
+    changed = true
+  }
+
+  if (serviceUser.name !== SERVICE_OWNER_NAME) {
+    serviceUser.name = SERVICE_OWNER_NAME
+    serviceUser.updatedAt = nowIso()
+    changed = true
+  }
+
+  if (normalizeLogin(serviceUser.login) !== SERVICE_OWNER_EMAIL) {
+    serviceUser.login = SERVICE_OWNER_EMAIL
+    serviceUser.updatedAt = nowIso()
+    changed = true
+  }
+
+  if (serviceUser.roleHint !== 'service_owner') {
+    serviceUser.roleHint = 'service_owner'
+    serviceUser.updatedAt = nowIso()
+    changed = true
+  }
+
+  if (SERVICE_OWNER_PASSWORD && !verifyPassword(SERVICE_OWNER_PASSWORD, serviceUser.passwordHash)) {
+    serviceUser.passwordHash = hashPassword(SERVICE_OWNER_PASSWORD)
+    serviceUser.updatedAt = nowIso()
+    changed = true
+  }
+
+  const existingMembership = state.memberships.find((membership) => membership.userId === serviceUser.id && membership.role === 'service_owner')
+  if (!existingMembership) {
+    const createdAt = nowIso()
+    state.memberships.push({
+      id: 'membership_service_owner',
+      userId: serviceUser.id,
+      restaurantId: restaurant.id,
+      role: 'service_owner',
+      position: 'Владелец сервиса',
+      status: 'active',
+      createdAt,
+      updatedAt: createdAt,
+    })
+    changed = true
+  } else {
+    if (existingMembership.restaurantId !== restaurant.id) {
+      existingMembership.restaurantId = restaurant.id
+      existingMembership.updatedAt = nowIso()
+      changed = true
+    }
+    if (existingMembership.status !== 'active') {
+      existingMembership.status = 'active'
+      existingMembership.updatedAt = nowIso()
+      changed = true
+    }
+  }
+
+  return changed
+}
+
 async function initPg() {
   if (!DATABASE_URL || pgPool) return pgPool
   try {
@@ -258,20 +372,32 @@ async function loadState() {
   const pool = await initPg()
   if (pool) {
     const result = await pool.query('SELECT data FROM resto_state WHERE id = $1', ['main'])
-    if (result.rows[0]?.data) return result.rows[0].data
+    if (result.rows[0]?.data) {
+      const state = result.rows[0].data
+      if (ensureServiceOwner(state)) {
+        await pool.query('INSERT INTO resto_state (id, data, updated_at) VALUES ($1, $2, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()', ['main', state])
+      }
+      return state
+    }
     const seed = createSeedState()
+    ensureServiceOwner(seed)
     await pool.query('INSERT INTO resto_state (id, data) VALUES ($1, $2)', ['main', seed])
     return seed
   }
 
-  if (memoryState) return memoryState
+  if (memoryState) {
+    if (ensureServiceOwner(memoryState)) await saveState(memoryState)
+    return memoryState
+  }
   await fs.mkdir(dataDir, { recursive: true })
   try {
     const content = await fs.readFile(jsonFile, 'utf8')
     memoryState = JSON.parse(content)
+    if (ensureServiceOwner(memoryState)) await saveState(memoryState)
     return memoryState
   } catch {
     memoryState = createSeedState()
+    ensureServiceOwner(memoryState)
     await fs.writeFile(jsonFile, JSON.stringify(memoryState, null, 2))
     return memoryState
   }
