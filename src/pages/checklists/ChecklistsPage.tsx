@@ -141,7 +141,7 @@ export function ChecklistsPage() {
 
       <section className="checklists-editor">
         <div className="checklists-editor-toolbar">
-          <div><h2>Основные настройки</h2><p>Шаблон сохраняется в backend и доступен сотрудникам в заданный период.</p></div>
+          <div><h2>Основные настройки</h2></div>
           <div className="checklists-editor-toolbar__actions"><button className="checklists-danger-button" type="button" onClick={deleteChecklist}>Удалить</button><button className="checklists-save-button" type="button" onClick={saveChecklist}>Сохранить изменения</button></div>
         </div>
         {error ? <div className="checklists-hint"><AlertCircleIcon /><p>{error}</p></div> : null}
@@ -156,12 +156,11 @@ export function ChecklistsPage() {
             <span className="checklists-period-row__dash">—</span>
             <label className="checklists-field checklists-field--time"><span>Время окончания</span><input type="time" value={draft.endTime} onChange={(e) => setDraft((v) => ({ ...v, endTime: e.target.value }))} /></label>
             <div className="checklists-active-control"><span>Активен</span><button className={draft.active ? 'checklists-switch checklists-switch--on' : 'checklists-switch'} type="button" onClick={toggleActive}><span /></button></div>
-            <div className="checklists-hint"><CalendarIcon /><p>Сотрудник увидит напоминание перед началом.</p></div>
           </div>
         </section>
 
         <section className="checklists-items-section">
-          <div className="checklists-items-section__header"><div><h2>Пункты чек-листа</h2><p>Фото выполнения хранится внутри конкретного пункта.</p></div><button className="checklists-add-item-button" type="button" onClick={addItem}>+ Добавить пункт</button></div>
+          <div className="checklists-items-section__header"><div><h2>Пункты чек-листа</h2></div><button className="checklists-add-item-button" type="button" onClick={addItem}>+ Добавить пункт</button></div>
           <div className="checklists-items-list">
             {(draft.items || []).map((item, index) => (
               <article className="checklists-item-editor" key={item.id || index}>

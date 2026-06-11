@@ -266,10 +266,6 @@ export function KnowledgeBasePage() {
             </div>
           </div>
 
-          <div className="knowledge-info-card">
-            <strong>Что хранится здесь</strong>
-            <p>Материалы адаптации, схемы ответственности, обучающие PDF, гости и события команды.</p>
-          </div>
         </aside>
 
         <section className="knowledge-list-card">
@@ -298,7 +294,7 @@ export function KnowledgeBasePage() {
                     <td>{material.author || '—'}</td>
                   </tr>
                 ))}
-                {!visibleMaterials.length ? <tr><td colSpan={5}><div className="knowledge-empty-row">В разделе пока нет материалов. Нажмите «Добавить материал».</div></td></tr> : null}
+                {!visibleMaterials.length ? <tr><td colSpan={5}><div className="knowledge-empty-row">Материалов пока нет.</div></td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -339,7 +335,7 @@ export function KnowledgeBasePage() {
               </div>
             </>
           ) : (
-            <div className="knowledge-empty-editor"><BookIcon /><strong>{isLoading ? 'Загрузка...' : 'Выберите или создайте материал'}</strong><p>Материалы базы знаний будут доступны сотрудникам в мобильной версии.</p></div>
+            <div className="knowledge-empty-editor"><BookIcon /><strong>{isLoading ? 'Загрузка...' : 'Выберите материал'}</strong></div>
           )}
         </aside>
       </div>

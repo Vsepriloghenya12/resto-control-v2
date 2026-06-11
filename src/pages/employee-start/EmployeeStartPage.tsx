@@ -350,8 +350,7 @@ export function EmployeeStartPage() {
     return {
       kind: 'support',
       title: 'Поддержка',
-      subtitle: 'Создайте заявку или напишите управляющему',
-      body: <div className="employee-mobile__detail-text"><p>Для технической проблемы нажмите центральную кнопку «Тех. заявка». По срочному вопросу можно написать в поддержку.</p></div>,
+      subtitle: 'Обращение управляющему',
       actions: <button type="button" onClick={async () => { await api.create('technical-requests', { title: 'Обращение в поддержку', description: 'Запрос помощи из мобильного приложения', area: 'Поддержка', priority: 'medium', status: 'new', createdByPosition: employee.position }); setNotice('Обращение создано.'); setDetail(null) }}>Создать обращение</button>,
     }
   }
@@ -425,7 +424,7 @@ export function EmployeeStartPage() {
             <div className={shiftOpen ? 'employee-mobile__shift-icon employee-mobile__shift-icon--open' : 'employee-mobile__shift-icon'}><ClockIcon /></div>
             <div>
               <strong>{shiftOpen ? 'Смена открыта' : 'Смена не открыта'}</strong>
-              <span>{shiftOpen ? 'Рабочий день активен' : 'Откройте смену перед работой'}</span>
+              <span>{shiftOpen ? 'Рабочий день активен' : 'Смена не открыта'}</span>
             </div>
           </div>
           <button className={shiftOpen ? 'employee-mobile__shift-button' : 'employee-mobile__shift-button employee-mobile__shift-button--primary'} type="button" onClick={() => void toggleShift()}>
@@ -638,7 +637,7 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__sheet-backdrop" onClick={() => setShowRequestModal(false)}>
           <div className="employee-mobile__sheet employee-mobile__sheet--form" onClick={(event) => event.stopPropagation()}>
             <div className="employee-mobile__sheet-handle" />
-            <div className="employee-mobile__sheet-title"><strong>Новая тех. заявка</strong><p>Сообщите о проблеме по оборудованию или расходникам</p></div>
+            <div className="employee-mobile__sheet-title"><strong>Новая тех. заявка</strong></div>
             {requestSubmitted ? <div className="employee-mobile__request-success"><strong>Заявка создана</strong><p>Техническая заявка отправлена управляющему.</p><button type="button" onClick={() => { setRequestSubmitted(false); setShowRequestModal(false); void loadData() }}>Готово</button></div> : (
               <form className="employee-mobile__request-form" onSubmit={async (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); await api.create('technical-requests', { category: String(formData.get('category') || 'Оборудование'), title: String(formData.get('title') || 'Тех. заявка'), description: String(formData.get('description') || ''), area: String(formData.get('area') || ''), status: 'new', priority: 'medium', createdByPosition: employee.position }); setRequestSubmitted(true) }}>
                 <label><span>Категория</span><select name="category" defaultValue="Оборудование"><option>Оборудование</option><option>Клининг</option><option>Расходники</option><option>Электрика</option><option>Мебель</option></select></label>

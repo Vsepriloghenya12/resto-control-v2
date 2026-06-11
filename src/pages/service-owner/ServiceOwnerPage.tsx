@@ -203,12 +203,11 @@ function RestaurantsTab({
         <div className="service-owner-card__header">
           <div>
             <h2>Рестораны платформы</h2>
-            <p>Реальные рестораны из backend. Нажмите на строку, чтобы открыть карточку ресторана.</p>
           </div>
           <button type="button" className="service-owner-primary-button" onClick={onCreate}>Создать ресторан</button>
         </div>
 
-        {isLoading ? <EmptyState title="Загрузка" text="Получаем рестораны из backend." /> : null}
+        {isLoading ? <EmptyState title="Загрузка" text="" /> : null}
         {!isLoading && filtered.length === 0 ? <EmptyState title="Рестораны не найдены" text="Создайте ресторан или измените поиск." /> : null}
 
         <div className="service-owner-restaurants-layout">
@@ -302,7 +301,7 @@ function PaymentsTab({
     <div className="service-owner-payments-layout">
       {message && <div className="service-owner-message service-owner-form-full">{message}</div>}
       <section className="service-owner-card service-owner-issue-card">
-        <div className="service-owner-card__header"><div><h2>Выставить счёт</h2><p>Выберите ресторан. Счёт появится в списке оплат.</p></div></div>
+        <div className="service-owner-card__header"><div><h2>Выставить счёт</h2></div></div>
         <div className="service-owner-form-grid">
           <label><span>Ресторан</span><select onChange={(event) => { const restaurant = restaurants.find((item) => item.id === event.target.value); if (restaurant) onIssueInvoice(restaurant) }} defaultValue=""><option value="" disabled>Выберите ресторан</option>{restaurants.map((restaurant) => <option key={restaurant.id} value={restaurant.id}>{restaurant.name}</option>)}</select></label>
         </div>
@@ -336,11 +335,10 @@ function RequisitesTab({ message, setMessage }: { message: string; setMessage: (
     <div className="service-owner-requisites-layout">
       {message && <div className="service-owner-message service-owner-form-full">{message}</div>}
       <section className="service-owner-card">
-        <div className="service-owner-card__header"><div><h2>Реквизиты для счетов и документов</h2><p>Эти данные будут использоваться в счёте, акте или УПД.</p></div></div>
+        <div className="service-owner-card__header"><div><h2>Реквизиты для счетов и документов</h2></div></div>
         <div className="service-owner-form-grid service-owner-form-grid--wide">
           <label><span>Юридическое название</span><input defaultValue="ИП Иванов Иван Иванович" /></label><label><span>ИНН</span><input defaultValue="231234567890" /></label><label><span>ОГРН / ОГРНИП</span><input defaultValue="323237500000000" /></label><label><span>Юридический адрес</span><input defaultValue="г. Сочи, ул. Морская, 10" /></label><label><span>Банк</span><input defaultValue="Т-Банк" /></label><label><span>БИК</span><input defaultValue="044525974" /></label><label><span>Расчётный счёт</span><input defaultValue="40802810000000000000" /></label><label><span>Корреспондентский счёт</span><input defaultValue="30101810145250000974" /></label><label><span>Email</span><input defaultValue="billing@restocontrol.ru" /></label><label><span>Телефон</span><input defaultValue="+7 900 000-00-00" /></label><label><span>НДС</span><input defaultValue="Без НДС" /></label><label><span>ЭДО</span><input placeholder="Идентификатор ЭДО, если есть" /></label>
         </div>
-        <p className="service-owner-muted-note">Реквизиты сервиса будут редактироваться после подключения отдельного backend-раздела. Сейчас это справочная карточка, без кнопок-муляжей.</p>
       </section>
     </div>
   )
@@ -555,11 +553,10 @@ export function ServiceOwnerPage() {
         <nav className="service-owner-nav" aria-label="Меню владельца сервиса">
           {tabItems.map((item) => <button key={item.id} className={item.id === tab ? 'service-owner-nav__item service-owner-nav__item--active' : 'service-owner-nav__item'} type="button" onClick={() => { setTab(item.id); setMessage('') }}>{item.icon}<span>{item.id === 'payments' && paymentActionCount ? `Оплаты (${paymentActionCount})` : item.label}</span></button>)}
         </nav>
-        <div className="service-owner-sidebar-note"><strong>Оплата по счёту</strong><p>Ресторан отмечает оплату, владелец сервиса подтверждает платёж и продлевает доступ.</p></div>
       </aside>
       <section className="service-owner-main">
         <header className="service-owner-topbar">
-          <div className="service-owner-title-block"><h1>{pageCopy[tab].title}</h1><p>{pageCopy[tab].subtitle}</p></div>
+          <div className="service-owner-title-block"><h1>{pageCopy[tab].title}</h1></div>
           <div className="service-owner-topbar__actions">
             <label className="service-owner-search"><SearchIcon /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={pageCopy[tab].search} /></label>
             <div className="service-owner-popover-host"><button className="service-owner-icon-button" type="button" aria-label="Уведомления" onClick={() => { setIsNotificationsOpen((value) => !value); setIsProfileOpen(false) }}><BellIcon /><span>{paymentActionCount}</span></button>{isNotificationsOpen && <NotificationsPopover notices={notices} onSelect={openNotice} />}</div>

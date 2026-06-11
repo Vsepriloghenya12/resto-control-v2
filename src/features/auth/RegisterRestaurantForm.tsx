@@ -78,7 +78,6 @@ export function RegisterRestaurantForm() {
 
       <div className="auth-trial-note">
         <strong>Пробный период 14 дней</strong>
-        <span>После создания ресторана доступ включится автоматически. Счёт можно будет оформить позже во вкладке «Оплата».</span>
       </div>
 
       {error ? <p className="auth-message auth-message--error">{error}</p> : null}

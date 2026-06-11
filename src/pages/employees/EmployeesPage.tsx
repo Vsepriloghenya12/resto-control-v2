@@ -242,7 +242,7 @@ export function EmployeesPage() {
               </tbody>
             </table>
           </div>
-          <div className="employees-table-footer"><span>Показано {filteredEmployees.length} из {employees.length}</span><span>Нажмите на строку, чтобы открыть карточку сотрудника</span></div>
+          <div className="employees-table-footer"><span>Показано {filteredEmployees.length} из {employees.length}</span></div>
         </section>
 
         <aside className="employees-add-panel employees-editor-panel" aria-label="Карточка сотрудника">
@@ -255,7 +255,6 @@ export function EmployeesPage() {
           {!selectedEmployee ? <label><span>Временный пароль</span><input value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type="password" /></label> : null}
           <button className="employees-create-button" type="button" onClick={saveEmployee}>{selectedEmployee ? 'Сохранить карточку' : 'Создать сотрудника'}</button>
           {selectedEmployee ? <button className="employees-cancel-button" type="button" onClick={fireEmployee}>Удалить сотрудника</button> : <button className="employees-cancel-button" type="button" onClick={startCreate}>Очистить</button>}
-          <div className="employees-add-panel__hint"><AlertCircleIcon /><p>{selectedEmployee ? 'Все параметры сотрудника редактируются здесь. Отдельного столбца действий в таблице нет.' : 'После создания сотрудник сможет войти по указанному телефону или email и временному паролю.'}</p></div>
         </aside>
       </div>
     </section>

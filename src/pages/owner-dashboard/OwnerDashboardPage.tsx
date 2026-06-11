@@ -365,7 +365,6 @@ function AddRestaurantDialog({ onClose, onCreated }: { onClose: () => void; onCr
         <div className="owner-support-dialog__header">
           <div>
             <h2>Добавить ресторан</h2>
-            <p>Будет создан новый пустой ресторан, без чужих задач, броней и сотрудников.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
         </div>
@@ -412,7 +411,6 @@ function SupportDialog({ onClose }: { onClose: () => void }) {
         <div className="owner-support-dialog__header">
           <div>
             <h2>Поддержка</h2>
-            <p>Создайте обращение. Оно сохранится как тех. заявка в текущем ресторане.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
         </div>
@@ -441,7 +439,6 @@ function ProfileDialog({ userName, login, roleLabel, restaurantName, onClose }: 
         <div className="owner-support-dialog__header">
           <div>
             <h2>Профиль</h2>
-            <p>Данные текущего входа.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
         </div>

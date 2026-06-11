@@ -81,7 +81,7 @@ export function TtkPage() {
     const created = await api.create<TtkItem>('ttk', { name: 'Новая позиция', group: selectedGroupId, unit: 'шт', price: 0, tag: '', description: '', recipe: [], cookingTime: '0 мин', output: '', takeaway: true, online: true, discounts: true, marked: false, requiresScan: false, excise: false })
     setItems((current) => [created, ...current])
     setSelectedItemId(created.id)
-    setNotice('Позиция создана. Откройте карточку и заполните данные.')
+    setNotice('Позиция создана.')
   }
 
   async function saveSelected() {
@@ -117,7 +117,7 @@ export function TtkPage() {
             <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>КБЖУ</h3></div><div className="ttk-kbju-grid"><label><span>Ккал</span><input value={getKcal(selectedItem)} readOnly /></label><label><span>Белки</span><input value={`${getProtein(selectedItem)} г`} readOnly /></label><label><span>Жиры</span><input value={`${getFat(selectedItem)} г`} readOnly /></label><label><span>Углеводы</span><input value={`${getCarbs(selectedItem)} г`} readOnly /></label></div></section>
             <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Продажа и контроль</h3></div><div className="ttk-switch-grid"><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.takeaway)} onChange={(e) => updateSelected({ takeaway: e.target.checked })} /><span>Доступно на вынос</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.online)} onChange={(e) => updateSelected({ online: e.target.checked })} /><span>Доступно для онлайн-заказа</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.discounts)} onChange={(e) => updateSelected({ discounts: e.target.checked })} /><span>Скидки применяются</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.marked)} onChange={(e) => updateSelected({ marked: e.target.checked })} /><span>Маркировочный товар</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.requiresScan)} onChange={(e) => updateSelected({ requiresScan: e.target.checked })} /><span>Нельзя взять без пика / сканирования</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.excise)} onChange={(e) => updateSelected({ excise: e.target.checked })} /><span>Подакцизный товар</span></label></div></section>
             <div className="ttk-editor-actions"><button className="ttk-primary-button" type="button" onClick={() => void saveSelected()}>Сохранить изменения</button></div>
-          </div> : <div className="ttk-empty"><span><BookIcon /></span><strong>Выберите позицию</strong><p>Откройте блюдо или товар из списка, чтобы посмотреть и отредактировать карточку.</p></div>}
+          </div> : <div className="ttk-empty"><span><BookIcon /></span><strong>Выберите позицию</strong></div>}
         </aside>
       </div>
     </section>

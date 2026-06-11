@@ -147,7 +147,6 @@ export function AuthPage() {
             <div className="auth-support-dialog__header">
               <div>
                 <h2>Поддержка</h2>
-                <p>Напишите вопрос управляющему или владельцу сервиса. На публичной странице обращение не отправляется автоматически.</p>
               </div>
               <button type="button" onClick={() => setSupportOpen(false)} aria-label="Закрыть">×</button>
             </div>

@@ -160,7 +160,7 @@ export function TasksPage() {
 
       <section className="tasks-editor">
         <div className="tasks-editor-toolbar">
-          <div><h2>{selectedId ? 'Редактирование задачи' : 'Создание задачи'}</h2><p>Задача сохраняется в backend и появляется у сотрудников.</p></div>
+          <div><h2>{selectedId ? 'Редактирование задачи' : 'Создание задачи'}</h2></div>
           <div className="tasks-editor-toolbar__actions"><button className="tasks-secondary-button" type="button" onClick={completeTask}>Выполнена</button><button className="tasks-danger-button" type="button" onClick={deleteTask}>Удалить</button><button className="tasks-save-button" type="button" onClick={saveTask}>Сохранить</button></div>
         </div>
         {error ? <div className="tasks-info-card"><AlertCircleIcon /><p>{error}</p></div> : null}
@@ -175,7 +175,7 @@ export function TasksPage() {
           <div className="tasks-form-grid tasks-form-grid--three">
             <label className="tasks-field"><span>Дата выполнения</span><input type="date" value={draft.dueDate || ''} onChange={(e) => setDraft((v) => ({ ...v, dueDate: e.target.value }))} /></label>
             <label className="tasks-field"><span>Время выполнения</span><input type="time" value={draft.dueTime || ''} onChange={(e) => setDraft((v) => ({ ...v, dueTime: e.target.value }))} /></label>
-            <label className="tasks-photo-toggle"><span>Нужно фото выполнения</span><input type="checkbox" checked={Boolean(draft.requiresPhoto)} onChange={(e) => setDraft((v) => ({ ...v, requiresPhoto: e.target.checked }))} /><small>Сотрудник не сможет завершить задачу без фото</small></label>
+            <label className="tasks-photo-toggle"><span>Нужно фото выполнения</span><input type="checkbox" checked={Boolean(draft.requiresPhoto)} onChange={(e) => setDraft((v) => ({ ...v, requiresPhoto: e.target.checked }))} /></label>
           </div>
           <label className="tasks-field tasks-field--full"><span>Дополнительно</span><textarea value={draft.extraNote || ''} onChange={(e) => setDraft((v) => ({ ...v, extraNote: e.target.value }))} /></label>
         </div>
