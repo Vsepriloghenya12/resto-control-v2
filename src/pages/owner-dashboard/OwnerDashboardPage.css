@@ -1347,3 +1347,126 @@
   font-size: 12px;
   font-weight: 800;
 }
+
+/* Step 22: every visible action is clickable and gives feedback. */
+button.owner-payment-badge,
+button.owner-metric-card,
+button.owner-operation-row,
+button.owner-attention,
+button.owner-employee {
+  border: 1px solid #e5e7eb;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.owner-payment-badge {
+  text-align: left;
+}
+
+.owner-clickable-card,
+.owner-clickable-row,
+.owner-profile,
+.owner-icon-button,
+.owner-logout,
+.owner-add-restaurant,
+.owner-restaurant-tab,
+.owner-support-button,
+.owner-sidebar-status button,
+.owner-section-card__header button,
+.owner-zones-card__header button,
+.owner-link-button {
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.owner-clickable-card:hover,
+.owner-clickable-row:hover,
+.owner-profile:hover,
+.owner-icon-button:hover,
+.owner-logout:hover,
+.owner-support-button:hover,
+.owner-sidebar-status button:hover,
+.owner-section-card__header button:hover,
+.owner-zones-card__header button:hover,
+.owner-link-button:hover {
+  transform: translateY(-1px);
+}
+
+.owner-clickable-card:hover,
+.owner-section-card__header button:hover,
+.owner-zones-card__header button:hover {
+  border-color: #b8c7dd;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.07);
+}
+
+button.owner-operation-row {
+  width: 100%;
+  background: transparent;
+  border-color: transparent;
+  padding: 6px;
+  border-radius: 12px;
+}
+
+button.owner-operation-row:hover,
+button.owner-attention:hover,
+button.owner-employee:hover {
+  border-color: #dbe1ea;
+  background: #f8fbff;
+}
+
+button.owner-attention,
+button.owner-employee {
+  width: 100%;
+  background: transparent;
+}
+
+.owner-search {
+  overflow: hidden;
+}
+
+.owner-search__submit {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  color: #667085;
+  background: transparent;
+  cursor: pointer;
+}
+
+.owner-search__submit svg {
+  width: 18px;
+  height: 18px;
+}
+
+.owner-action-notice {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #bfd0ea;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 0 0 14px;
+  color: #0f2147;
+  background: #eef4ff;
+  font-size: 13px;
+  font-weight: 750;
+  box-shadow: 0 10px 22px rgba(15, 33, 71, 0.07);
+}
+
+.owner-payment-badge:hover,
+.owner-add-restaurant:hover,
+.owner-restaurant-tab:hover {
+  transform: translateY(-1px);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 2px;
+}

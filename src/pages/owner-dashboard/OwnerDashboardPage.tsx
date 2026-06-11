@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import type { Restaurant } from '../../features/auth/authTypes'
 import {
@@ -237,16 +237,16 @@ function ProgressLine({ item, compact = false }: { item: ZoneReadiness; compact?
   )
 }
 
-function SummaryMetricCard({ item }: { item: SummaryMetric }) {
+function SummaryMetricCard({ item, onClick }: { item: SummaryMetric; onClick: () => void }) {
   return (
-    <article className="owner-metric-card">
+    <button className="owner-metric-card owner-clickable-card" type="button" onClick={onClick}>
       <div className={`owner-metric-card__icon owner-metric-card__icon--${item.tone}`}>{item.icon}</div>
       <div>
         <strong>{item.value}<span>{item.subValue}</span></strong>
         <p>{item.label}</p>
         <small>{item.description}</small>
       </div>
-    </article>
+    </button>
   )
 }
 
@@ -258,13 +258,13 @@ function AttentionIcon({ tone }: { tone: StatusTone }) {
   return <span className={`owner-attention__icon owner-attention__icon--${tone}`}><AlertCircleIcon /></span>
 }
 
-function PaymentAccessBadge({ paidUntil, daysLeft }: { paidUntil: string; daysLeft: number }) {
+function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: string; daysLeft: number; onClick: () => void }) {
   return (
-    <div className="owner-payment-badge" aria-label="Статус оплаты">
+    <button className="owner-payment-badge" type="button" aria-label="Открыть оплату" onClick={onClick}>
       <span>Оплата</span>
       <strong>Оплачено до {paidUntil}</strong>
       <p>До окончания оплаченного периода осталось {daysLeft} дней</p>
-    </div>
+    </button>
   )
 }
 
@@ -272,10 +272,12 @@ function RestaurantTabs({
   restaurants,
   activeRestaurantId,
   onSelect,
+  onAdd,
 }: {
   restaurants: Array<{ id: string; name: string }>
   activeRestaurantId: string
   onSelect: (restaurantId: string) => void
+  onAdd: () => void
 }) {
   return (
     <section className="owner-restaurant-row" aria-label="Рестораны владельца">
@@ -292,13 +294,33 @@ function RestaurantTabs({
         ))}
       </div>
       <span className="owner-restaurant-divider" aria-hidden="true" />
-      <button className="owner-add-restaurant" type="button">+ Добавить ресторан</button>
+      <button className="owner-add-restaurant" type="button" onClick={onAdd}>+ Добавить ресторан</button>
     </section>
   )
 }
 
 
-function DashboardContent() {
+function DashboardContent({ onOpen, onNotice }: { onOpen: (section: OwnerSection) => void; onNotice: (message: string) => void }) {
+  const metricTargets: Record<string, OwnerSection> = {
+    'Сотрудников': 'employees',
+    'Чек-листов': 'checklists',
+    'Задач': 'tasks',
+    'Броней': 'hallBookings',
+    'Позиций': 'inventory',
+    'Инвентаризации': 'inventory',
+  }
+
+  const operationTargets: Record<string, OwnerSection> = {
+    'Завершено чек-листов': 'checklists',
+    'Выполнено задач': 'tasks',
+    'Проблемы требуют внимания': 'tasks',
+    'Сотрудники на смене': 'employees',
+  }
+
+  function openMetric(label: string) {
+    onOpen(metricTargets[label] || 'dashboard')
+  }
+
   return (
     <>
       <section className="owner-overview-card" aria-label="Операционная сводка за сегодня">
@@ -315,7 +337,7 @@ function DashboardContent() {
 
         <div className="owner-operation-list">
           {operationRows.map((row) => (
-            <div className="owner-operation-row" key={row.label}>
+            <button className="owner-operation-row owner-clickable-row" type="button" key={row.label} onClick={() => onOpen(operationTargets[row.label] || 'dashboard')}>
               <div className={`owner-operation-row__icon owner-operation-row__icon--${row.tone}`}>{row.icon}</div>
               <div className="owner-operation-row__content">
                 <div>
@@ -326,14 +348,14 @@ function DashboardContent() {
                   <span className={`owner-operation-row__bar owner-operation-row__bar--${row.tone}`} style={{ width: `${row.percent}%` }} />
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
         <div className="owner-zones-card">
           <div className="owner-zones-card__header">
             <h2>Готовность по зонам</h2>
-            <button type="button">Подробнее</button>
+            <button type="button" onClick={() => onOpen('checklists')}>Подробнее</button>
           </div>
           <div className="owner-zones-list">
             {zones.map((item) => <ProgressLine item={item} key={item.label} />)}
@@ -342,36 +364,36 @@ function DashboardContent() {
       </section>
 
       <section className="owner-metrics-grid" aria-label="Ключевые показатели смены">
-        {summaryMetrics.map((item) => <SummaryMetricCard item={item} key={item.label} />)}
+        {summaryMetrics.map((item) => <SummaryMetricCard item={item} key={item.label} onClick={() => openMetric(item.label)} />)}
       </section>
 
       <section className="owner-lower-grid">
         <article className="owner-section-card owner-zone-details">
           <div className="owner-section-card__header">
             <h2>Готовность процессов по зонам</h2>
-            <button type="button">Сегодня</button>
+            <button type="button" onClick={() => onOpen('checklists')}>Сегодня</button>
           </div>
           <div className="owner-zone-details__list">
             {zones.map((item) => <ProgressLine item={item} compact key={item.label} />)}
           </div>
-          <button className="owner-link-button" type="button">Перейти ко всем чек-листам</button>
+          <button className="owner-link-button" type="button" onClick={() => onOpen('checklists')}>Перейти ко всем чек-листам</button>
         </article>
 
         <article className="owner-section-card owner-attention-card">
           <div className="owner-section-card__header">
             <h2>Требует внимания</h2>
-            <button type="button">Все (3)</button>
+            <button type="button" onClick={() => onNotice('Открыт список событий, требующих внимания. Нажмите на событие, чтобы перейти в нужный раздел.')}>Все (3)</button>
           </div>
           <div className="owner-attention-list">
             {attentionItems.map((item) => (
-              <div className="owner-attention" key={item.title}>
+              <button className="owner-attention owner-clickable-row" type="button" key={item.title} onClick={() => onOpen(item.title.toLowerCase().includes('чек') ? 'checklists' : item.title.toLowerCase().includes('задач') ? 'tasks' : item.title.toLowerCase().includes('инвентар') ? 'inventory' : 'inventory')}>
                 <AttentionIcon tone={item.tone} />
                 <div>
                   <strong>{item.title}</strong>
                   <span>{item.description}</span>
                 </div>
                 <small>{item.time}</small>
-              </div>
+              </button>
             ))}
           </div>
         </article>
@@ -379,11 +401,11 @@ function DashboardContent() {
         <article className="owner-section-card owner-employees-card">
           <div className="owner-section-card__header">
             <h2>Сотрудники на смене</h2>
-            <button type="button">Все</button>
+            <button type="button" onClick={() => onOpen('employees')}>Все</button>
           </div>
           <div className="owner-employees-list">
             {shiftEmployees.map((employee) => (
-              <div className="owner-employee" key={employee.name}>
+              <button className="owner-employee owner-clickable-row" type="button" key={employee.name} onClick={() => onOpen('employees')}>
                 <span className="owner-employee__avatar">{employee.initials}</span>
                 <div>
                   <strong>{employee.name}</strong>
@@ -391,7 +413,7 @@ function DashboardContent() {
                 </div>
                 <small>{employee.zone}</small>
                 <StatusBadge tone={employee.tone}>{employee.status}</StatusBadge>
-              </div>
+              </button>
             ))}
           </div>
         </article>
@@ -414,6 +436,9 @@ export function OwnerDashboardPage() {
   const { session, logout } = useSession()
   const [section, setSection] = useState<OwnerSection>('dashboard')
   const [pendingLabel, setPendingLabel] = useState('')
+  const [notice, setNotice] = useState('')
+  const [shiftOpen, setShiftOpen] = useState(true)
+  const [globalSearch, setGlobalSearch] = useState('')
   const userName = session?.user.name ?? 'Иван'
   const restaurantName = session?.restaurant.name ?? 'Resto Control'
   const paymentAccess = getPaymentAccess(session?.restaurant)
@@ -432,6 +457,36 @@ export function OwnerDashboardPage() {
     }
 
     setPendingLabel(item.label)
+  }
+
+  const openSection = (nextSection: OwnerSection) => {
+    setSection(nextSection)
+    setPendingLabel('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const showNotice = (message: string) => {
+    setNotice(message)
+    window.setTimeout(() => setNotice((current) => current === message ? '' : current), 3200)
+  }
+
+  const handleGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const value = globalSearch.trim().toLowerCase()
+    if (!value) {
+      showNotice('Введите запрос: сотрудник, задача, чек-лист, бронь, ТТК, инвентаризация, оплата.')
+      return
+    }
+
+    if (value.includes('сотруд')) openSection('employees')
+    else if (value.includes('чек')) openSection('checklists')
+    else if (value.includes('задач')) openSection('tasks')
+    else if (value.includes('брон') || value.includes('зал') || value.includes('стол')) openSection('hallBookings')
+    else if (value.includes('инвентар') || value.includes('стоп')) openSection('inventory')
+    else if (value.includes('ттк') || value.includes('блюд')) openSection('ttk')
+    else if (value.includes('знани') || value.includes('обуч')) openSection('knowledge')
+    else if (value.includes('оплат') || value.includes('счет') || value.includes('счёт')) openSection('payment')
+    else showNotice('Ничего не найдено. Попробуйте: сотрудник, задача, чек-лист, бронь, ТТК, оплата.')
   }
 
   const pageCopy: Record<OwnerSection, { title: string; subtitle: string; searchPlaceholder: string }> = {
@@ -520,9 +575,9 @@ export function OwnerDashboardPage() {
 
         <div className="owner-sidebar-status">
           <span />
-          <strong>Смена открыта</strong>
-          <p>Сегодня до 23:00</p>
-          <button type="button">Закрыть смену</button>
+          <strong>{shiftOpen ? 'Смена открыта' : 'Смена закрыта'}</strong>
+          <p>{shiftOpen ? 'Сегодня до 23:00' : 'Откройте смену перед работой'}</p>
+          <button type="button" onClick={() => { setShiftOpen((value) => !value); showNotice(shiftOpen ? 'Смена закрыта.' : 'Смена открыта.') }}>{shiftOpen ? 'Закрыть смену' : 'Открыть смену'}</button>
         </div>
       </aside>
 
@@ -533,18 +588,18 @@ export function OwnerDashboardPage() {
             {section !== 'dashboard' || pendingLabel ? <p>{pageSubtitle}</p> : null}
           </div>
 
-          {section === 'dashboard' && !pendingLabel && paymentAccess ? <PaymentAccessBadge paidUntil={paymentAccess.paidUntil} daysLeft={paymentAccess.daysLeft} /> : null}
+          {section === 'dashboard' && !pendingLabel && paymentAccess ? <PaymentAccessBadge paidUntil={paymentAccess.paidUntil} daysLeft={paymentAccess.daysLeft} onClick={() => openSection('payment')} /> : null}
 
           <div className="owner-topbar__actions">
-            <label className="owner-search">
-              <SearchIcon />
-              <input placeholder={searchPlaceholder} />
-            </label>
-            <button className="owner-icon-button" type="button" aria-label="Уведомления">
+            <form className="owner-search" onSubmit={handleGlobalSearch}>
+              <button className="owner-search__submit" type="submit" aria-label="Найти"><SearchIcon /></button>
+              <input value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder={searchPlaceholder} />
+            </form>
+            <button className="owner-icon-button" type="button" aria-label="Уведомления" onClick={() => showNotice('Уведомления: 3 события требуют внимания. Откройте главную карточку «Требует внимания».') }>
               <BellIcon />
               <span>3</span>
             </button>
-            <button className="owner-profile" type="button">
+            <button className="owner-profile" type="button" onClick={() => showNotice('Профиль пользователя будет открыт отдельным экраном настроек аккаунта.') }>
               <span><UserIcon /></span>
               <div>
                 <strong>{userName}</strong>
@@ -561,11 +616,14 @@ export function OwnerDashboardPage() {
           <RestaurantTabs
             restaurants={ownerRestaurants}
             activeRestaurantId={activeRestaurantId}
-            onSelect={setActiveRestaurantId}
+            onSelect={(restaurantId) => { setActiveRestaurantId(restaurantId); showNotice('Ресторан переключён. Данные по выбранному ресторану будут загружаться из backend.') }}
+            onAdd={() => showNotice('Добавление второго ресторана будет доступно из кабинета владельца сервиса.')}
           />
         ) : null}
 
-        {pendingLabel ? <UnsupportedSectionNotice label={pendingLabel} /> : section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent />}
+        {notice ? <div className="owner-action-notice" role="status">{notice}</div> : null}
+
+        {pendingLabel ? <UnsupportedSectionNotice label={pendingLabel} /> : section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent onOpen={openSection} onNotice={showNotice} />}
       </section>
     </main>
   )

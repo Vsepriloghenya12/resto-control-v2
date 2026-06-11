@@ -37,7 +37,7 @@ function photoItemsCount(checklist: ChecklistTemplate) { return checklist.items?
 function ChecklistCard({ checklist, active, onSelect }: { checklist: ChecklistTemplate; active: boolean; onSelect: () => void }) {
   return (
     <button className={active ? 'checklists-card checklists-card--active' : 'checklists-card'} type="button" onClick={onSelect}>
-      <div className="checklists-card__top"><strong>{checklist.title}</strong><span>{checklist.active ? 'Активен' : 'Выключен'}</span></div>
+      <div className="checklists-card__top"><strong>{checklist.title}</strong><span className={checklist.active ? 'checklists-status checklists-status--active' : 'checklists-status checklists-status--inactive'}>{checklist.active ? 'Активен' : 'Выключен'}</span></div>
       <p>{typeLabels[checklist.type]} · {checklist.position}</p>
       <div className="checklists-card__meta"><span>{checklist.startTime} — {checklist.endTime}</span><span>{itemsCount(checklist)} пунктов</span><span>{photoItemsCount(checklist)} фото</span></div>
     </button>
