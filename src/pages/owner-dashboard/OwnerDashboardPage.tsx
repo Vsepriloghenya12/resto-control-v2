@@ -166,6 +166,13 @@ const attentionItems: AttentionItem[] = [
   },
 ]
 
+
+const notificationMessages = [
+  { title: 'Чек-лист бара не закрыт', text: 'Бар не завершил чек-лист открытия. Проверьте раздел «Чек-листы».', time: '15 мин назад', target: 'checklists' as OwnerSection },
+  { title: 'Просрочена задача', text: 'У официанта Марии просрочена задача: протереть столы на террасе.', time: '45 мин назад', target: 'tasks' as OwnerSection },
+  { title: 'Инвентаризация кухни', text: 'Инвентаризация кухни ещё не назначена ответственному сотруднику.', time: '2 ч назад', target: 'inventory' as OwnerSection },
+]
+
 const shiftEmployees: ShiftEmployee[] = [
   { name: 'Мария Иванова', role: 'Официант', zone: 'Зал', status: 'Смена открыта', tone: 'success', initials: 'МИ' },
   { name: 'Алексей Смирнов', role: 'Бармен', zone: 'Бар', status: 'Смена открыта', tone: 'success', initials: 'АС' },
@@ -296,6 +303,35 @@ function RestaurantTabs({
       <span className="owner-restaurant-divider" aria-hidden="true" />
       <button className="owner-add-restaurant" type="button" onClick={onAdd}>+ Добавить ресторан</button>
     </section>
+  )
+}
+
+
+function SupportDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="owner-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="owner-support-dialog" role="dialog" aria-modal="true" aria-label="Поддержка" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="owner-support-dialog__header">
+          <div>
+            <h2>Поддержка</h2>
+            <p>Опишите вопрос. Сообщение пока готовится для отправки в поддержку.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
+        </div>
+        <label>
+          <span>Тема</span>
+          <input defaultValue="Вопрос по Resto Control" />
+        </label>
+        <label>
+          <span>Сообщение</span>
+          <textarea rows={5} placeholder="Например: не открывается чек-лист, нужно помочь с оплатой, сотрудник не видит задачу..." />
+        </label>
+        <div className="owner-support-dialog__actions">
+          <button type="button" onClick={() => window.location.href = 'mailto:support@resto-control.ru?subject=Поддержка Resto Control'}>Написать на email</button>
+          <button type="button" onClick={onClose}>Закрыть</button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -439,6 +475,8 @@ export function OwnerDashboardPage() {
   const [notice, setNotice] = useState('')
   const [shiftOpen, setShiftOpen] = useState(true)
   const [globalSearch, setGlobalSearch] = useState('')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [supportOpen, setSupportOpen] = useState(false)
   const userName = session?.user.name ?? 'Иван'
   const restaurantName = session?.restaurant.name ?? 'Resto Control'
   const paymentAccess = getPaymentAccess(session?.restaurant)
@@ -567,7 +605,7 @@ export function OwnerDashboardPage() {
         <button
           className="owner-support-button"
           type="button"
-          onClick={() => { window.location.href = 'mailto:support@resto-control.ru?subject=Поддержка Resto Control' }}
+          onClick={() => setSupportOpen(true)}
         >
           <MailIcon />
           <span>Поддержка</span>
@@ -595,10 +633,27 @@ export function OwnerDashboardPage() {
               <button className="owner-search__submit" type="submit" aria-label="Найти"><SearchIcon /></button>
               <input value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder={searchPlaceholder} />
             </form>
-            <button className="owner-icon-button" type="button" aria-label="Уведомления" onClick={() => showNotice('Уведомления: 3 события требуют внимания. Откройте главную карточку «Требует внимания».') }>
-              <BellIcon />
-              <span>3</span>
-            </button>
+            <div className="owner-notifications-wrap">
+              <button className="owner-icon-button" type="button" aria-label="Уведомления" onClick={() => setNotificationsOpen((value) => !value)}>
+                <BellIcon />
+                <span>{notificationMessages.length}</span>
+              </button>
+              {notificationsOpen ? (
+                <div className="owner-notifications-popover">
+                  <div className="owner-notifications-popover__header">
+                    <strong>Уведомления</strong>
+                    <small>{notificationMessages.length} новых</small>
+                  </div>
+                  {notificationMessages.map((item) => (
+                    <button key={item.title} type="button" onClick={() => { setNotificationsOpen(false); openSection(item.target) }}>
+                      <strong>{item.title}</strong>
+                      <span>{item.text}</span>
+                      <small>{item.time}</small>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <button className="owner-profile" type="button" onClick={() => showNotice('Профиль пользователя будет открыт отдельным экраном настроек аккаунта.') }>
               <span><UserIcon /></span>
               <div>
@@ -616,7 +671,7 @@ export function OwnerDashboardPage() {
           <RestaurantTabs
             restaurants={ownerRestaurants}
             activeRestaurantId={activeRestaurantId}
-            onSelect={(restaurantId) => { setActiveRestaurantId(restaurantId); showNotice('Ресторан переключён. Данные по выбранному ресторану будут загружаться из backend.') }}
+            onSelect={(restaurantId) => setActiveRestaurantId(restaurantId)}
             onAdd={() => showNotice('Добавление второго ресторана будет доступно из кабинета владельца сервиса.')}
           />
         ) : null}
@@ -625,6 +680,7 @@ export function OwnerDashboardPage() {
 
         {pendingLabel ? <UnsupportedSectionNotice label={pendingLabel} /> : section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent onOpen={openSection} onNotice={showNotice} />}
       </section>
+    {supportOpen ? <SupportDialog onClose={() => setSupportOpen(false)} /> : null}
     </main>
   )
 }

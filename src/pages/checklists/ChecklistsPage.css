@@ -700,3 +700,47 @@
     width: fit-content;
   }
 }
+
+/* Cleaner checklist list and instant active switch */
+.checklists-list {
+  gap: 8px !important;
+}
+
+.checklists-card {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px #edf0f4 !important;
+  padding: 14px !important;
+}
+
+.checklists-card:hover {
+  background: #f7faff !important;
+}
+
+.checklists-card--active {
+  background: #f2f7ff !important;
+  box-shadow: inset 0 0 0 1px #c7d7fe, inset 4px 0 0 #183b72 !important;
+}
+
+.checklists-card__top {
+  gap: 10px;
+}
+
+.checklists-card__top strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklists-item-editor {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px #edf0f4;
+}
+
+.checklists-switch {
+  cursor: pointer;
+}

@@ -110,6 +110,24 @@ export function ChecklistsPage() {
     setDraft((value) => ({ ...value, items: (value.items || []).filter((_, itemIndex) => itemIndex !== index) }))
   }
 
+  async function toggleActive() {
+    const nextActive = !draft.active
+    const nextDraft = { ...draft, active: nextActive }
+    setDraft(nextDraft)
+    if (!selectedId) return
+    try {
+      const saved = await api.update<ChecklistTemplate>('checklists', selectedId, { ...nextDraft, items: nextDraft.items || [] })
+      const normalized = normalizeChecklist(saved)
+      setChecklists((items) => items.map((item) => item.id === normalized.id ? normalized : item))
+      setDraft(normalized)
+      setError('')
+    } catch (err) {
+      setDraft((value) => ({ ...value, active: !nextActive }))
+      setError(err instanceof Error ? err.message : 'Не удалось переключить статус чек-листа')
+    }
+  }
+
+
   return (
     <section className="checklists-page">
       <aside className="checklists-list-panel">
@@ -137,7 +155,7 @@ export function ChecklistsPage() {
             <label className="checklists-field checklists-field--time"><span>Время начала</span><input type="time" value={draft.startTime} onChange={(e) => setDraft((v) => ({ ...v, startTime: e.target.value }))} /></label>
             <span className="checklists-period-row__dash">—</span>
             <label className="checklists-field checklists-field--time"><span>Время окончания</span><input type="time" value={draft.endTime} onChange={(e) => setDraft((v) => ({ ...v, endTime: e.target.value }))} /></label>
-            <div className="checklists-active-control"><span>Активен</span><button className={draft.active ? 'checklists-switch checklists-switch--on' : 'checklists-switch'} type="button" onClick={() => setDraft((v) => ({ ...v, active: !v.active }))}><span /></button></div>
+            <div className="checklists-active-control"><span>Активен</span><button className={draft.active ? 'checklists-switch checklists-switch--on' : 'checklists-switch'} type="button" onClick={toggleActive}><span /></button></div>
             <div className="checklists-hint"><CalendarIcon /><p>Сотрудник увидит напоминание перед началом.</p></div>
           </div>
         </section>

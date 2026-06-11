@@ -218,6 +218,7 @@ function TagBadge({ value }: { value: string }) {
 }
 
 export function TtkPage() {
+  const [notice, setNotice] = useState('')
   const [selectedGroupId, setSelectedGroupId] = useState<string>(groups[0].id)
   const [selectedItemId, setSelectedItemId] = useState<string>(items[0].id)
 
@@ -231,11 +232,12 @@ export function TtkPage() {
 
   return (
     <section className="ttk-page">
+      {notice ? <div className="ttk-notice">{notice}</div> : null}
       <div className="ttk-layout">
         <aside className="ttk-groups-card">
           <div className="ttk-panel-title">
             <h2>Группы</h2>
-            <button type="button">Добавить группу</button>
+            <button type="button" onClick={() => setNotice('Добавление группы будет сохранено после подключения формы группы.')}>Добавить группу</button>
           </div>
           <div className="ttk-groups-list">
             {groups.map((group) => (
@@ -264,7 +266,7 @@ export function TtkPage() {
                 <SearchIcon />
                 <input placeholder="Поиск по списку..." />
               </label>
-              <button className="ttk-outline-button" type="button">Добавить позицию</button>
+              <button className="ttk-outline-button" type="button" onClick={() => setNotice('Новая позиция создаётся через карточку справа. Выберите группу и заполните поля.')}>Добавить позицию</button>
             </div>
           </div>
 
@@ -280,14 +282,13 @@ export function TtkPage() {
                   <th>Скидки</th>
                   <th>Онлайн</th>
                   <th>На вынос</th>
-                  <th>Действия</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredItems.map((item) => {
                   const active = selectedItem?.id === item.id
                   return (
-                    <tr key={item.id} className={active ? 'ttk-table__row ttk-table__row--active' : 'ttk-table__row'}>
+                    <tr key={item.id} className={active ? 'ttk-table__row ttk-table__row--active ttk-table__row--clickable' : 'ttk-table__row ttk-table__row--clickable'} onClick={() => setSelectedItemId(item.id)}>
                       <td>
                         <span className="ttk-photo-pill">{item.photoLabel}</span>
                       </td>
@@ -302,9 +303,6 @@ export function TtkPage() {
                       <td>{item.discounts ? 'Да' : 'Нет'}</td>
                       <td>{item.online ? '✓' : '—'}</td>
                       <td>{item.takeaway ? '✓' : '—'}</td>
-                      <td>
-                        <button className="ttk-open-button" type="button" onClick={() => setSelectedItemId(item.id)}>Открыть</button>
-                      </td>
                     </tr>
                   )
                 })}
@@ -471,9 +469,9 @@ export function TtkPage() {
               </section>
 
               <div className="ttk-editor-actions">
-                <button className="ttk-primary-button" type="button">Сохранить изменения</button>
-                <button className="ttk-outline-button" type="button">Дублировать</button>
-                <button className="ttk-danger-button" type="button">Удалить</button>
+                <button className="ttk-primary-button" type="button" onClick={() => setNotice('Изменения в карточке зафиксированы на экране. Постоянное сохранение подключается через API ТТК.')}>Сохранить изменения</button>
+                <button className="ttk-outline-button" type="button" onClick={() => setNotice('Дублирование позиции будет добавлено как отдельное действие карточки.')}>Дублировать</button>
+                <button className="ttk-danger-button" type="button" onClick={() => setNotice('Удаление позиции требует подтверждения. Пока позиция не удалена.')}>Удалить</button>
               </div>
             </div>
           ) : (

@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npm install --omit=dev --no-audit --no-fund"]
+cmds = ["echo Runtime node_modules is included; skipping npm install"]
 
 [phases.build]
 cmds = ["npm run check && test -f dist/index.html"]

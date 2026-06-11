@@ -1470,3 +1470,184 @@ textarea:focus-visible {
   outline: 3px solid rgba(37, 99, 235, 0.22);
   outline-offset: 2px;
 }
+
+/* Cleaner dashboard rows and real notification/support surfaces */
+.owner-attention-list,
+.owner-employees-list {
+  gap: 6px;
+}
+
+.owner-attention,
+.owner-employee {
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.owner-attention:hover,
+.owner-employee:hover {
+  background: #f7faff !important;
+}
+
+.owner-notifications-wrap {
+  position: relative;
+}
+
+.owner-notifications-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 360px;
+  z-index: 40;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.owner-notifications-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.owner-notifications-popover__header strong {
+  font-size: 14px;
+  color: #101828;
+}
+
+.owner-notifications-popover__header small {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.owner-notifications-popover button {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  border: 0;
+  border-bottom: 1px solid #f1f3f7;
+  padding: 13px 16px;
+  background: #ffffff;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.owner-notifications-popover button:hover {
+  background: #f7faff;
+}
+
+.owner-notifications-popover button:last-child {
+  border-bottom: 0;
+}
+
+.owner-notifications-popover button strong {
+  color: #101828;
+  font-size: 13px;
+}
+
+.owner-notifications-popover button span {
+  color: #475467;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.owner-notifications-popover button small {
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.owner-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.28);
+  padding: 20px;
+}
+
+.owner-support-dialog {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 14px;
+  border-radius: 18px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+}
+
+.owner-support-dialog__header,
+.owner-support-dialog__actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.owner-support-dialog h2,
+.owner-support-dialog p {
+  margin: 0;
+}
+
+.owner-support-dialog p {
+  margin-top: 6px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.owner-support-dialog__header button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: #f2f4f7;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.owner-support-dialog label {
+  display: grid;
+  gap: 8px;
+  color: #101828;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.owner-support-dialog input,
+.owner-support-dialog textarea {
+  width: 100%;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: #101828;
+  font: inherit;
+  resize: vertical;
+}
+
+.owner-support-dialog__actions button {
+  min-height: 40px;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #101828;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.owner-support-dialog__actions button:first-child {
+  border-color: #183b72;
+  color: #ffffff;
+  background: #183b72;
+}

@@ -720,3 +720,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Hall plan cleanup: row opens side card, actions live only in card */
+.hall-notice {
+  border: 1px solid #cfe2ff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #183b72;
+  background: #f2f7ff;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.hall-table--clickable tbody tr {
+  cursor: pointer;
+}
+
+.hall-table--clickable tbody tr:hover td {
+  background: #f7faff;
+}
+
+.hall-list-panel__header {
+  min-height: 42px;
+}

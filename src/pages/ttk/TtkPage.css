@@ -548,3 +548,22 @@
     flex-wrap: wrap;
   }
 }
+
+/* TTK rows open the card; no separate action column */
+.ttk-table__row--clickable {
+  cursor: pointer;
+}
+
+.ttk-table__row--clickable:hover td {
+  background: #f7faff;
+}
+
+.ttk-notice {
+  border: 1px solid #cfe2ff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #183b72;
+  background: #f2f7ff;
+  font-size: 13px;
+  font-weight: 750;
+}

@@ -613,3 +613,13 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.inventory-notice {
+  border: 1px solid #cfe2ff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #183b72;
+  background: #f2f7ff;
+  font-size: 13px;
+  font-weight: 750;
+}
