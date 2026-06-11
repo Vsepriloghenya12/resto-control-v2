@@ -307,15 +307,79 @@ function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: strin
   )
 }
 
-function RestaurantHeader({ restaurant }: { restaurant?: Restaurant }) {
+
+function RestaurantHeader({ restaurants, currentRestaurantId, onSwitch, onAdd }: { restaurants: Array<Restaurant & { isCurrent?: boolean }>; currentRestaurantId?: string; onSwitch: (id: string) => void; onAdd: () => void }) {
   return (
-    <section className="owner-restaurant-row owner-restaurant-row--single" aria-label="Текущий ресторан">
-      <div className="owner-restaurant-current">
-        <span>Текущий ресторан</span>
-        <strong>{restaurant?.name || 'Ресторан'}</strong>
+    <section className="owner-restaurant-row" aria-label="Рестораны владельца">
+      <div className="owner-restaurant-tabs">
+        {restaurants.length ? restaurants.map((restaurant) => {
+          const isCurrent = restaurant.id === currentRestaurantId || restaurant.isCurrent
+          return (
+            <button
+              key={restaurant.id}
+              type="button"
+              className={isCurrent ? 'owner-restaurant-tab owner-restaurant-tab--active' : 'owner-restaurant-tab'}
+              onClick={() => !isCurrent && onSwitch(restaurant.id)}
+            >
+              {restaurant.name}
+            </button>
+          )
+        }) : (
+          <span className="owner-restaurant-empty">Ресторан не выбран</span>
+        )}
       </div>
-      <p>Все данные на экране относятся только к этому ресторану.</p>
+      <button className="owner-add-restaurant" type="button" onClick={onAdd}>+ Добавить ресторан</button>
     </section>
+  )
+}
+
+function AddRestaurantDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (name: string) => Promise<void> }) {
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  return (
+    <div className="owner-modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <form
+        className="owner-support-dialog owner-add-restaurant-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Добавить ресторан"
+        onMouseDown={(event) => event.stopPropagation()}
+        onSubmit={async (event) => {
+          event.preventDefault()
+          if (!name.trim()) {
+            setError('Введите название ресторана.')
+            return
+          }
+          try {
+            setSaving(true)
+            await onCreated(name.trim())
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось создать ресторан')
+          } finally {
+            setSaving(false)
+          }
+        }}
+      >
+        <div className="owner-support-dialog__header">
+          <div>
+            <h2>Добавить ресторан</h2>
+            <p>Будет создан новый пустой ресторан, без чужих задач, броней и сотрудников.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
+        </div>
+        <label>
+          <span>Название ресторана</span>
+          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Например: Resto Bar" autoFocus />
+        </label>
+        {error ? <p className="owner-form-error">{error}</p> : null}
+        <div className="owner-support-dialog__actions">
+          <button type="submit" disabled={saving}>{saving ? 'Создаю...' : 'Создать ресторан'}</button>
+          <button type="button" onClick={onClose}>Отмена</button>
+        </div>
+      </form>
+    </div>
   )
 }
 
@@ -494,6 +558,8 @@ export function OwnerDashboardPage() {
   const [profileOpen, setProfileOpen] = useState(false)
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [summaryError, setSummaryError] = useState('')
+  const [restaurants, setRestaurants] = useState<Array<Restaurant & { isCurrent?: boolean }>>([])
+  const [addRestaurantOpen, setAddRestaurantOpen] = useState(false)
   const userName = session?.user.name ?? 'Пользователь'
   const restaurantName = summary?.restaurant?.name || session?.restaurant.name || 'Ресторан'
   const paymentAccess = getPaymentAccess(summary?.restaurant || session?.restaurant)
@@ -510,9 +576,31 @@ export function OwnerDashboardPage() {
     }
   }
 
-  useEffect(() => { void loadSummary() }, [])
+  async function loadRestaurants() {
+    try {
+      const result = await apiRequest<{ items: Array<Restaurant & { isCurrent?: boolean }> }>('/api/my-restaurants')
+      setRestaurants(result.items)
+    } catch {
+      setRestaurants(summary?.restaurant ? [summary.restaurant] : session?.restaurant ? [session.restaurant] : [])
+    }
+  }
+
+  async function switchRestaurant(restaurantId: string) {
+    await apiRequest(`/api/my-restaurants/${restaurantId}/switch`, { method: 'POST' })
+    window.location.reload()
+  }
+
+  async function createRestaurant(name: string) {
+    await apiRequest('/api/my-restaurants', { method: 'POST', body: JSON.stringify({ name }) })
+    window.location.reload()
+  }
+
+  useEffect(() => { void loadSummary(); void loadRestaurants() }, [])
   useEffect(() => {
-    if (section === 'dashboard') void loadSummary()
+    if (section === 'dashboard') {
+      void loadSummary()
+      void loadRestaurants()
+    }
   }, [section])
 
   const openSection = (nextSection: OwnerSection) => {
@@ -630,13 +718,14 @@ export function OwnerDashboardPage() {
           </div>
         </header>
 
-        {section === 'dashboard' ? <RestaurantHeader restaurant={summary?.restaurant || session?.restaurant} /> : null}
+        {section === 'dashboard' ? <RestaurantHeader restaurants={restaurants.length ? restaurants : (summary?.restaurant ? [summary.restaurant] : session?.restaurant ? [session.restaurant] : [])} currentRestaurantId={(summary?.restaurant || session?.restaurant)?.id} onSwitch={switchRestaurant} onAdd={() => setAddRestaurantOpen(true)} /> : null}
         {summaryError ? <div className="owner-action-notice" role="status">{summaryError}</div> : null}
 
         {section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent summary={summary} onOpen={openSection} />}
       </section>
       {supportOpen ? <SupportDialog onClose={() => setSupportOpen(false)} /> : null}
       {profileOpen ? <ProfileDialog userName={userName} login={session?.user.login} roleLabel={roleLabel} restaurantName={restaurantName} onClose={() => setProfileOpen(false)} /> : null}
+      {addRestaurantOpen ? <AddRestaurantDialog onClose={() => setAddRestaurantOpen(false)} onCreated={createRestaurant} /> : null}
     </main>
   )
 }

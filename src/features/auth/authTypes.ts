@@ -34,6 +34,7 @@ export type Membership = {
   userId: string
   restaurantId: string
   role: MembershipRole
+  position?: string
   status: 'active' | 'invited' | 'blocked'
 }
 

@@ -442,6 +442,13 @@ function restaurantIdFrom(auth) {
   return auth.payload.restaurant.id
 }
 
+function roleFromPosition(position) {
+  const value = String(position || '').toLowerCase()
+  if (value.includes('управля')) return 'manager'
+  if (value.includes('старш') || value.includes('администратор')) return 'senior'
+  return 'employee'
+}
+
 function collectionByPath(state, name) {
   const allowed = {
     employees: 'employees',
@@ -762,8 +769,9 @@ async function handleCollections(req, res, state, pathname, auth) {
         throw httpError(409, 'Пользователь с таким телефоном или email уже существует.')
       }
       const createdAt = nowIso()
-      const user = { id: id('user'), name: String(body.name).trim(), login, passwordHash: hashPassword(password), roleHint: 'employee', createdAt, updatedAt: createdAt }
-      const membership = { id: id('membership'), userId: user.id, restaurantId: targetRestaurantId, role: 'employee', position: body.position, status: 'active', createdAt, updatedAt: createdAt }
+      const employeeRole = roleFromPosition(body.position)
+      const user = { id: id('user'), name: String(body.name).trim(), login, passwordHash: hashPassword(password), roleHint: employeeRole, createdAt, updatedAt: createdAt }
+      const membership = { id: id('membership'), userId: user.id, restaurantId: targetRestaurantId, role: employeeRole, position: body.position, status: 'active', createdAt, updatedAt: createdAt }
       const employee = {
         id: id('employee'),
         restaurantId: targetRestaurantId,
@@ -840,6 +848,64 @@ async function handleCollections(req, res, state, pathname, auth) {
   return false
 }
 
+
+
+async function handleMyRestaurants(req, res, state, pathname, auth) {
+  if (!pathname.startsWith('/api/my-restaurants')) return false
+  const payload = requireRole(auth, ['owner', 'manager'])
+  const userId = payload.user.id
+
+  if (pathname === '/api/my-restaurants' && req.method === 'GET') {
+    const memberships = state.memberships.filter((item) => item.userId === userId && item.status === 'active' && ['owner', 'manager'].includes(item.role))
+    const restaurants = memberships
+      .map((membership) => state.restaurants.find((restaurant) => restaurant.id === membership.restaurantId))
+      .filter(Boolean)
+      .map((restaurant) => ({ ...restaurant, isCurrent: restaurant.id === payload.restaurant.id }))
+    send(res, 200, { items: restaurants })
+    return true
+  }
+
+  if (pathname === '/api/my-restaurants' && req.method === 'POST') {
+    const body = await readBody(req)
+    const name = String(body.name || '').trim()
+    if (!name) throw httpError(400, 'Введите название ресторана.')
+    const createdAt = nowIso()
+    const restaurant = {
+      id: id('restaurant'),
+      name,
+      plan: 'trial',
+      subscriptionStatus: 'trial',
+      trialStartedAt: createdAt,
+      trialEndsAt: addDays(new Date(), 14),
+      subscriptionEndsAt: addDays(new Date(), 14),
+      createdAt,
+      updatedAt: createdAt,
+    }
+    const membership = { id: id('membership'), userId, restaurantId: restaurant.id, role: payload.membership.role, position: payload.membership.position || 'Владелец', status: 'active', createdAt, updatedAt: createdAt }
+    state.restaurants.push(restaurant)
+    state.memberships.push(membership)
+    state.halls.push({ id: id('hall'), restaurantId: restaurant.id, name: 'Основной зал', tablesCount: 0, seatsCount: 0, active: true, createdAt, updatedAt: createdAt })
+    const session = createSession(state, payload.user, membership, true)
+    state.sessions = state.sessions.filter((item) => item.id !== auth.session.id)
+    await saveState(state)
+    send(res, 201, sessionPayload(state, session), { 'Set-Cookie': cookieHeader(session) })
+    return true
+  }
+
+  const switchMatch = pathname.match(/^\/api\/my-restaurants\/([^/]+)\/switch$/)
+  if (switchMatch && req.method === 'POST') {
+    const restaurantId = switchMatch[1]
+    const membership = state.memberships.find((item) => item.userId === userId && item.restaurantId === restaurantId && item.status === 'active')
+    if (!membership) throw httpError(404, 'Доступ к ресторану не найден.')
+    const session = createSession(state, payload.user, membership, true)
+    state.sessions = state.sessions.filter((item) => item.id !== auth.session.id)
+    await saveState(state)
+    send(res, 200, sessionPayload(state, session), { 'Set-Cookie': cookieHeader(session) })
+    return true
+  }
+
+  return false
+}
 
 async function handleRestaurant(req, res, state, pathname, auth) {
   if (pathname !== '/api/restaurant') return false
@@ -964,6 +1030,7 @@ async function handleRequest(req, res) {
 
     if (await handleAuth(req, res, state, pathname, auth)) return
     if (await handleServiceOwner(req, res, state, pathname, auth)) return
+    if (await handleMyRestaurants(req, res, state, pathname, auth)) return
     if (await handleRestaurant(req, res, state, pathname, auth)) return
     if (await handleDashboard(req, res, state, pathname, auth)) return
     if (await handleMobile(req, res, state, pathname, auth)) return

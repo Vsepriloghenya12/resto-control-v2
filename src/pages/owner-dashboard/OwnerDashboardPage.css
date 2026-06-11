@@ -1797,3 +1797,75 @@ button.owner-employee {
 .owner-brand > span {
   display: none !important;
 }
+
+.owner-restaurant-row {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.owner-restaurant-tabs {
+  max-width: min(760px, 100%);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.owner-restaurant-tabs::-webkit-scrollbar { display: none; }
+
+.owner-restaurant-empty {
+  padding: 0 16px;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.owner-add-restaurant {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dbe1ea;
+  border-radius: 12px;
+  padding: 0 18px;
+  background: #ffffff;
+  color: #1b56db;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.owner-add-restaurant:hover {
+  border-color: #b7c7ff;
+  background: #f7f9ff;
+}
+
+.owner-add-restaurant-dialog label {
+  display: grid;
+  gap: 8px;
+}
+
+.owner-add-restaurant-dialog label span {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.owner-add-restaurant-dialog input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #dbe1ea;
+  border-radius: 14px;
+  padding: 0 14px;
+  color: #111827;
+  font: inherit;
+  font-weight: 700;
+}
+
+.owner-form-error {
+  margin: 4px 0 0;
+  color: #d92d20;
+  font-size: 13px;
+  font-weight: 800;
+}

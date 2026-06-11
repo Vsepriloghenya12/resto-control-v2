@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import { useSession } from "../../app/providers/SessionProvider";
-import { api, apiRequest } from "../../shared/api/client";
+import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import { useSession } from '../../app/providers/SessionProvider'
+import { api, apiRequest } from '../../shared/api/client'
 import {
   AlertCircleIcon,
   BellIcon,
@@ -13,806 +13,498 @@ import {
   ClipboardIcon,
   ClockIcon,
   LogoutIcon,
+  MailIcon,
   MoreIcon,
   OverviewIcon,
   PlusIcon,
   SearchIcon,
-  TeamIcon,
-} from "../../shared/ui/Icon";
-import "./EmployeeStartPage.css";
+} from '../../shared/ui/Icon'
+import './EmployeeStartPage.css'
 
-type MobileTab = "overview" | "tasks" | "request" | "checklists" | "hallPlan" | "more";
+type MobileTab = 'overview' | 'tasks' | 'request' | 'checklists' | 'hallPlan' | 'more'
+type DetailKind = 'task' | 'checklist' | 'inventory' | 'notification' | 'knowledge' | 'guest' | 'support' | null
+type HallStatus = 'free' | 'reserved' | 'arrived' | 'occupied' | 'disabled'
+type HallMode = 'tables' | 'bookings'
+type HallFilter = 'all' | HallStatus
 
-type OverviewCard = {
-  id: string;
-  title: string;
-  subtitle: string;
-  meta?: string;
-  action: string;
-  tone: "orange" | "blue" | "green" | "purple";
-  icon: ReactNode;
-  badge?: string;
-};
+type Task = { id: string; title: string; description?: string; status?: string; assignedPosition?: string; dueTime?: string; dueDate?: string; requiresPhoto?: boolean }
+type Checklist = { id: string; title: string; position?: string; active?: boolean; startTime?: string; endTime?: string; items?: Array<{ id: string; title: string; required?: boolean; requiresCompletionPhoto?: boolean }> }
+type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; dueDate?: string; rowsCount?: number }
+type Knowledge = { id: string; title: string; section?: string; type?: string; description?: string; status?: string }
+type Guest = { id: string; name: string; phone?: string; preferences?: string; restrictions?: string; favoriteTable?: string; serviceComment?: string }
+type TechRequest = { id: string; title: string; description?: string; priority?: string; status?: string }
 
+type DashboardSummary = {
+  restaurant: { id: string; name: string }
+  employees?: Array<{ id: string; name: string; position: string; shiftStatus?: string; status?: string }>
+  tasks?: Task[]
+  checklists?: Checklist[]
+  bookings?: Array<{ id: string; guestName?: string; status?: string; time?: string; guestsCount?: number }>
+  technicalRequests?: TechRequest[]
+  inventoryAssignments?: InventoryAssignment[]
+  knowledgeMaterials?: Knowledge[]
+  guests?: Guest[]
+}
 
-type HallStatus = "free" | "reserved" | "arrived" | "occupied" | "disabled";
-type HallMode = "tables" | "bookings";
-type HallFilter = "all" | HallStatus;
-
-type MobileHall = {
-  id: string;
-  name: string;
-  tablesCount: number;
-};
-
-type MobileBooking = {
-  id: string;
-  guestName: string;
-  phone: string;
-  time: string;
-  guestsCount: number;
-  status: "new" | "confirmed" | "arrived" | "seated" | "cancelled" | "no_show";
-  comment?: string;
-};
-
-type MobileHallTable = {
-  id: string;
-  hallId: string;
-  name: string;
-  seats: number;
-  status: HallStatus;
-  booking?: MobileBooking;
-};
-
-const fallbackHalls: MobileHall[] = [
-  { id: "main", name: "Основной зал", tablesCount: 12 },
-  { id: "terrace", name: "Терраса", tablesCount: 8 },
-  { id: "vip", name: "VIP", tablesCount: 4 },
-  { id: "bar", name: "Бар", tablesCount: 6 },
-];
-
-const fallbackHallTables: MobileHallTable[] = [
-  { id: "t1", hallId: "main", name: "Стол 1", seats: 2, status: "free" },
-  {
-    id: "t4",
-    hallId: "main",
-    name: "Стол 4",
-    seats: 4,
-    status: "reserved",
-    booking: {
-      id: "b4",
-      guestName: "Анна Смирнова",
-      phone: "+7 999 123-45-67",
-      time: "19:00",
-      guestsCount: 4,
-      status: "confirmed",
-      comment: "День рождения",
-    },
-  },
-  {
-    id: "t6",
-    hallId: "main",
-    name: "Стол 6",
-    seats: 4,
-    status: "arrived",
-    booking: {
-      id: "b6",
-      guestName: "Иван Петров",
-      phone: "+7 900 111-22-33",
-      time: "18:30",
-      guestsCount: 3,
-      status: "arrived",
-      comment: "Попросили стол у окна",
-    },
-  },
-  { id: "t7", hallId: "main", name: "Стол 7", seats: 2, status: "free" },
-  {
-    id: "t8",
-    hallId: "main",
-    name: "Стол 8",
-    seats: 6,
-    status: "occupied",
-    booking: {
-      id: "b8",
-      guestName: "Семья Орловых",
-      phone: "+7 900 222-44-55",
-      time: "19:15",
-      guestsCount: 6,
-      status: "seated",
-      comment: "Нужен детский стул",
-    },
-  },
-  { id: "t9", hallId: "main", name: "Стол 9", seats: 4, status: "free" },
-  { id: "t10", hallId: "main", name: "Стол 10", seats: 4, status: "disabled" },
-  { id: "t11", hallId: "main", name: "Стол 11", seats: 2, status: "free" },
-  { id: "t12", hallId: "main", name: "Стол 12", seats: 4, status: "free" },
-  { id: "tr1", hallId: "terrace", name: "Терраса 1", seats: 4, status: "free" },
-  { id: "tr2", hallId: "terrace", name: "Терраса 2", seats: 2, status: "reserved", booking: { id: "bt2", guestName: "Ольга Соколова", phone: "+7 900 555-12-12", time: "20:00", guestsCount: 2, status: "confirmed" } },
-  { id: "vip1", hallId: "vip", name: "VIP 1", seats: 8, status: "reserved", booking: { id: "bv1", guestName: "Компания на 8 гостей", phone: "+7 900 777-70-70", time: "21:00", guestsCount: 8, status: "confirmed", comment: "Предзаказ по меню" } },
-  { id: "bar1", hallId: "bar", name: "Бар 1", seats: 2, status: "free" },
-];
+type MobileHall = { id: string; name: string; tablesCount: number }
+type MobileBooking = { id: string; guestName: string; phone?: string; time: string; guestsCount: number; status: 'new' | 'confirmed' | 'arrived' | 'seated' | 'cancelled' | 'no_show'; comment?: string }
+type MobileHallTable = { id: string; hallId: string; name: string; seats: number; status: HallStatus; booking?: MobileBooking }
+type DetailState = { kind: DetailKind; title: string; subtitle?: string; body?: ReactNode; actions?: ReactNode }
 
 function getHallStatusLabel(status: HallStatus) {
   const labels: Record<HallStatus, string> = {
-    free: "Свободен",
-    reserved: "Подтверждена",
-    arrived: "Пришли по брони",
-    occupied: "Гости сели",
-    disabled: "Недоступен",
-  };
-  return labels[status];
+    free: 'Свободен',
+    reserved: 'Подтверждена',
+    arrived: 'Пришли по брони',
+    occupied: 'Гости сели',
+    disabled: 'Недоступен',
+  }
+  return labels[status]
 }
 
-function getBookingStatusLabel(status: MobileBooking["status"]) {
-  const labels: Record<MobileBooking["status"], string> = {
-    new: "Новая",
-    confirmed: "Подтверждена",
-    arrived: "Пришли по брони",
-    seated: "Гости сели",
-    cancelled: "Отменена",
-    no_show: "Не пришли",
-  };
-  return labels[status];
+function getBookingStatusLabel(status: MobileBooking['status']) {
+  const labels: Record<MobileBooking['status'], string> = {
+    new: 'Новая',
+    confirmed: 'Подтверждена',
+    arrived: 'Пришли по брони',
+    seated: 'Гости сели',
+    cancelled: 'Отменена',
+    no_show: 'Не пришли',
+  }
+  return labels[status]
+}
+
+function statusText(status?: string) {
+  if (status === 'done') return 'Выполнена'
+  if (status === 'in_progress') return 'В работе'
+  if (status === 'overdue') return 'Просрочена'
+  if (status === 'assigned') return 'Назначена'
+  if (status === 'draft') return 'Черновик'
+  if (status === 'closed') return 'Закрыта'
+  if (status === 'new') return 'Новая'
+  return 'Не начата'
+}
+
+function samePosition(itemPosition: string | undefined, employeePosition: string) {
+  if (!itemPosition) return true
+  return itemPosition.toLowerCase() === employeePosition.toLowerCase()
+}
+
+function getTone(status?: string): 'green' | 'orange' | 'blue' | 'red' | 'purple' {
+  if (status === 'done' || status === 'closed') return 'green'
+  if (status === 'overdue') return 'red'
+  if (status === 'in_progress' || status === 'assigned') return 'orange'
+  if (status === 'draft') return 'purple'
+  return 'blue'
 }
 
 export function EmployeeStartPage() {
-  const { session, logout } = useSession();
-  const [activeTab, setActiveTab] = useState<MobileTab>("overview");
-  const [shiftOpen, setShiftOpen] = useState(true);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [requestSubmitted, setRequestSubmitted] = useState(false);
-  const [halls, setHalls] = useState<MobileHall[]>(fallbackHalls);
-  const [hallTables, setHallTables] = useState<MobileHallTable[]>(fallbackHallTables);
-  const [selectedHallId, setSelectedHallId] = useState<string>(fallbackHalls[0].id);
-  const [hallMode, setHallMode] = useState<HallMode>("tables");
-  const [hallFilter, setHallFilter] = useState<HallFilter>("all");
-  const [selectedTable, setSelectedTable] = useState<MobileHallTable | null>(null);
-
-
-  async function loadHallPlan() {
-    try {
-      const result = await apiRequest<{ halls: Array<{ id: string; name: string; tablesCount?: number }>; tables: Array<{ id: string; hallId: string; name: string; seats: number; status: HallStatus }>; bookings: Array<{ id: string; tableId: string; guestName: string; phone?: string; time: string; guestsCount: number; status: MobileBooking["status"]; comment?: string }> }>("/api/mobile/hall-plan");
-      const nextTables = result.tables.map((table) => {
-        const booking = result.bookings.find((item) => item.tableId === table.id && !["cancelled", "no_show"].includes(item.status));
-        return { ...table, booking: booking ? { ...booking, phone: booking.phone || "", comment: booking.comment || "" } : undefined };
-      });
-      setHalls(result.halls.map((hall) => ({ id: hall.id, name: hall.name, tablesCount: hall.tablesCount || nextTables.filter((table) => table.hallId === hall.id).length })));
-      setHallTables(nextTables);
-      if (result.halls[0] && !result.halls.some((hall) => hall.id === selectedHallId)) setSelectedHallId(result.halls[0].id);
-    } catch {
-      setHalls(fallbackHalls);
-      setHallTables(fallbackHallTables);
-    }
-  }
-
-  useEffect(() => { void loadHallPlan() }, []);
-
-  async function updateSelectedBookingStatus(status: MobileBooking["status"]) {
-    if (!selectedTable?.booking) return;
-    await api.bookingStatus(selectedTable.booking.id, status);
-    await loadHallPlan();
-    setSelectedTable(null);
-  }
+  const { session, logout } = useSession()
+  const [activeTab, setActiveTab] = useState<MobileTab>('overview')
+  const [shiftOpen, setShiftOpen] = useState(true)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showRequestModal, setShowRequestModal] = useState(false)
+  const [requestSubmitted, setRequestSubmitted] = useState(false)
+  const [summary, setSummary] = useState<DashboardSummary | null>(null)
+  const [halls, setHalls] = useState<MobileHall[]>([])
+  const [hallTables, setHallTables] = useState<MobileHallTable[]>([])
+  const [selectedHallId, setSelectedHallId] = useState('')
+  const [hallMode, setHallMode] = useState<HallMode>('tables')
+  const [hallFilter, setHallFilter] = useState<HallFilter>('all')
+  const [selectedTable, setSelectedTable] = useState<MobileHallTable | null>(null)
+  const [detail, setDetail] = useState<DetailState | null>(null)
+  const [notice, setNotice] = useState('')
 
   const employee = {
-    name: session?.user.name || "Мария",
-    position: "Администратор",
-    restaurantName: session?.restaurant.name || "Resto Control",
-    canSeeHallPlan: true,
-    canManageStopList: false,
-    inventoryAssignment: null as null | { title: string; dueTime: string },
-  };
+    name: session?.user.name || 'Сотрудник',
+    position: session?.membership.position || (session?.membership.role === 'manager' ? 'Управляющий' : 'Сотрудник'),
+    restaurantName: summary?.restaurant.name || session?.restaurant.name || 'Ресторан',
+    isManager: session?.membership.role === 'manager' || session?.membership.role === 'owner',
+  }
 
-  const overviewCards = useMemo<OverviewCard[]>(() => {
-    const cards: OverviewCard[] = [
-      {
-        id: "checklist",
-        title: "Чек-лист открытия",
-        subtitle: "5 из 12 пунктов",
-        meta: "до 11:00",
-        action: "Продолжить",
-        tone: "orange",
-        icon: <ChecklistIcon />,
-      },
-      {
-        id: "tasks",
-        title: "Задачи",
-        subtitle: "3 активные",
-        meta: "1 просрочена",
-        action: "Открыть",
-        tone: "blue",
-        icon: <ClipboardIcon />,
-      },
-    ];
+  const userTasks = useMemo(() => {
+    const tasks = summary?.tasks || []
+    if (employee.isManager) return tasks
+    return tasks.filter((item) => samePosition(item.assignedPosition, employee.position))
+  }, [employee.isManager, employee.position, summary?.tasks])
 
-    if (employee.inventoryAssignment) {
-      cards.push({
-        id: "inventory",
-        title: "Инвентаризация",
-        subtitle: employee.inventoryAssignment.title,
-        meta: `сдать до ${employee.inventoryAssignment.dueTime}`,
-        action: "Начать",
-        tone: "green",
-        icon: <BoxIcon />,
-      });
-    }
+  const userChecklists = useMemo(() => {
+    const checklists = summary?.checklists || []
+    if (employee.isManager) return checklists.filter((item) => item.active !== false)
+    return checklists.filter((item) => item.active !== false && samePosition(item.position, employee.position))
+  }, [employee.isManager, employee.position, summary?.checklists])
 
-    if (employee.canManageStopList) {
-      cards.push({
-        id: "stoplist",
-        title: "Стоп-лист",
-        subtitle: "7 позиций",
-        action: "Открыть",
-        tone: "purple",
-        icon: <AlertCircleIcon />,
-        badge: "для старших",
-      });
-    }
+  const userInventory = useMemo(() => {
+    const assignments = summary?.inventoryAssignments || []
+    if (employee.isManager) return assignments.filter((item) => item.status !== 'submitted' && item.status !== 'done')
+    return assignments.filter((item) => samePosition(item.assignedPosition, employee.position) && item.status !== 'submitted' && item.status !== 'done')
+  }, [employee.isManager, employee.position, summary?.inventoryAssignments])
 
-    if (employee.canSeeHallPlan) {
-      cards.push({
-        id: "hallplan",
-        title: "План зала",
-        subtitle: "14 броней сегодня",
-        action: "Открыть",
-        tone: "green",
-        icon: <CalendarIcon />,
-      });
-    }
+  const notifications = useMemo(() => {
+    const items: Array<{ title: string; text: string; target: MobileTab; detail: DetailState }> = []
+    userTasks.filter((item) => item.status === 'overdue').slice(0, 3).forEach((task) => {
+      items.push({ title: task.title, text: 'Просроченная задача', target: 'tasks', detail: taskDetail(task) })
+    })
+    userInventory.slice(0, 2).forEach((item) => {
+      items.push({ title: item.title, text: item.section || 'Инвентаризация назначена', target: 'overview', detail: inventoryDetail(item) })
+    })
+    ;(summary?.bookings || []).filter((booking) => ['new', 'confirmed', 'arrived'].includes(String(booking.status || ''))).slice(0, 3).forEach((booking) => {
+      items.push({ title: booking.guestName ? `Бронь: ${booking.guestName}` : 'Бронь на сегодня', text: `${booking.time || 'время не указано'} · ${booking.guestsCount || 1} гостей`, target: 'hallPlan', detail: { kind: 'notification', title: booking.guestName || 'Бронь', subtitle: `${booking.time || ''} · ${booking.guestsCount || 1} гостей` } })
+    })
+    return items
+  }, [summary?.bookings, userInventory, userTasks])
 
-    return cards;
-  }, [
-    employee.canManageStopList,
-    employee.canSeeHallPlan,
-    employee.inventoryAssignment,
-  ]);
+  async function loadData() {
+    const nextSummary = await apiRequest<DashboardSummary>('/api/dashboard/summary')
+    setSummary(nextSummary)
+  }
 
-  const tasks = [
-    {
-      title: "Подготовить зону ожидания гостей",
-      status: "к 10:30",
-      accent: "normal",
-    },
-    {
-      title: "Проверить резерв на вечер",
-      status: "до 17:00",
-      accent: "normal",
-    },
-    {
-      title: "Протереть столы на террасе",
-      status: "просрочена 15 мин назад",
-      accent: "danger",
-    },
-  ];
+  async function loadHallPlan() {
+    const result = await apiRequest<{ halls: Array<{ id: string; name: string; tablesCount?: number }>; tables: Array<{ id: string; hallId: string; name: string; seats: number; status: HallStatus }>; bookings: Array<{ id: string; tableId: string; guestName: string; phone?: string; time: string; guestsCount: number; status: MobileBooking['status']; comment?: string }> }>('/api/mobile/hall-plan')
+    const nextTables = result.tables.map((table) => {
+      const booking = result.bookings.find((item) => item.tableId === table.id && !['cancelled', 'no_show'].includes(item.status))
+      return { ...table, booking: booking ? { ...booking, phone: booking.phone || '', comment: booking.comment || '' } : undefined }
+    })
+    const nextHalls = result.halls.map((hall) => ({ id: hall.id, name: hall.name, tablesCount: hall.tablesCount || nextTables.filter((table) => table.hallId === hall.id).length }))
+    setHalls(nextHalls)
+    setHallTables(nextTables)
+    setSelectedHallId((current) => current && nextHalls.some((hall) => hall.id === current) ? current : nextHalls[0]?.id || '')
+  }
 
-  const checklists = [
-    { title: "Открытие зала", progress: "5 / 12", time: "до 11:00" },
-    { title: "Подготовка входной зоны", progress: "2 / 6", time: "до 10:00" },
-    { title: "Закрытие смены", progress: "0 / 10", time: "после 22:30" },
-  ];
+  useEffect(() => {
+    void loadData().catch(() => setNotice('Не удалось загрузить данные смены.'))
+    void loadHallPlan().catch(() => undefined)
+  }, [])
 
-  const moreTiles = [
-    "Знакомство с компанией",
-    "Корпоративная жизнь",
-    "Постоянные гости",
-    "База знаний",
-    "Поддержка",
-  ];
-
-  const selectedHall = halls.find((hall) => hall.id === selectedHallId) ?? halls[0];
-  const visibleHallTables = hallTables.filter((table) => {
-    if (table.hallId !== selectedHallId) return false;
-    if (hallFilter === "all") return true;
-    return table.status === hallFilter;
-  });
-  const visibleBookings = visibleHallTables.filter((table) => table.booking).sort((a, b) => String(a.booking?.time).localeCompare(String(b.booking?.time)));
-
-  function handleOverviewAction(cardId: string) {
-    if (cardId === "hallplan") {
-      setActiveTab("hallPlan");
-      return;
-    }
-    if (cardId === "tasks") {
-      setActiveTab("tasks");
-      return;
-    }
-    if (cardId === "checklist") {
-      setActiveTab("checklists");
+  function taskDetail(task: Task): DetailState {
+    return {
+      kind: 'task',
+      title: task.title,
+      subtitle: statusText(task.status),
+      body: (
+        <div className="employee-mobile__detail-text">
+          <p>{task.description || 'Описание задачи не заполнено.'}</p>
+          <span>Должность: {task.assignedPosition || 'любая'}</span>
+          <span>Срок: {task.dueTime || 'не указан'}</span>
+          {task.requiresPhoto ? <span>Для закрытия нужно фото.</span> : null}
+        </div>
+      ),
+      actions: task.status === 'done' ? null : <button type="button" onClick={() => completeTask(task.id)}>Отметить выполненной</button>,
     }
   }
+
+  function checklistDetail(checklist: Checklist): DetailState {
+    return {
+      kind: 'checklist',
+      title: checklist.title,
+      subtitle: `${checklist.startTime || '—'} — ${checklist.endTime || '—'}`,
+      body: (
+        <div className="employee-mobile__detail-list">
+          {(checklist.items || []).length ? checklist.items?.map((item, index) => (
+            <button key={item.id || item.title} type="button" onClick={() => setNotice(`Пункт отмечен: ${item.title}`)}>
+              <strong>{index + 1}. {item.title}</strong>
+              <span>{item.required ? 'Обязательный' : 'Необязательный'}{item.requiresCompletionPhoto ? ' · нужно фото' : ''}</span>
+            </button>
+          )) : <p>Пункты чек-листа ещё не настроены.</p>}
+        </div>
+      ),
+      actions: <button type="button" onClick={() => setNotice('Прохождение чек-листа сохранено.')}>Сохранить прохождение</button>,
+    }
+  }
+
+  function inventoryDetail(item: InventoryAssignment): DetailState {
+    return {
+      kind: 'inventory',
+      title: item.title,
+      subtitle: item.section || 'Инвентаризация',
+      body: (
+        <div className="employee-mobile__detail-text">
+          <span>Статус: {statusText(item.status)}</span>
+          <span>Строк: {item.rowsCount || 0}</span>
+          <span>Срок: {item.dueDate || 'не указан'}</span>
+        </div>
+      ),
+      actions: <button type="button" onClick={() => submitInventory(item.id)}>Отметить как сданную</button>,
+    }
+  }
+
+  async function completeTask(id: string) {
+    await api.update('tasks', id, { status: 'done' })
+    setNotice('Задача выполнена.')
+    setDetail(null)
+    await loadData()
+  }
+
+  async function submitInventory(id: string) {
+    await api.update('inventory-assignments', id, { status: 'submitted', submittedAt: new Date().toISOString() })
+    setNotice('Инвентаризация отмечена как сданная.')
+    setDetail(null)
+    await loadData()
+  }
+
+  async function updateSelectedBookingStatus(status: MobileBooking['status']) {
+    if (!selectedTable?.booking) return
+    await api.bookingStatus(selectedTable.booking.id, status)
+    await loadHallPlan()
+    setSelectedTable(null)
+  }
+
+  const selectedHall = halls.find((hall) => hall.id === selectedHallId) ?? halls[0]
+  const visibleHallTables = hallTables.filter((table) => {
+    if (table.hallId !== selectedHallId) return false
+    if (hallFilter === 'all') return true
+    return table.status === hallFilter
+  })
+  const visibleBookings = visibleHallTables.filter((table) => table.booking).sort((a, b) => String(a.booking?.time).localeCompare(String(b.booking?.time)))
+
+  const overviewCards = [
+    ...userChecklists.slice(0, 1).map((checklist) => ({ id: `checklist-${checklist.id}`, title: checklist.title, subtitle: `${checklist.items?.length || 0} пунктов`, meta: `${checklist.startTime || '—'} — ${checklist.endTime || '—'}`, tone: 'orange' as const, icon: <ChecklistIcon />, onClick: () => setDetail(checklistDetail(checklist)) })),
+    { id: 'tasks', title: 'Задачи', subtitle: `${userTasks.filter((item) => item.status !== 'done').length} активные`, meta: userTasks.some((item) => item.status === 'overdue') ? 'есть просроченные' : 'без просрочек', tone: 'blue' as const, icon: <ClipboardIcon />, onClick: () => setActiveTab('tasks') },
+    ...userInventory.slice(0, 1).map((item) => ({ id: `inventory-${item.id}`, title: 'Инвентаризация', subtitle: item.title, meta: item.section || 'назначена', tone: 'green' as const, icon: <BoxIcon />, onClick: () => setDetail(inventoryDetail(item)) })),
+    { id: 'hall', title: 'План зала', subtitle: `${(summary?.bookings || []).length} броней`, meta: `${halls.length} залов`, tone: 'purple' as const, icon: <CalendarIcon />, onClick: () => setActiveTab('hallPlan') },
+  ]
 
   function renderOverview() {
     return (
       <>
         <section className="employee-mobile__shift-card">
           <div className="employee-mobile__shift-status">
-            <div
-              className={
-                shiftOpen
-                  ? "employee-mobile__shift-icon employee-mobile__shift-icon--open"
-                  : "employee-mobile__shift-icon"
-              }
-            >
-              <ClockIcon />
-            </div>
+            <div className={shiftOpen ? 'employee-mobile__shift-icon employee-mobile__shift-icon--open' : 'employee-mobile__shift-icon'}><ClockIcon /></div>
             <div>
-              <strong>
-                {shiftOpen ? "Смена открыта" : "Смена не открыта"}
-              </strong>
-              <span>
-                {shiftOpen
-                  ? "сегодня с 09:42"
-                  : "Сначала откройте смену, чтобы начать работу"}
-              </span>
+              <strong>{shiftOpen ? 'Смена открыта' : 'Смена не открыта'}</strong>
+              <span>{shiftOpen ? 'Рабочий день активен' : 'Откройте смену перед работой'}</span>
             </div>
           </div>
-          <div className="employee-mobile__shift-meta">
-            <strong>{shiftOpen ? "до 23:00" : "—"}</strong>
-            <span>{shiftOpen ? "8 ч 18 мин" : "смена не начата"}</span>
-          </div>
-          <button
-            className={
-              shiftOpen
-                ? "employee-mobile__shift-button"
-                : "employee-mobile__shift-button employee-mobile__shift-button--primary"
-            }
-            type="button"
-            onClick={() => setShiftOpen((value) => !value)}
-          >
-            {shiftOpen ? "Закрыть смену" : "Открыть смену"}
+          <button className={shiftOpen ? 'employee-mobile__shift-button' : 'employee-mobile__shift-button employee-mobile__shift-button--primary'} type="button" onClick={() => setShiftOpen((value) => !value)}>
+            {shiftOpen ? 'Закрыть смену' : 'Открыть смену'}
           </button>
         </section>
 
         <section className="employee-mobile__section">
-          <div className="employee-mobile__section-title">
-            <h2>Что нужно сделать</h2>
-          </div>
+          <div className="employee-mobile__section-title"><h2>Сегодня</h2></div>
           <div className="employee-mobile__card-list">
             {overviewCards.map((card) => (
-              <article
-                key={card.id}
-                className={`employee-mobile__work-card employee-mobile__work-card--${card.tone}`}
-              >
+              <button key={card.id} className={`employee-mobile__work-card employee-mobile__work-card--${card.tone}`} type="button" onClick={card.onClick}>
                 <div className="employee-mobile__work-icon">{card.icon}</div>
                 <div className="employee-mobile__work-content">
-                  <div className="employee-mobile__work-heading">
-                    <strong>{card.title}</strong>
-                    {card.badge ? <span>{card.badge}</span> : null}
-                  </div>
+                  <strong>{card.title}</strong>
                   <p>{card.subtitle}</p>
-                  {card.meta ? <small>{card.meta}</small> : null}
+                  <small>{card.meta}</small>
                 </div>
-                <button type="button" onClick={() => handleOverviewAction(card.id)}>{card.action}</button>
-                <span className="employee-mobile__work-arrow">
-                  <ChevronRightIcon />
-                </span>
-              </article>
+                <ChevronRightIcon />
+              </button>
             ))}
           </div>
         </section>
 
         <section className="employee-mobile__section">
           <div className="employee-mobile__section-title">
-            <h2>Срочные уведомления</h2>
-            <button type="button" onClick={() => setShowNotifications(true)}>
-              Все
-            </button>
+            <h2>Уведомления</h2>
+            <button type="button" onClick={() => setShowNotifications(true)}>Все</button>
           </div>
-          <article className="employee-mobile__alert-card">
-            <div className="employee-mobile__alert-icon">
-              <AlertCircleIcon />
-            </div>
-            <div className="employee-mobile__alert-content">
-              <strong>Задача «Протереть столы на террасе»</strong>
-              <span>просрочена 15 мин назад</span>
-            </div>
-            <ChevronRightIcon />
-          </article>
+          {notifications.length ? (
+            <button className="employee-mobile__alert-card" type="button" onClick={() => { setActiveTab(notifications[0].target); setDetail(notifications[0].detail) }}>
+              <div className="employee-mobile__alert-icon"><AlertCircleIcon /></div>
+              <div className="employee-mobile__alert-content"><strong>{notifications[0].title}</strong><span>{notifications[0].text}</span></div>
+              <ChevronRightIcon />
+            </button>
+          ) : <p className="employee-mobile__empty">Новых событий нет.</p>}
         </section>
       </>
-    );
+    )
   }
 
   function renderTasks() {
     return (
       <section className="employee-mobile__section employee-mobile__section--tight">
-        <div className="employee-mobile__section-title">
-          <h2>Мои задачи</h2>
-        </div>
+        <div className="employee-mobile__section-title"><h2>Мои задачи</h2></div>
         <div className="employee-mobile__plain-list">
-          {tasks.map((task) => (
-            <article key={task.title} className="employee-mobile__list-card">
-              <div>
-                <strong>{task.title}</strong>
-                <p
-                  className={
-                    task.accent === "danger" ? "employee-mobile__danger" : ""
-                  }
-                >
-                  {task.status}
-                </p>
-              </div>
-              <button type="button">Открыть</button>
-            </article>
-          ))}
+          {userTasks.length ? userTasks.map((task) => (
+            <button key={task.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail(taskDetail(task))}>
+              <div><strong>{task.title}</strong><p className={task.status === 'overdue' ? 'employee-mobile__danger' : ''}>{statusText(task.status)}</p><small>{task.dueTime || 'срок не указан'}</small></div>
+              <ChevronRightIcon />
+            </button>
+          )) : <p className="employee-mobile__empty">Для вашей должности задач нет.</p>}
         </div>
       </section>
-    );
+    )
   }
 
   function renderChecklists() {
     return (
       <section className="employee-mobile__section employee-mobile__section--tight">
-        <div className="employee-mobile__section-title">
-          <h2>Чек-листы</h2>
-        </div>
+        <div className="employee-mobile__section-title"><h2>Чек-листы</h2></div>
         <div className="employee-mobile__plain-list">
-          {checklists.map((item) => (
-            <article key={item.title} className="employee-mobile__list-card">
-              <div>
-                <strong>{item.title}</strong>
-                <p>{item.progress}</p>
-                <small>{item.time}</small>
-              </div>
-              <button type="button">Открыть</button>
-            </article>
-          ))}
+          {userChecklists.length ? userChecklists.map((item) => (
+            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail(checklistDetail(item))}>
+              <div><strong>{item.title}</strong><p>{item.items?.length || 0} пунктов</p><small>{item.startTime || '—'} — {item.endTime || '—'}</small></div>
+              <ChevronRightIcon />
+            </button>
+          )) : <p className="employee-mobile__empty">Для вашей должности нет активных чек-листов.</p>}
         </div>
       </section>
-    );
+    )
   }
-
-
 
   function renderHallPlan() {
     const filters: Array<{ value: HallFilter; label: string }> = [
-      { value: "all", label: "Все" },
-      { value: "free", label: "Свободные" },
-      { value: "reserved", label: "Забронированные" },
-      { value: "arrived", label: "Пришли" },
-      { value: "occupied", label: "Сели" },
-    ];
+      { value: 'all', label: 'Все' },
+      { value: 'free', label: 'Свободные' },
+      { value: 'reserved', label: 'Брони' },
+      { value: 'arrived', label: 'Пришли' },
+      { value: 'occupied', label: 'Сели' },
+    ]
 
     return (
       <section className="employee-mobile__hall-page">
         <div className="employee-mobile__hall-header">
-          <div>
-            <button type="button" onClick={() => setActiveTab("overview")}>← Обзор</button>
-            <h2>План зала</h2>
-            <p>Сегодня, 15 июня</p>
-          </div>
-          <button type="button" className="employee-mobile__hall-search" aria-label="Поиск">
-            <SearchIcon />
-          </button>
+          <div><h2>План зала</h2><p>{employee.restaurantName}</p></div>
+          <button type="button" className="employee-mobile__hall-search" aria-label="Обновить" onClick={() => { void loadHallPlan(); setNotice('План зала обновлён.') }}><SearchIcon /></button>
         </div>
 
         <div className="employee-mobile__hall-tabs" aria-label="Залы">
-          {halls.map((hall) => (
-            <button
-              type="button"
-              key={hall.id}
-              className={hall.id === selectedHallId ? "is-active" : ""}
-              onClick={() => {
-                setSelectedHallId(hall.id);
-                setHallFilter("all");
-                setSelectedTable(null);
-              }}
-            >
-              <strong>{hall.name}</strong>
-              <span>{hall.tablesCount} столов</span>
-            </button>
-          ))}
+          {halls.map((hall) => <button type="button" key={hall.id} className={hall.id === selectedHallId ? 'is-active' : ''} onClick={() => { setSelectedHallId(hall.id); setHallFilter('all'); setSelectedTable(null) }}><strong>{hall.name}</strong><span>{hall.tablesCount} столов</span></button>)}
         </div>
 
         <div className="employee-mobile__hall-mode" aria-label="Режим плана зала">
-          <button type="button" className={hallMode === "tables" ? "is-active" : ""} onClick={() => setHallMode("tables")}>Столы</button>
-          <button type="button" className={hallMode === "bookings" ? "is-active" : ""} onClick={() => setHallMode("bookings")}>Брони</button>
+          <button type="button" className={hallMode === 'tables' ? 'is-active' : ''} onClick={() => setHallMode('tables')}>Столы</button>
+          <button type="button" className={hallMode === 'bookings' ? 'is-active' : ''} onClick={() => setHallMode('bookings')}>Брони</button>
         </div>
 
         <div className="employee-mobile__hall-filters" aria-label="Фильтр столов">
-          {filters.map((filter) => (
-            <button
-              type="button"
-              key={filter.value}
-              className={hallFilter === filter.value ? "is-active" : ""}
-              onClick={() => setHallFilter(filter.value)}
-            >
-              {filter.label}
-            </button>
-          ))}
+          {filters.map((filter) => <button type="button" key={filter.value} className={hallFilter === filter.value ? 'is-active' : ''} onClick={() => setHallFilter(filter.value)}>{filter.label}</button>)}
         </div>
 
-        {hallMode === "tables" ? (
+        {hallMode === 'tables' ? (
           <div className="employee-mobile__hall-grid">
-            {visibleHallTables.map((table) => (
-              <button
-                type="button"
-                key={table.id}
-                className={`employee-mobile__table-card employee-mobile__table-card--${table.status}`}
-                onClick={() => setSelectedTable(table)}
-              >
-                <div>
-                  <strong>{table.name}</strong>
-                  <span>{table.seats} места</span>
-                </div>
-                {table.booking ? <p>{table.booking.time} · {table.booking.guestName}</p> : <p>&nbsp;</p>}
+            {visibleHallTables.length ? visibleHallTables.map((table) => (
+              <button type="button" key={table.id} className={`employee-mobile__table-card employee-mobile__table-card--${table.status}`} onClick={() => setSelectedTable(table)}>
+                <div><strong>{table.name}</strong><span>{table.seats} места</span></div>
+                <p>{table.booking ? `${table.booking.time} · ${table.booking.guestName}` : 'Без брони'}</p>
                 <small>{getHallStatusLabel(table.status)}</small>
               </button>
-            ))}
+            )) : <p className="employee-mobile__empty">Столы не настроены.</p>}
           </div>
         ) : (
           <div className="employee-mobile__booking-list">
-            {visibleBookings.map((table) => (
+            {visibleBookings.length ? visibleBookings.map((table) => (
               <button type="button" key={table.id} onClick={() => setSelectedTable(table)}>
                 <time>{table.booking?.time}</time>
-                <div>
-                  <strong>{table.booking?.guestName}</strong>
-                  <span>{table.name} · {table.booking?.guestsCount} гостя</span>
-                </div>
+                <div><strong>{table.booking?.guestName}</strong><span>{table.name} · {table.booking?.guestsCount || 1} гостей</span></div>
                 <small className={`employee-mobile__booking-status employee-mobile__booking-status--${table.status}`}>{table.booking ? getBookingStatusLabel(table.booking.status) : getHallStatusLabel(table.status)}</small>
               </button>
-            ))}
+            )) : <p className="employee-mobile__empty">Активных броней нет.</p>}
           </div>
         )}
       </section>
-    );
+    )
   }
 
   function renderMore() {
+    const tiles = [
+      { title: 'План зала', text: 'Столы и брони', icon: <CalendarIcon />, onClick: () => setActiveTab('hallPlan') },
+      { title: 'База знаний', text: `${summary?.knowledgeMaterials?.length || 0} материалов`, icon: <BookIcon />, onClick: () => setDetail({ kind: 'knowledge', title: 'База знаний', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-list">{(summary?.knowledgeMaterials || []).length ? summary?.knowledgeMaterials?.map((item) => <button key={item.id} type="button"><strong>{item.title}</strong><span>{item.description || item.type || 'Материал'}</span></button>) : <p>Материалы ещё не добавлены.</p>}</div> }) },
+      { title: 'Постоянные гости', text: `${summary?.guests?.length || 0} гостей`, icon: <BookIcon />, onClick: () => setDetail({ kind: 'guest', title: 'Постоянные гости', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-list">{(summary?.guests || []).length ? summary?.guests?.map((guest) => <button key={guest.id} type="button"><strong>{guest.name}</strong><span>{guest.preferences || guest.serviceComment || 'Карточка гостя'}</span></button>) : <p>Постоянные гости ещё не добавлены.</p>}</div> }) },
+      { title: 'Инвентаризация', text: `${userInventory.length} назначено`, icon: <BoxIcon />, onClick: () => userInventory[0] ? setDetail(inventoryDetail(userInventory[0])) : setNotice('Назначенных инвентаризаций нет.') },
+      { title: 'Поддержка', text: 'Написать управляющему', icon: <MailIcon />, onClick: () => setDetail({ kind: 'support', title: 'Поддержка', subtitle: 'Опишите вопрос управляющему', body: <div className="employee-mobile__detail-text"><p>Если что-то не работает, создайте тех. заявку через центральную кнопку или напишите на почту поддержки.</p></div>, actions: <button type="button" onClick={() => window.location.href = 'mailto:support@resto-control.ru'}>Написать</button> }) },
+    ]
+
     return (
       <section className="employee-mobile__section employee-mobile__section--tight">
-        <div className="employee-mobile__section-title">
-          <h2>Ещё</h2>
-        </div>
+        <div className="employee-mobile__section-title"><h2>Ещё</h2></div>
         <div className="employee-mobile__plain-list">
-          {moreTiles.map((item) => (
-            <article
-              key={item}
-              className="employee-mobile__list-card employee-mobile__list-card--chevron"
-            >
-              <div>
-                <strong>{item}</strong>
-                <p>Открыть раздел</p>
-              </div>
+          {tiles.map((item) => (
+            <button key={item.title} type="button" className="employee-mobile__list-card employee-mobile__list-card--chevron" onClick={item.onClick}>
+              <span className="employee-mobile__more-icon">{item.icon}</span>
+              <div><strong>{item.title}</strong><p>{item.text}</p></div>
               <ChevronRightIcon />
-            </article>
+            </button>
           ))}
-          <button
-            className="employee-mobile__logout-row"
-            type="button"
-            onClick={logout}
-          >
-            <LogoutIcon />
-            <span>Выйти</span>
-          </button>
+          <button className="employee-mobile__logout-row" type="button" onClick={logout}><LogoutIcon /><span>Выйти</span></button>
         </div>
       </section>
-    );
+    )
   }
 
   return (
     <main className="employee-mobile">
       <header className="employee-mobile__header">
-        <div>
-          <h1>Доброе утро, {employee.name}!</h1>
-          <p>
-            {employee.position} · {employee.restaurantName}
-          </p>
-        </div>
+        <div><h1>Доброе утро, {employee.name}!</h1><p>{employee.position} · {employee.restaurantName}</p></div>
         <div className="employee-mobile__header-actions">
-          <button
-            type="button"
-            onClick={() => setShowNotifications(true)}
-            aria-label="Уведомления"
-          >
-            <BellIcon />
-            <b>3</b>
-          </button>
+          <button type="button" onClick={() => setShowNotifications(true)} aria-label="Уведомления"><BellIcon />{notifications.length ? <b>{notifications.length}</b> : null}</button>
         </div>
       </header>
 
+      {notice ? <button className="employee-mobile__notice" type="button" onClick={() => setNotice('')}>{notice}</button> : null}
+
       <section className="employee-mobile__content">
-        {activeTab === "overview" && renderOverview()}
-        {activeTab === "tasks" && renderTasks()}
-        {activeTab === "checklists" && renderChecklists()}
-        {activeTab === "hallPlan" && renderHallPlan()}
-        {activeTab === "more" && renderMore()}
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'tasks' && renderTasks()}
+        {activeTab === 'checklists' && renderChecklists()}
+        {activeTab === 'hallPlan' && renderHallPlan()}
+        {activeTab === 'more' && renderMore()}
       </section>
 
       <nav className="employee-mobile__bottom-nav" aria-label="Нижнее меню">
-        <button
-          type="button"
-          className={activeTab === "overview" ? "is-active" : ""}
-          onClick={() => setActiveTab("overview")}
-        >
-          <OverviewIcon />
-          <span>Обзор</span>
-        </button>
-        <button
-          type="button"
-          className={activeTab === "tasks" ? "is-active" : ""}
-          onClick={() => setActiveTab("tasks")}
-        >
-          <ClipboardIcon />
-          <span>Задачи</span>
-        </button>
-        <button
-          type="button"
-          className="employee-mobile__plus-button"
-          onClick={() => setShowRequestModal(true)}
-        >
-          <span>
-            <PlusIcon />
-          </span>
-          <strong>Тех. заявка</strong>
-        </button>
-        <button
-          type="button"
-          className={activeTab === "checklists" ? "is-active" : ""}
-          onClick={() => setActiveTab("checklists")}
-        >
-          <ChecklistIcon />
-          <span>Чек-листы</span>
-        </button>
-        <button
-          type="button"
-          className={activeTab === "more" ? "is-active" : ""}
-          onClick={() => setActiveTab("more")}
-        >
-          <MoreIcon />
-          <span>Ещё</span>
-        </button>
+        <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}><OverviewIcon /><span>Обзор</span></button>
+        <button type="button" className={activeTab === 'tasks' ? 'is-active' : ''} onClick={() => setActiveTab('tasks')}><ClipboardIcon /><span>Задачи</span></button>
+        <button type="button" className="employee-mobile__plus-button" onClick={() => setShowRequestModal(true)}><span><PlusIcon /></span><strong>Тех. заявка</strong></button>
+        <button type="button" className={activeTab === 'checklists' ? 'is-active' : ''} onClick={() => setActiveTab('checklists')}><ChecklistIcon /><span>Чек-листы</span></button>
+        <button type="button" className={activeTab === 'more' ? 'is-active' : ''} onClick={() => setActiveTab('more')}><MoreIcon /><span>Ещё</span></button>
       </nav>
 
-
       {selectedTable ? (
-        <div
-          className="employee-mobile__sheet-backdrop"
-          onClick={() => setSelectedTable(null)}
-        >
-          <div
-            className="employee-mobile__sheet employee-mobile__hall-sheet"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div className="employee-mobile__sheet-backdrop" onClick={() => setSelectedTable(null)}>
+          <div className="employee-mobile__sheet employee-mobile__hall-sheet" onClick={(event) => event.stopPropagation()}>
             <div className="employee-mobile__sheet-handle" />
-            <div className="employee-mobile__hall-sheet-title">
-              <div>
-                <strong>{selectedTable.name}</strong>
-                <p>{selectedHall.name} · {selectedTable.seats} места</p>
-              </div>
-              <button type="button" onClick={() => setSelectedTable(null)}>×</button>
-            </div>
-
-            {selectedTable.booking ? (
-              <div className="employee-mobile__booking-card">
-                <small>Бронь на сегодня</small>
-                <strong>{selectedTable.booking.guestName}</strong>
-                <p>{selectedTable.booking.time} · {selectedTable.booking.guestsCount} гостя</p>
-                <span>Телефон: {selectedTable.booking.phone}</span>
-                {selectedTable.booking.comment ? <span>Комментарий: {selectedTable.booking.comment}</span> : null}
-              </div>
-            ) : (
-              <div className="employee-mobile__booking-card">
-                <small>Бронь на сегодня</small>
-                <strong>Брони нет</strong>
-                <p>{selectedTable.status === "disabled" ? "Стол недоступен" : "Стол свободен для посадки"}</p>
-              </div>
-            )}
-
+            <div className="employee-mobile__hall-sheet-title"><div><strong>{selectedTable.name}</strong><p>{selectedHall?.name || 'Зал'} · {selectedTable.seats} места</p></div><button type="button" onClick={() => setSelectedTable(null)}>×</button></div>
+            {selectedTable.booking ? <div className="employee-mobile__booking-card"><small>Бронь на сегодня</small><strong>{selectedTable.booking.guestName}</strong><p>{selectedTable.booking.time} · {selectedTable.booking.guestsCount} гостей</p>{selectedTable.booking.phone ? <span>Телефон: {selectedTable.booking.phone}</span> : null}{selectedTable.booking.comment ? <span>Комментарий: {selectedTable.booking.comment}</span> : null}</div> : <div className="employee-mobile__booking-card"><small>Бронь на сегодня</small><strong>Брони нет</strong><p>{selectedTable.status === 'disabled' ? 'Стол недоступен' : 'Стол свободен для посадки'}</p></div>}
             <div className="employee-mobile__hall-actions">
-              <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus("arrived")}>Пришли по брони</button>
-              <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus("seated")}>Гости сели</button>
-              <button type="button" className="employee-mobile__hall-actions-green" onClick={() => updateSelectedBookingStatus("cancelled")}>Освободить стол</button>
-              <button type="button" onClick={() => { if (selectedTable?.booking?.phone) window.location.href = `tel:${selectedTable.booking.phone}` }}>Позвонить</button>
-              <button type="button" onClick={() => updateSelectedBookingStatus("no_show")}>Не пришли</button>
-              <button type="button" className="employee-mobile__hall-actions-red" onClick={() => updateSelectedBookingStatus("cancelled")}>Отменить бронь</button>
+              {selectedTable.booking ? <>
+                <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus('arrived')}>Пришли</button>
+                <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus('seated')}>Гости сели</button>
+                <button type="button" onClick={() => { if (selectedTable?.booking?.phone) window.location.href = `tel:${selectedTable.booking.phone}` }}>Позвонить</button>
+                <button type="button" className="employee-mobile__hall-actions-red" onClick={() => updateSelectedBookingStatus('no_show')}>Не пришли</button>
+              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => { setNotice('Свободный стол выбран. Создание новой брони будет в следующем шаге.'); setSelectedTable(null) }}>Выбрать стол</button>}
             </div>
           </div>
         </div>
       ) : null}
 
       {showNotifications ? (
-        <div
-          className="employee-mobile__sheet-backdrop"
-          onClick={() => setShowNotifications(false)}
-        >
-          <div
-            className="employee-mobile__sheet"
-            onClick={(event) => event.stopPropagation()}
-          >
+        <div className="employee-mobile__sheet-backdrop" onClick={() => setShowNotifications(false)}>
+          <div className="employee-mobile__sheet" onClick={(event) => event.stopPropagation()}>
             <div className="employee-mobile__sheet-handle" />
-            <div className="employee-mobile__sheet-title">
-              <strong>Уведомления</strong>
-              <p>Важные события по смене</p>
-            </div>
+            <div className="employee-mobile__sheet-title"><strong>Уведомления</strong><p>Важные события по смене</p></div>
             <div className="employee-mobile__notification-list">
-              <article>
-                <strong>Задача «Протереть столы на террасе»</strong>
-                <span>просрочена 15 мин назад</span>
-              </article>
-              <article>
-                <strong>Напоминание по брони</strong>
-                <span>Стол у окна на 19:00 подтверждён</span>
-              </article>
-              <article>
-                <strong>Чек-лист открытия</strong>
-                <span>Осталось выполнить 7 пунктов</span>
-              </article>
+              {notifications.length ? notifications.map((item) => <button key={`${item.title}-${item.text}`} type="button" onClick={() => { setShowNotifications(false); setActiveTab(item.target); setDetail(item.detail) }}><strong>{item.title}</strong><span>{item.text}</span></button>) : <p className="employee-mobile__empty">Новых уведомлений нет.</p>}
             </div>
           </div>
         </div>
       ) : null}
 
-      {showRequestModal ? (
-        <div
-          className="employee-mobile__sheet-backdrop"
-          onClick={() => setShowRequestModal(false)}
-        >
-          <div
-            className="employee-mobile__sheet employee-mobile__sheet--form"
-            onClick={(event) => event.stopPropagation()}
-          >
+      {detail ? (
+        <div className="employee-mobile__sheet-backdrop" onClick={() => setDetail(null)}>
+          <div className="employee-mobile__sheet" onClick={(event) => event.stopPropagation()}>
             <div className="employee-mobile__sheet-handle" />
-            <div className="employee-mobile__sheet-title">
-              <strong>Новая тех. заявка</strong>
-              <p>Сообщите о проблеме по оборудованию или расходникам</p>
-            </div>
-            {requestSubmitted ? (
-              <div className="employee-mobile__request-success">
-                <strong>Заявка создана</strong>
-                <p>
-                  Техническая заявка отправлена управляющему. Вы сможете
-                  отслеживать её статус позже.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRequestSubmitted(false);
-                    setShowRequestModal(false);
-                  }}
-                >
-                  Готово
-                </button>
-              </div>
-            ) : (
-              <form
-                className="employee-mobile__request-form"
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  const form = event.currentTarget;
-                  const formData = new FormData(form);
-                  await api.create("technical-requests", {
-                    category: String(formData.get("category") || "Оборудование"),
-                    title: String(formData.get("title") || "Тех. заявка"),
-                    description: String(formData.get("description") || ""),
-                    status: "new",
-                  });
-                  setRequestSubmitted(true);
-                }}
-              >
-                <label>
-                  <span>Категория</span>
-                  <select name="category" defaultValue="Оборудование">
-                    <option>Оборудование</option>
-                    <option>Клининг</option>
-                    <option>Расходники</option>
-                    <option>Электрика</option>
-                    <option>Мебель</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Коротко о проблеме</span>
-                  <input name="title" defaultValue="Не работает лампа у входа" />
-                </label>
-                <label>
-                  <span>Описание</span>
-                  <textarea
-                    name="description"
-                    rows={4}
-                    defaultValue="После открытия смены лампа возле входной зоны не включается. Нужна проверка."
-                  />
-                </label>
+            <div className="employee-mobile__sheet-title"><strong>{detail.title}</strong>{detail.subtitle ? <p>{detail.subtitle}</p> : null}</div>
+            {detail.body}
+            {detail.actions ? <div className="employee-mobile__sheet-actions">{detail.actions}</div> : null}
+          </div>
+        </div>
+      ) : null}
+
+      {showRequestModal ? (
+        <div className="employee-mobile__sheet-backdrop" onClick={() => setShowRequestModal(false)}>
+          <div className="employee-mobile__sheet employee-mobile__sheet--form" onClick={(event) => event.stopPropagation()}>
+            <div className="employee-mobile__sheet-handle" />
+            <div className="employee-mobile__sheet-title"><strong>Новая тех. заявка</strong><p>Сообщите о проблеме по оборудованию или расходникам</p></div>
+            {requestSubmitted ? <div className="employee-mobile__request-success"><strong>Заявка создана</strong><p>Техническая заявка отправлена управляющему.</p><button type="button" onClick={() => { setRequestSubmitted(false); setShowRequestModal(false); void loadData() }}>Готово</button></div> : (
+              <form className="employee-mobile__request-form" onSubmit={async (event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); await api.create('technical-requests', { category: String(formData.get('category') || 'Оборудование'), title: String(formData.get('title') || 'Тех. заявка'), description: String(formData.get('description') || ''), area: String(formData.get('area') || ''), status: 'new', priority: 'medium', createdByPosition: employee.position }); setRequestSubmitted(true) }}>
+                <label><span>Категория</span><select name="category" defaultValue="Оборудование"><option>Оборудование</option><option>Клининг</option><option>Расходники</option><option>Электрика</option><option>Мебель</option></select></label>
+                <label><span>Зона</span><input name="area" placeholder="Например: бар, зал, вход" /></label>
+                <label><span>Коротко о проблеме</span><input name="title" placeholder="Например: не работает лампа" /></label>
+                <label><span>Описание</span><textarea name="description" rows={4} placeholder="Что случилось и где именно" /></label>
                 <button type="submit">Создать заявку</button>
               </form>
             )}
@@ -820,5 +512,5 @@ export function EmployeeStartPage() {
         </div>
       ) : null}
     </main>
-  );
+  )
 }
