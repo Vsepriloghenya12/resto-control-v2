@@ -1,4 +1,4 @@
-const CACHE_NAME = 'resto-control-v2-live-v3';
+const CACHE_NAME = 'resto-control-v2-live-v4';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

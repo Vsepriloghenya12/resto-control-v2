@@ -786,3 +786,233 @@
   font-size: 13px;
   font-weight: 800;
 }
+
+/* Worker mobile home redesign: clear main tools, no quick actions, fixed compact nav. */
+.employee-mobile {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f6f7f9;
+  overflow-x: hidden;
+}
+
+.employee-mobile__header {
+  position: sticky;
+  top: 0;
+  padding: max(16px, env(safe-area-inset-top)) 16px 12px;
+  background: rgba(246, 247, 249, 0.96);
+  border-bottom: 1px solid #e8ecf2;
+}
+
+.employee-mobile__header h1 {
+  max-width: 250px;
+  font-size: 23px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.employee-mobile__header p {
+  font-size: 14px;
+  color: #667085;
+}
+
+.employee-mobile__header-actions button,
+.employee-mobile__hall-search {
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.06);
+}
+
+.employee-mobile__content {
+  flex: 1;
+  padding: 0 16px calc(82px + env(safe-area-inset-bottom));
+}
+
+.employee-mobile__shift-card--compact,
+.employee-mobile__shift-card {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #e8ecf2;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(16, 24, 40, 0.05);
+}
+
+.employee-mobile__shift-card--compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.employee-mobile__shift-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+.employee-mobile__shift-button {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.employee-mobile__section {
+  margin-top: 18px;
+}
+
+.employee-mobile__section--tools {
+  margin-top: 18px;
+}
+
+.employee-mobile__section--compact {
+  margin-top: 14px;
+}
+
+.employee-mobile__section-title h2 {
+  font-size: 20px;
+  letter-spacing: -0.03em;
+}
+
+.employee-mobile__card-list--tools {
+  gap: 10px;
+}
+
+.employee-mobile__work-card,
+.employee-mobile__alert-card,
+.employee-mobile__list-card,
+.employee-mobile__detail-list button,
+.employee-mobile__notification-list button {
+  min-height: 76px;
+  border: 1px solid #e8ecf2;
+  border-radius: 18px;
+  padding: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.04);
+}
+
+.employee-mobile__work-card {
+  grid-template-columns: 48px minmax(0, 1fr) 22px;
+}
+
+.employee-mobile__work-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+}
+
+.employee-mobile__work-content strong,
+.employee-mobile__list-card strong {
+  font-size: 16px;
+}
+
+.employee-mobile__work-content p,
+.employee-mobile__work-content small,
+.employee-mobile__list-card p,
+.employee-mobile__list-card small {
+  font-size: 13px;
+}
+
+.employee-mobile__work-card--red .employee-mobile__work-icon {
+  background: #fff1f0;
+  color: #d92d20;
+}
+
+.employee-mobile__work-card--orange .employee-mobile__work-icon {
+  background: #fff8ed;
+  color: #ff7a00;
+}
+
+.employee-mobile__plain-list {
+  gap: 10px;
+}
+
+.employee-mobile__knowledge-row {
+  grid-template-columns: 42px minmax(0, 1fr) 20px;
+}
+
+.employee-mobile__schedule-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid #e8ecf2;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #101828;
+  box-shadow: 0 8px 18px rgba(16, 24, 40, 0.04);
+}
+
+.employee-mobile__schedule-card svg {
+  width: 30px;
+  height: 30px;
+  color: #667085;
+}
+
+.employee-mobile__schedule-card strong {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.employee-mobile__schedule-card p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.employee-mobile__bottom-nav,
+.employee-mobile__bottom-nav--compact {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  border-top: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 -10px 24px rgba(16, 24, 40, 0.08);
+}
+
+.employee-mobile__bottom-nav > button,
+.employee-mobile__bottom-nav--compact > button {
+  min-height: 46px;
+  gap: 3px;
+}
+
+.employee-mobile__bottom-nav svg,
+.employee-mobile__bottom-nav--compact svg {
+  width: 20px;
+  height: 20px;
+}
+
+.employee-mobile__bottom-nav span,
+.employee-mobile__bottom-nav strong,
+.employee-mobile__bottom-nav--compact span,
+.employee-mobile__bottom-nav--compact strong {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.employee-mobile__plus-button > span,
+.employee-mobile__bottom-nav--compact .employee-mobile__plus-button > span {
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 8px 18px rgba(255, 122, 0, 0.22);
+}
+
+.employee-mobile__bottom-nav > button.is-active {
+  color: #ff7a00;
+}
+
+@media (min-width: 720px) {
+  .employee-mobile {
+    max-width: none;
+    margin: 0;
+    border: 0;
+  }
+}

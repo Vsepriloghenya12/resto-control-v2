@@ -21,8 +21,8 @@ import {
 } from '../../shared/ui/Icon'
 import './EmployeeStartPage.css'
 
-type MobileTab = 'overview' | 'tasks' | 'request' | 'checklists' | 'hallPlan'
-type DetailKind = 'task' | 'checklist' | 'inventory' | 'notification' | 'knowledge' | 'guest' | 'support' | null
+type MobileTab = 'overview' | 'tasks' | 'checklists' | 'hallPlan' | 'ttk' | 'knowledge' | 'schedule'
+type DetailKind = 'task' | 'checklist' | 'inventory' | 'notification' | 'knowledge' | 'guest' | 'support' | 'ttk' | 'stopList' | 'schedule' | null
 type HallStatus = 'free' | 'reserved' | 'arrived' | 'occupied' | 'disabled'
 type HallMode = 'tables' | 'bookings'
 type HallFilter = 'all' | HallStatus
@@ -31,6 +31,7 @@ type Task = { id: string; title: string; description?: string; status?: string; 
 type Checklist = { id: string; title: string; position?: string; active?: boolean; startTime?: string; endTime?: string; items?: Array<{ id: string; title: string; required?: boolean; requiresCompletionPhoto?: boolean }> }
 type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; dueDate?: string; rowsCount?: number }
 type Knowledge = { id: string; title: string; section?: string; type?: string; description?: string; status?: string }
+type TtkItem = { id: string; name: string; group?: string; unit?: string; price?: number; tag?: string; description?: string; cookingTime?: string; output?: string; online?: boolean; takeaway?: boolean; stopList?: boolean; inStopList?: boolean; isStopped?: boolean; status?: string }
 type Guest = { id: string; name: string; phone?: string; preferences?: string; restrictions?: string; favoriteTable?: string; serviceComment?: string }
 type TechRequest = { id: string; title: string; description?: string; priority?: string; status?: string }
 
@@ -44,6 +45,7 @@ type DashboardSummary = {
   inventoryAssignments?: InventoryAssignment[]
   knowledgeMaterials?: Knowledge[]
   guests?: Guest[]
+  ttkItems?: TtkItem[]
 }
 
 type MobileHall = { id: string; name: string; tablesCount: number }
@@ -120,7 +122,6 @@ function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSav
     await onSaved()
     setSaving(false)
   }
-
   return (
     <div className="employee-mobile__checklist-run">
       <p className="employee-mobile__run-progress">Выполнено {doneCount} из {items.length}</p>
@@ -346,6 +347,43 @@ export function EmployeeStartPage() {
     }
   }
 
+  function ttkDetail(item: TtkItem): DetailState {
+    return {
+      kind: 'ttk',
+      title: item.name,
+      subtitle: item.group || 'ТТК',
+      body: (
+        <div className="employee-mobile__detail-text">
+          <span>Ед.: {item.unit || 'не указана'}</span>
+          <span>Цена: {item.price ? `${item.price} ₽` : 'не указана'}</span>
+          <span>Тэг: {item.tag || 'без тэга'}</span>
+          <span>Время приготовления: {item.cookingTime || 'не указано'}</span>
+          <span>Выход: {item.output || 'не указан'}</span>
+          <p>{item.description || 'Описание позиции не заполнено.'}</p>
+        </div>
+      ),
+    }
+  }
+
+  function stopListDetail(): DetailState {
+    const items = stopListItems
+    return {
+      kind: 'stopList',
+      title: 'Стоп-лист',
+      subtitle: items.length ? `${items.length} позиций` : 'Позиции не добавлены',
+      body: (
+        <div className="employee-mobile__detail-list">
+          {items.length ? items.map((item) => (
+            <button key={item.id} type="button" onClick={() => setDetail(ttkDetail(item))}>
+              <strong>{item.name}</strong>
+              <span>{item.group || 'ТТК'} · {item.tag || 'без тэга'}</span>
+            </button>
+          )) : <p>Стоп-лист пуст.</p>}
+        </div>
+      ),
+    }
+  }
+
   function supportDetail(): DetailState {
     return {
       kind: 'support',
@@ -403,38 +441,80 @@ export function EmployeeStartPage() {
   })
   const visibleBookings = visibleHallTables.filter((table) => table.booking).sort((a, b) => String(a.booking?.time).localeCompare(String(b.booking?.time)))
 
-  const overviewCards = [
-    ...userChecklists.slice(0, 1).map((checklist) => ({ id: `checklist-${checklist.id}`, title: checklist.title, subtitle: `${checklist.items?.length || 0} пунктов`, meta: `${checklist.startTime || '—'} — ${checklist.endTime || '—'}`, tone: 'orange' as const, icon: <ChecklistIcon />, onClick: () => setDetail(checklistDetail(checklist)) })),
-    { id: 'tasks', title: 'Задачи', subtitle: `${userTasks.filter((item) => item.status !== 'done').length} активные`, meta: userTasks.some((item) => item.status === 'overdue') ? 'есть просроченные' : 'без просрочек', tone: 'blue' as const, icon: <ClipboardIcon />, onClick: () => setActiveTab('tasks') },
-    ...userInventory.slice(0, 1).map((item) => ({ id: `inventory-${item.id}`, title: 'Инвентаризация', subtitle: item.title, meta: item.section || 'назначена', tone: 'green' as const, icon: <BoxIcon />, onClick: () => setDetail(inventoryDetail(item)) })),
-    { id: 'hall', title: 'План зала', subtitle: `${(summary?.bookings || []).length} броней`, meta: `${halls.length} залов`, tone: 'purple' as const, icon: <CalendarIcon />, onClick: () => setActiveTab('hallPlan') },
-  ]
+  const ttkItems = summary?.ttkItems || []
+  const stopListItems = ttkItems.filter((item) => Boolean(item.stopList || item.inStopList || item.isStopped || item.status === 'stop'))
+  const activeTasks = userTasks.filter((item) => item.status !== 'done')
+  const activeChecklists = userChecklists.filter((item) => item.active !== false)
+  const activeBookingsCount = (summary?.bookings || []).filter((booking) => !['cancelled', 'no_show'].includes(String(booking.status || ''))).length
+  const freeTablesCount = hallTables.filter((table) => table.status === 'free').length
 
-  const infoCards = [
-    { id: 'knowledge', title: 'База знаний', subtitle: `${summary?.knowledgeMaterials?.length || 0} материалов`, meta: 'обучение и правила', tone: 'blue' as const, icon: <BookIcon />, onClick: () => setDetail(knowledgeListDetail()) },
-    { id: 'guests', title: 'Постоянные гости', subtitle: `${summary?.guests?.length || 0} гостей`, meta: 'предпочтения и заметки', tone: 'green' as const, icon: <UserIcon />, onClick: () => setDetail(guestsListDetail()) },
-    { id: 'support', title: 'Поддержка', subtitle: 'заявки и помощь', meta: 'открыть диалог', tone: 'orange' as const, icon: <MailIcon />, onClick: () => setDetail(supportDetail()) },
+  const overviewCards = [
+    {
+      id: 'checklists',
+      title: 'Чек-листы',
+      subtitle: activeChecklists.length ? `${activeChecklists.length} активных` : 'нет активных',
+      meta: activeChecklists[0] ? `${activeChecklists[0].startTime || '—'} — ${activeChecklists[0].endTime || '—'}` : 'без назначений',
+      tone: 'green' as const,
+      icon: <ChecklistIcon />,
+      onClick: () => setActiveTab('checklists'),
+    },
+    {
+      id: 'tasks',
+      title: 'Задачи',
+      subtitle: activeTasks.length ? `${activeTasks.length} активных` : 'нет задач',
+      meta: userTasks.some((item) => item.status === 'overdue') ? 'есть просроченные' : 'без просрочек',
+      tone: 'blue' as const,
+      icon: <ClipboardIcon />,
+      onClick: () => setActiveTab('tasks'),
+    },
+    {
+      id: 'hall',
+      title: 'План зала',
+      subtitle: activeBookingsCount ? `${activeBookingsCount} броней` : 'броней нет',
+      meta: freeTablesCount ? `${freeTablesCount} свободных столов` : `${halls.length} залов`,
+      tone: 'purple' as const,
+      icon: <CalendarIcon />,
+      onClick: () => setActiveTab('hallPlan'),
+    },
+    {
+      id: 'stop-list',
+      title: 'Стоп-лист',
+      subtitle: stopListItems.length ? `${stopListItems.length} позиций` : 'пусто',
+      meta: 'блюда и товары под запретом',
+      tone: 'red' as const,
+      icon: <AlertCircleIcon />,
+      onClick: () => setDetail(stopListDetail()),
+    },
+    ...userInventory.slice(0, 1).map((item) => ({
+      id: `inventory-${item.id}`,
+      title: 'Инвентаризация',
+      subtitle: item.title,
+      meta: `${item.rowsCount || 0} позиций${item.dueDate ? ` · до ${item.dueDate}` : ''}`,
+      tone: 'orange' as const,
+      icon: <BoxIcon />,
+      onClick: () => setDetail(inventoryDetail(item)),
+    })),
   ]
 
   function renderOverview() {
     return (
       <>
-        <section className="employee-mobile__shift-card">
+        <section className="employee-mobile__shift-card employee-mobile__shift-card--compact">
           <div className="employee-mobile__shift-status">
             <div className={shiftOpen ? 'employee-mobile__shift-icon employee-mobile__shift-icon--open' : 'employee-mobile__shift-icon'}><ClockIcon /></div>
             <div>
               <strong>{shiftOpen ? 'Смена открыта' : 'Смена не открыта'}</strong>
-              <span>{shiftOpen ? 'Рабочий день активен' : 'Смена не открыта'}</span>
+              <span>{shiftOpen ? 'Рабочий день активен' : 'Откройте смену перед началом работы'}</span>
             </div>
           </div>
           <button className={shiftOpen ? 'employee-mobile__shift-button' : 'employee-mobile__shift-button employee-mobile__shift-button--primary'} type="button" onClick={() => void toggleShift()}>
-            {shiftOpen ? 'Закрыть смену' : 'Открыть смену'}
+            {shiftOpen ? 'Закрыть' : 'Открыть'}
           </button>
         </section>
 
-        <section className="employee-mobile__section">
-          <div className="employee-mobile__section-title"><h2>Сегодня</h2></div>
-          <div className="employee-mobile__card-list">
+        <section className="employee-mobile__section employee-mobile__section--tools">
+          <div className="employee-mobile__section-title"><h2>Главная</h2></div>
+          <div className="employee-mobile__card-list employee-mobile__card-list--tools">
             {overviewCards.map((card) => (
               <button key={card.id} className={`employee-mobile__work-card employee-mobile__work-card--${card.tone}`} type="button" onClick={card.onClick}>
                 <div className="employee-mobile__work-icon">{card.icon}</div>
@@ -449,32 +529,16 @@ export function EmployeeStartPage() {
           </div>
         </section>
 
-        <section className="employee-mobile__section">
-          <div className="employee-mobile__section-title"><h2>Материалы и связь</h2></div>
-          <div className="employee-mobile__card-list">
-            {infoCards.map((card) => (
-              <button key={card.id} className={`employee-mobile__work-card employee-mobile__work-card--${card.tone}`} type="button" onClick={card.onClick}>
-                <div className="employee-mobile__work-icon">{card.icon}</div>
-                <div className="employee-mobile__work-content"><strong>{card.title}</strong><p>{card.subtitle}</p><small>{card.meta}</small></div>
-                <ChevronRightIcon />
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="employee-mobile__section">
-          <div className="employee-mobile__section-title">
-            <h2>Уведомления</h2>
-            <button type="button" onClick={() => setShowNotifications(true)}>Все</button>
-          </div>
-          {notifications.length ? (
+        {notifications.length ? (
+          <section className="employee-mobile__section employee-mobile__section--compact">
+            <div className="employee-mobile__section-title"><h2>События</h2><button type="button" onClick={() => setShowNotifications(true)}>Все</button></div>
             <button className="employee-mobile__alert-card" type="button" onClick={() => { setActiveTab(notifications[0].target); setDetail(notifications[0].detail) }}>
               <div className="employee-mobile__alert-icon"><AlertCircleIcon /></div>
               <div className="employee-mobile__alert-content"><strong>{notifications[0].title}</strong><span>{notifications[0].text}</span></div>
               <ChevronRightIcon />
             </button>
-          ) : <p className="employee-mobile__empty">Новых событий нет.</p>}
-        </section>
+          </section>
+        ) : null}
       </>
     )
   }
@@ -565,6 +629,59 @@ export function EmployeeStartPage() {
     )
   }
 
+  function renderTtk() {
+    return (
+      <section className="employee-mobile__section employee-mobile__section--tight">
+        <div className="employee-mobile__section-title"><h2>ТТК</h2></div>
+        <div className="employee-mobile__plain-list">
+          {ttkItems.length ? ttkItems.map((item) => (
+            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail(ttkDetail(item))}>
+              <div><strong>{item.name}</strong><p>{item.group || 'Без группы'}{item.price ? ` · ${item.price} ₽` : ''}</p><small>{item.tag || item.cookingTime || 'карточка позиции'}</small></div>
+              <ChevronRightIcon />
+            </button>
+          )) : <p className="employee-mobile__empty">ТТК ещё не добавлены.</p>}
+        </div>
+      </section>
+    )
+  }
+
+  function renderKnowledge() {
+    const sections = [
+      { id: 'hierarchy', title: 'Схема иерархии', subtitle: 'Кто за что отвечает', icon: <UserIcon />, action: () => setDetail({ kind: 'knowledge', title: 'Схема иерархии', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-text"><p>Иерархия и зоны ответственности будут заполняться управляющим.</p></div> }) },
+      { id: 'we-guests', title: 'Мы и гости', subtitle: `${summary?.guests?.length || 0} постоянных гостей`, icon: <UserIcon />, action: () => setDetail(guestsListDetail()) },
+      { id: 'team', title: 'Мы команда', subtitle: 'События и жизнь ресторана', icon: <MailIcon />, action: () => setDetail({ kind: 'knowledge', title: 'Мы команда', subtitle: employee.restaurantName, body: <div className="employee-mobile__detail-text"><p>Корпоративные события, дни рождения и внутренняя жизнь команды.</p></div> }) },
+      { id: 'materials', title: 'Материалы', subtitle: `${summary?.knowledgeMaterials?.length || 0} материалов`, icon: <BookIcon />, action: () => setDetail(knowledgeListDetail()) },
+    ]
+    return (
+      <section className="employee-mobile__section employee-mobile__section--tight">
+        <div className="employee-mobile__section-title"><h2>База знаний</h2></div>
+        <div className="employee-mobile__plain-list">
+          {sections.map((item) => (
+            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron employee-mobile__knowledge-row" type="button" onClick={item.action}>
+              <div className="employee-mobile__more-icon">{item.icon}</div>
+              <div><strong>{item.title}</strong><p>{item.subtitle}</p></div>
+              <ChevronRightIcon />
+            </button>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  function renderSchedule() {
+    return (
+      <section className="employee-mobile__section employee-mobile__section--tight">
+        <div className="employee-mobile__section-title"><h2>График</h2></div>
+        <div className="employee-mobile__schedule-card">
+          <CalendarIcon />
+          <strong>График смен</strong>
+          <p>Раздел будет добавлен следующим этапом.</p>
+        </div>
+      </section>
+    )
+  }
+
+
 
   return (
     <main className="employee-mobile">
@@ -582,14 +699,17 @@ export function EmployeeStartPage() {
         {activeTab === 'tasks' && renderTasks()}
         {activeTab === 'checklists' && renderChecklists()}
         {activeTab === 'hallPlan' && renderHallPlan()}
+        {activeTab === 'ttk' && renderTtk()}
+        {activeTab === 'knowledge' && renderKnowledge()}
+        {activeTab === 'schedule' && renderSchedule()}
       </section>
 
       <nav className="employee-mobile__bottom-nav employee-mobile__bottom-nav--compact" aria-label="Нижнее меню">
-        <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}><OverviewIcon /><span>Обзор</span></button>
-        <button type="button" className={activeTab === 'tasks' ? 'is-active' : ''} onClick={() => setActiveTab('tasks')}><ClipboardIcon /><span>Задачи</span></button>
+        <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}><OverviewIcon /><span>Главная</span></button>
+        <button type="button" className={activeTab === 'ttk' ? 'is-active' : ''} onClick={() => setActiveTab('ttk')}><BookIcon /><span>ТТК</span></button>
         <button type="button" className="employee-mobile__plus-button" onClick={() => setShowRequestModal(true)}><span><PlusIcon /></span><strong>Заявка</strong></button>
-        <button type="button" className={activeTab === 'checklists' ? 'is-active' : ''} onClick={() => setActiveTab('checklists')}><ChecklistIcon /><span>Чек-листы</span></button>
-        <button type="button" className={activeTab === 'hallPlan' ? 'is-active' : ''} onClick={() => setActiveTab('hallPlan')}><CalendarIcon /><span>Зал</span></button>
+        <button type="button" className={activeTab === 'knowledge' ? 'is-active' : ''} onClick={() => setActiveTab('knowledge')}><ChecklistIcon /><span>База знаний</span></button>
+        <button type="button" className={activeTab === 'schedule' ? 'is-active' : ''} onClick={() => setActiveTab('schedule')}><CalendarIcon /><span>График</span></button>
       </nav>
 
       {selectedTable ? (
