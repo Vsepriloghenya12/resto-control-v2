@@ -536,7 +536,7 @@ export function EmployeesPage() {
       })
       setSchedules((items) => items.map((item) => item.id === updated.id ? updated : item))
       setSelectedShiftId(updated.id)
-      openShiftEditor(updated)
+      setShiftEditor(null)
       setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось сохранить смену')
@@ -633,14 +633,7 @@ export function EmployeesPage() {
   }
 
   function renderScheduleEditor() {
-    if (!shiftEditor) {
-      return (
-        <aside className="employees-schedule-editor employees-schedule-editor--empty">
-          <h4>Редактирование смены</h4>
-          <p>Нажмите на смену в таблице. Пустая ячейка создаёт смену с временем из формы.</p>
-        </aside>
-      )
-    }
+    if (!shiftEditor) return null
 
     const shift = schedules.find((item) => item.id === shiftEditor.id)
     const employee = employees.find((item) => item.id === shift?.employeeId)
@@ -648,39 +641,44 @@ export function EmployeesPage() {
     const factHours = shiftEditor.actualStart && shiftEditor.actualEnd ? hoursBetween(shiftEditor.actualStart, shiftEditor.actualEnd) : planHours
 
     return (
-      <aside className="employees-schedule-editor">
-        <div className="employees-schedule-editor__header">
-          <div>
-            <h4>{employee?.name || shift?.employeeName || 'Смена'}</h4>
-            <p>{shift?.position || employee?.position || 'Должность'} · {shift?.day} {getMonthLabel(shift?.month || scheduleMonth).toLowerCase()}</p>
+      <div className="employees-schedule-modal" role="dialog" aria-modal="true" aria-label="Редактирование смены">
+        <button className="employees-schedule-modal__backdrop" type="button" aria-label="Закрыть окно" onClick={() => { setShiftEditor(null); setSelectedShiftId('') }} />
+        <aside className="employees-schedule-editor employees-schedule-editor--modal">
+          <div className="employees-schedule-editor__header employees-schedule-editor__header--modal">
+            <div>
+              <h4>{employee?.name || shift?.employeeName || 'Смена'}</h4>
+              <p>{shift?.position || employee?.position || 'Должность'} · {shift?.day} {getMonthLabel(shift?.month || scheduleMonth).toLowerCase()}</p>
+            </div>
+            <button className="employees-schedule-modal__close" type="button" onClick={() => { setShiftEditor(null); setSelectedShiftId('') }}>×</button>
           </div>
+
           <span className={`employees-schedule-status employees-schedule-status--${getShiftColor(shift)}`}>{getChecklistStatusText(shift)}</span>
-        </div>
 
-        <div className="employees-schedule-editor__grid">
-          <label><span>План начало</span><input type="time" value={shiftEditor.plannedStart} onChange={(event) => setShiftEditor((current) => current ? { ...current, plannedStart: event.target.value } : current)} /></label>
-          <label><span>План конец</span><input type="time" value={shiftEditor.plannedEnd} onChange={(event) => setShiftEditor((current) => current ? { ...current, plannedEnd: event.target.value } : current)} /></label>
-          <label><span>Факт начало</span><input type="time" value={shiftEditor.actualStart} onChange={(event) => setShiftEditor((current) => current ? { ...current, actualStart: event.target.value } : current)} /></label>
-          <label><span>Факт конец</span><input type="time" value={shiftEditor.actualEnd} onChange={(event) => setShiftEditor((current) => current ? { ...current, actualEnd: event.target.value } : current)} /></label>
-        </div>
+          <div className="employees-schedule-editor__grid">
+            <label><span>План начало</span><input type="time" value={shiftEditor.plannedStart} onChange={(event) => setShiftEditor((current) => current ? { ...current, plannedStart: event.target.value } : current)} /></label>
+            <label><span>План конец</span><input type="time" value={shiftEditor.plannedEnd} onChange={(event) => setShiftEditor((current) => current ? { ...current, plannedEnd: event.target.value } : current)} /></label>
+            <label><span>Факт начало</span><input type="time" value={shiftEditor.actualStart} onChange={(event) => setShiftEditor((current) => current ? { ...current, actualStart: event.target.value } : current)} /></label>
+            <label><span>Факт конец</span><input type="time" value={shiftEditor.actualEnd} onChange={(event) => setShiftEditor((current) => current ? { ...current, actualEnd: event.target.value } : current)} /></label>
+          </div>
 
-        <div className="employees-schedule-editor__checks">
-          <label><input type="checkbox" checked={shiftEditor.openChecklistDone} onChange={(event) => setShiftEditor((current) => current ? { ...current, openChecklistDone: event.target.checked } : current)} /> Чек-лист открытия выполнен</label>
-          <label><input type="checkbox" checked={shiftEditor.closeChecklistDone} onChange={(event) => setShiftEditor((current) => current ? { ...current, closeChecklistDone: event.target.checked } : current)} /> Чек-лист закрытия выполнен</label>
-        </div>
+          <div className="employees-schedule-editor__checks">
+            <label><input type="checkbox" checked={shiftEditor.openChecklistDone} onChange={(event) => setShiftEditor((current) => current ? { ...current, openChecklistDone: event.target.checked } : current)} /> Чек-лист открытия выполнен</label>
+            <label><input type="checkbox" checked={shiftEditor.closeChecklistDone} onChange={(event) => setShiftEditor((current) => current ? { ...current, closeChecklistDone: event.target.checked } : current)} /> Чек-лист закрытия выполнен</label>
+          </div>
 
-        <label className="employees-schedule-editor__note"><span>Комментарий / причина правки</span><textarea value={shiftEditor.note} onChange={(event) => setShiftEditor((current) => current ? { ...current, note: event.target.value } : current)} placeholder="Например: сотрудник задержался из-за банкета" /></label>
+          <label className="employees-schedule-editor__note"><span>Комментарий / причина правки</span><textarea value={shiftEditor.note} onChange={(event) => setShiftEditor((current) => current ? { ...current, note: event.target.value } : current)} placeholder="Например: сотрудник задержался из-за банкета" /></label>
 
-        <div className="employees-schedule-editor__summary">
-          <span>Часы: {formatHours(factHours)} / {formatHours(planHours)}</span>
-          <span>Отклонение: {formatDeviation(factHours - planHours)}</span>
-        </div>
+          <div className="employees-schedule-editor__summary">
+            <span>Часы: {formatHours(factHours)} / {formatHours(planHours)}</span>
+            <span>Отклонение: {formatDeviation(factHours - planHours)}</span>
+          </div>
 
-        <div className="employees-schedule-editor__actions">
-          <button type="button" className="employees-primary-button" onClick={() => void saveShiftEditor()}>Сохранить смену</button>
-          <button type="button" className="employees-cancel-button" onClick={() => void deleteSelectedShift()}>Удалить смену</button>
-        </div>
-      </aside>
+          <div className="employees-schedule-editor__actions employees-schedule-editor__actions--modal">
+            <button type="button" className="employees-primary-button" onClick={() => void saveShiftEditor()}>Сохранить смену</button>
+            <button type="button" className="employees-cancel-button" onClick={() => void deleteSelectedShift()}>Удалить смену</button>
+          </div>
+        </aside>
+      </div>
     )
   }
 
@@ -722,63 +720,38 @@ export function EmployeesPage() {
   function renderScheduleTable() {
     const departments = scheduleDepartments.filter((department) => employeesByDepartment[department]?.length)
     const scheduleDeviation = scheduleSummary.factHours - scheduleSummary.planHours
-    const shiftsByDepartment = departments.reduce<Record<string, StaffSchedule[]>>((groups, department) => {
-      groups[department] = monthSchedules
-        .filter((shift) => (shift.department || getDepartment(shift.position || '')) === department)
-        .sort((a, b) => Number(a.day) - Number(b.day) || getPlannedStart(a).localeCompare(getPlannedStart(b)))
-      return groups
-    }, {})
 
     return (
-      <section className="employees-schedule-card employees-schedule-card--advanced employees-schedule-card--redesign" aria-label="График персонала">
+      <section className="employees-schedule-card employees-schedule-card--redesign employees-schedule-card--grid-view">
         <div className="employees-schedule-redesign__hero">
           <div>
             <span className="employees-schedule-redesign__eyebrow">План / факт</span>
             <h3>График сотрудников</h3>
-            <p>Смены, часы, чек-листы и отклонения без лишнего шума.</p>
+            <p>Сетка смен по сотрудникам. Нажмите на смену в ячейке, чтобы открыть редактирование в отдельном окне.</p>
           </div>
-          <div className="employees-schedule-redesign__month">
-            <span>Месяц</span>
-            <input type="month" value={scheduleMonth} onChange={(event) => setScheduleMonth(event.target.value || getCurrentMonth())} />
-          </div>
+          <label className="employees-schedule-redesign__month"><span>Месяц</span><input type="month" value={scheduleMonth} onChange={(event) => setScheduleMonth(event.target.value || getCurrentMonth())} /></label>
         </div>
 
         <div className="employees-schedule-redesign__summary">
-          <article>
-            <span>Смены</span>
-            <strong>{scheduleSummary.factShifts} / {scheduleSummary.planShifts}</strong>
-            <small>факт / план</small>
-          </article>
-          <article>
-            <span>Часы</span>
-            <strong>{formatHours(scheduleSummary.factHours)} / {formatHours(scheduleSummary.planHours)}</strong>
-            <small>факт / план</small>
-          </article>
-          <article className={scheduleDeviation < 0 ? 'is-negative' : scheduleDeviation > 0 ? 'is-positive' : ''}>
-            <span>Отклонение</span>
-            <strong>{formatDeviation(scheduleDeviation)}</strong>
-            <small>по фактическим часам</small>
-          </article>
-          <article>
-            <span>Чек-листы</span>
-            <strong>{scheduleSummary.green}/{scheduleSummary.yellow}/{scheduleSummary.red}</strong>
-            <small>оба / один / нет</small>
-          </article>
+          <article><span>Смены</span><strong>{scheduleSummary.factShifts} / {scheduleSummary.planShifts}</strong><small>факт / план</small></article>
+          <article><span>Часы</span><strong>{formatHours(scheduleSummary.factHours)} / {formatHours(scheduleSummary.planHours)}</strong><small>факт / план</small></article>
+          <article className={scheduleDeviation < 0 ? 'is-negative' : scheduleDeviation > 0 ? 'is-positive' : ''}><span>Отклонение</span><strong>{formatDeviation(scheduleDeviation)}</strong><small>по фактическим часам</small></article>
+          <article><span>Чек-листы</span><strong>{scheduleSummary.green} / {scheduleSummary.yellow} / {scheduleSummary.red}</strong><small>зелёные / жёлтые / красные</small></article>
         </div>
 
         <div className="employees-schedule-redesign__legend">
-          <span><i className="legend-green" /> оба чек-листа выполнены</span>
+          <span><i className="legend-green" /> оба чек-листа</span>
           <span><i className="legend-yellow" /> один чек-лист</span>
-          <span><i className="legend-red" /> чек-листы не выполнены</span>
+          <span><i className="legend-red" /> нет чек-листов</span>
           <span className="employees-schedule-redesign__legend-note">Если чек-листов нет, факт считается по графику</span>
         </div>
 
         <div className="employees-schedule-redesign__actions">
           <details className="employees-schedule-redesign__panel">
-            <summary><span>+ Смена</span><small>один сотрудник, подразделение или группа</small></summary>
+            <summary><span>+ Смена</span><small>одному сотруднику, подразделению или выбранной группе</small></summary>
             <div className="employees-schedule-redesign__panel-body">
               <div className="employees-schedule-builder__grid">
-                <label><span>Кому</span><select value={scheduleForm.scope} onChange={(event) => setScheduleForm((current) => ({ ...current, scope: event.target.value as ScheduleScope }))}><option value="employee">Одному сотруднику</option><option value="department">Подразделению</option><option value="selection">Выбранным сотрудникам</option></select></label>
+                <label><span>Кому</span><select value={scheduleForm.scope} onChange={(event) => setScheduleForm((current) => ({ ...current, scope: event.target.value as ScheduleScope }))}><option value="employee">Один сотрудник</option><option value="department">Подразделение</option><option value="selection">Выбрать нескольких</option></select></label>
                 <label><span>День</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={scheduleForm.day} onChange={(event) => setScheduleForm((current) => ({ ...current, day: Number(event.target.value || 1) }))} /></label>
                 <label><span>Начало</span><input type="time" value={scheduleForm.plannedStart} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedStart: event.target.value }))} /></label>
                 <label><span>Конец</span><input type="time" value={scheduleForm.plannedEnd} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedEnd: event.target.value }))} /></label>
@@ -811,67 +784,48 @@ export function EmployeesPage() {
           </details>
         </div>
 
-        <div className="employees-schedule-redesign__workspace">
-          <div className="employees-schedule-redesign__groups">
-            {departments.length ? departments.map((department) => {
-              const departmentShifts = shiftsByDepartment[department] || []
-              return (
-                <section className="employees-schedule-redesign__department" key={department}>
-                  <div className="employees-schedule-redesign__department-head">
-                    <h4>{department}</h4>
-                    <span>{departmentShifts.length} смен</span>
-                  </div>
-                  {departmentShifts.length ? <div className="employees-schedule-redesign__shift-list">{departmentShifts.map(renderScheduleShiftCard)}</div> : <p className="employees-schedule-redesign__empty">Смены в этом месяце ещё не поставлены.</p>}
-                </section>
-              )
-            }) : <p className="employees-schedule-redesign__empty">Добавьте сотрудников, чтобы составить график.</p>}
-
-            <details className="employees-schedule-calendar-details">
-              <summary>Открыть календарную сетку месяца</summary>
-              <div className="employees-schedule-wrap employees-schedule-wrap--redesign">
-                <table className="employees-schedule-table employees-schedule-table--advanced employees-schedule-table--compact">
-                  <thead>
-                    <tr>
-                      <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
-                      {scheduleDays.map((day) => <th key={day}>{day}</th>)}
-                      <th>Смены</th>
-                      <th>Часы</th>
-                    </tr>
-                    <tr>
-                      <th className="employees-schedule-table__name" />
-                      {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
-                      <th>факт/план</th>
-                      <th>факт/план</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {departments.length ? departments.map((department) => (
-                      <>
-                        <tr className="employees-schedule-table__group" key={`${department}-group`}><td colSpan={scheduleDays.length + 3}>{department}</td></tr>
-                        {employeesByDepartment[department].map((employee) => {
-                          const employeeMonthShifts = monthSchedules.filter((shift) => shift.employeeId === employee.id)
-                          const planShifts = employeeMonthShifts.length
-                          const factShifts = employeeMonthShifts.filter((shift) => shift.openChecklistDone || shift.closeChecklistDone).length
-                          const planHours = employeeMonthShifts.reduce((sum, shift) => sum + getPlannedHours(shift), 0)
-                          const factHours = employeeMonthShifts.reduce((sum, shift) => sum + getActualHours(shift), 0)
-                          return (
-                            <tr key={employee.id}>
-                              <th className="employees-schedule-table__employee"><span>{employee.name}</span><small>{employee.position}</small></th>
-                              {scheduleDays.map((day) => <td key={day}>{renderScheduleCell(employee, day)}</td>)}
-                              <td className="employees-schedule-table__total">{factShifts}/{planShifts}</td>
-                              <td className="employees-schedule-table__total">{formatHours(factHours)} / {formatHours(planHours)}</td>
-                            </tr>
-                          )
-                        })}
-                      </>
-                    )) : <tr><td colSpan={scheduleDays.length + 3}>Добавьте сотрудников, чтобы составить график.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </details>
+        <div className="employees-schedule-grid-shell">
+          <div className="employees-schedule-wrap employees-schedule-wrap--redesign employees-schedule-wrap--full">
+            <table className="employees-schedule-table employees-schedule-table--advanced employees-schedule-table--compact">
+              <thead>
+                <tr>
+                  <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
+                  {scheduleDays.map((day) => <th key={day}>{day}</th>)}
+                  <th>Смены</th>
+                  <th>Часы</th>
+                </tr>
+                <tr>
+                  <th className="employees-schedule-table__name" />
+                  {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
+                  <th>факт/план</th>
+                  <th>факт/план</th>
+                </tr>
+              </thead>
+              {departments.length ? departments.map((department) => (
+                <tbody key={department}>
+                  <tr className="employees-schedule-table__group"><td colSpan={scheduleDays.length + 3}>{department}</td></tr>
+                  {employeesByDepartment[department].map((employee) => {
+                    const employeeMonthShifts = monthSchedules.filter((shift) => shift.employeeId === employee.id)
+                    const planShifts = employeeMonthShifts.length
+                    const factShifts = employeeMonthShifts.filter((shift) => shift.openChecklistDone || shift.closeChecklistDone).length
+                    const planHours = employeeMonthShifts.reduce((sum, shift) => sum + getPlannedHours(shift), 0)
+                    const factHours = employeeMonthShifts.reduce((sum, shift) => sum + getActualHours(shift), 0)
+                    return (
+                      <tr key={employee.id}>
+                        <th className="employees-schedule-table__employee"><span>{employee.name}</span><small>{employee.position}</small></th>
+                        {scheduleDays.map((day) => <td key={day}>{renderScheduleCell(employee, day)}</td>)}
+                        <td className="employees-schedule-table__total">{factShifts}/{planShifts}</td>
+                        <td className="employees-schedule-table__total">{formatHours(factHours)} / {formatHours(planHours)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              )) : <tbody><tr><td colSpan={scheduleDays.length + 3}>Добавьте сотрудников, чтобы составить график.</td></tr></tbody>}
+            </table>
           </div>
-          {renderScheduleEditor()}
         </div>
+
+        {renderScheduleEditor()}
       </section>
     )
   }

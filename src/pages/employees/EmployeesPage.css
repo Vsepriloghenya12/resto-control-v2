@@ -1761,3 +1761,114 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Schedule grid restore: main view is calendar grid, editor is modal */
+.employees-schedule-card--grid-view .employees-schedule-redesign__hero p {
+  max-width: 680px;
+}
+
+.employees-schedule-grid-shell {
+  padding: 18px 22px 22px;
+  background: #ffffff;
+  border-radius: 0 0 22px 22px;
+}
+
+.employees-schedule-wrap--full {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #dbe1ea;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.employees-schedule-wrap--full .employees-schedule-table--advanced {
+  border: 0;
+  border-radius: 0;
+  min-width: 1280px;
+}
+
+.employees-schedule-card--grid-view .employees-schedule__cell-button {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 0;
+}
+
+.employees-schedule-card--grid-view .employees-schedule__cell-button--empty:hover {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.employees-schedule-card--grid-view .employees-schedule__cell-button.is-selected {
+  outline: 2px solid #ff7a00;
+  outline-offset: -2px;
+}
+
+.employees-schedule-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.employees-schedule-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.42);
+  cursor: pointer;
+}
+
+.employees-schedule-editor--modal {
+  position: relative;
+  z-index: 1;
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  border: 1px solid #e6eaf0;
+  border-radius: 22px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+}
+
+.employees-schedule-editor__header--modal {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+}
+
+.employees-schedule-modal__close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e6eaf0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #667085;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.employees-schedule-modal__close:hover {
+  background: #f8fafc;
+  color: #111827;
+}
+
+.employees-schedule-editor__actions--modal {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 960px) {
+  .employees-schedule-grid-shell {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .employees-schedule-editor__actions--modal {
+    grid-template-columns: 1fr;
+  }
+}
