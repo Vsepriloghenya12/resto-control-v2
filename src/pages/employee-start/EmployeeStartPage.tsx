@@ -150,6 +150,14 @@ function getTone(status?: string): 'green' | 'orange' | 'blue' | 'red' | 'purple
   return 'blue'
 }
 
+function accentColor(status?: string) {
+  if (status === 'overdue') return 'red'
+  if (status === 'in_progress') return 'orange'
+  if (status === 'done' || status === 'closed') return 'green'
+  if (status === 'assigned' || status === 'new') return 'blue'
+  return 'gray'
+}
+
 
 function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSaved: () => Promise<void> }) {
   const [progress, setProgress] = useState<Record<string, boolean>>({})
@@ -206,6 +214,7 @@ export function EmployeeStartPage() {
   const [selectedTable, setSelectedTable] = useState<MobileHallTable | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [notice, setNotice] = useState('')
+  const [taskFilter, setTaskFilter] = useState<'all' | 'active' | 'overdue' | 'done'>('all')
 
   const employee = {
     name: session?.user.name || 'Сотрудник',
@@ -630,7 +639,6 @@ export function EmployeeStartPage() {
                   <p>{card.subtitle}</p>
                   <small>{card.meta}</small>
                 </div>
-                <ChevronRightIcon />
               </button>
             ))}
           </div>
@@ -642,7 +650,6 @@ export function EmployeeStartPage() {
             <button className="employee-mobile__alert-card" type="button" onClick={() => { setActiveTab(notifications[0].target); setDetail(notifications[0].detail) }}>
               <div className="employee-mobile__alert-icon"><AlertCircleIcon /></div>
               <div className="employee-mobile__alert-content"><strong>{notifications[0].title}</strong><span>{notifications[0].text}</span></div>
-              <ChevronRightIcon />
             </button>
           </section>
         ) : null}
@@ -651,16 +658,26 @@ export function EmployeeStartPage() {
   }
 
   function renderTasks() {
+    const filtered = taskFilter === 'all' ? userTasks
+      : taskFilter === 'active' ? userTasks.filter((t) => t.status !== 'done' && t.status !== 'closed')
+      : taskFilter === 'overdue' ? userTasks.filter((t) => t.status === 'overdue')
+      : userTasks.filter((t) => t.status === 'done' || t.status === 'closed')
     return (
       <section className="employee-mobile__section employee-mobile__section--tight">
         <div className="employee-mobile__section-title"><h2>Мои задачи</h2></div>
+        <div className="employee-mobile__filter-pills">
+          {([['all', 'Все'], ['active', 'Активные'], ['overdue', 'Просроченные'], ['done', 'Выполненные']] as const).map(([value, label]) => (
+            <button key={value} type="button" className={taskFilter === value ? 'is-active' : ''} onClick={() => setTaskFilter(value)}>{label}</button>
+          ))}
+        </div>
         <div className="employee-mobile__plain-list">
-          {userTasks.length ? userTasks.map((task) => (
-            <button key={task.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail(taskDetail(task))}>
-              <div><strong>{task.title}</strong><p className={task.status === 'overdue' ? 'employee-mobile__danger' : ''}>{statusText(task.status)}</p><small>{task.dueTime || 'срок не указан'}</small></div>
-              <ChevronRightIcon />
+          {filtered.length ? filtered.map((task) => (
+            <button key={task.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail(taskDetail(task))}>
+              <div className={`employee-mobile__list-card__accent employee-mobile__list-card__accent--${accentColor(task.status)}`} />
+              <div className="employee-mobile__list-card__body"><strong>{task.title}</strong><p className={task.status === 'overdue' ? 'employee-mobile__danger' : ''}>{statusText(task.status)}</p><small>{task.dueTime || 'срок не указан'}</small></div>
+              <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
             </button>
-          )) : <p className="employee-mobile__empty">Для вашей должности задач нет.</p>}
+          )) : <p className="employee-mobile__empty">Задач нет.</p>}
         </div>
       </section>
     )
@@ -672,9 +689,10 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__section-title"><h2>Чек-листы</h2></div>
         <div className="employee-mobile__plain-list">
           {userChecklists.length ? userChecklists.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail(checklistDetail(item))}>
-              <div><strong>{item.title}</strong><p>{item.items?.length || 0} пунктов</p><small>{item.startTime || '—'} — {item.endTime || '—'}</small></div>
-              <ChevronRightIcon />
+            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail(checklistDetail(item))}>
+              <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--green" />
+              <div className="employee-mobile__list-card__body"><strong>{item.title}</strong><p>{item.items?.length || 0} пунктов</p><small>{item.startTime || '—'} — {item.endTime || '—'}</small></div>
+              <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
             </button>
           )) : <p className="employee-mobile__empty">Для вашей должности нет активных чек-листов.</p>}
         </div>
@@ -742,9 +760,10 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__section-title"><h2>ТТК</h2></div>
         <div className="employee-mobile__plain-list">
           {ttkItems.length ? ttkItems.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail(ttkDetail(item))}>
-              <div><strong>{item.name}</strong><p>{item.group || 'Без группы'}{item.price ? ` · ${item.price} ₽` : ''}</p><small>{item.tag || item.cookingTime || 'карточка позиции'}</small></div>
-              <ChevronRightIcon />
+            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail(ttkDetail(item))}>
+              <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--orange" />
+              <div className="employee-mobile__list-card__body"><strong>{item.name}</strong><p>{item.group || 'Без группы'}{item.price ? ` · ${item.price} ₽` : ''}</p><small>{item.tag || item.cookingTime || 'карточка позиции'}</small></div>
+              <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
             </button>
           )) : <p className="employee-mobile__empty">ТТК ещё не добавлены.</p>}
         </div>
@@ -764,10 +783,11 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__section-title"><h2>База знаний</h2></div>
         <div className="employee-mobile__plain-list">
           {sections.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron employee-mobile__knowledge-row" type="button" onClick={item.action}>
+            <button key={item.id} className="employee-mobile__list-card employee-mobile__knowledge-row" type="button" onClick={item.action}>
+              <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--blue" />
               <div className="employee-mobile__more-icon">{item.icon}</div>
-              <div><strong>{item.title}</strong><p>{item.subtitle}</p></div>
-              <ChevronRightIcon />
+              <div className="employee-mobile__list-card__body"><strong>{item.title}</strong><p>{item.subtitle}</p></div>
+              <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
             </button>
           ))}
         </div>
@@ -793,9 +813,10 @@ export function EmployeeStartPage() {
         ) : null}
         <div className="employee-mobile__plain-list">
           {visibleSchedule.length ? visibleSchedule.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card employee-mobile__list-card--chevron" type="button" onClick={() => setDetail({ kind: 'schedule', title: 'Смена по графику', subtitle: getScheduleDateLabel(item.month, Number(item.day)), body: <div className="employee-mobile__detail-text"><span>{item.value === '0.5' ? 'Половина смены' : 'Полная смена'}</span>{item.note ? <p>{item.note}</p> : null}</div> })}>
-              <div><strong>{getScheduleDateLabel(item.month, Number(item.day))}</strong><p>{item.value === '0.5' ? '0.5 смены' : '1 смена'}</p><small>{item.position || employee.position}</small></div>
-              <ChevronRightIcon />
+            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail({ kind: 'schedule', title: 'Смена по графику', subtitle: getScheduleDateLabel(item.month, Number(item.day)), body: <div className="employee-mobile__detail-text"><span>{item.value === '0.5' ? 'Половина смены' : 'Полная смена'}</span>{item.note ? <p>{item.note}</p> : null}</div> })}>
+              <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--blue" />
+              <div className="employee-mobile__list-card__body"><strong>{getScheduleDateLabel(item.month, Number(item.day))}</strong><p>{item.value === '0.5' ? '0.5 смены' : '1 смена'}</p><small>{item.position || employee.position}</small></div>
+              <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
             </button>
           )) : <p className="employee-mobile__empty">Смены по графику ещё не назначены.</p>}
         </div>
@@ -808,7 +829,7 @@ export function EmployeeStartPage() {
   return (
     <main className="employee-mobile">
       <header className="employee-mobile__header">
-        <div><h1>Доброе утро, {employee.name}!</h1><p>{employee.position} · {employee.restaurantName}</p></div>
+        <div><div className="employee-mobile__header-name">Доброе утро,<br />{employee.name}!</div><p className="employee-mobile__header-sub">{employee.position} · {employee.restaurantName}</p></div>
         <div className="employee-mobile__header-actions">
           <button type="button" onClick={() => setShowNotifications(true)} aria-label="Уведомления"><BellIcon />{notifications.length ? <b>{notifications.length}</b> : null}</button>
         </div>
