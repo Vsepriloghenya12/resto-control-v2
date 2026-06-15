@@ -12,11 +12,13 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 
   const contentType = response.headers.get('content-type') ?? ''
   const isJson = contentType.includes('application/json')
-  const data = isJson ? await response.json() : null
+  const rawText = isJson ? '' : await response.text().catch(() => '')
+  const data = isJson ? await response.json().catch(() => null) : null
 
   if (!response.ok) {
-    const message = data?.message || 'Не удалось выполнить запрос. Попробуйте ещё раз.'
-    throw new Error(message)
+    if (data?.message) throw new Error(data.message)
+    if (rawText.trim().startsWith('<')) throw new Error('Сервер вернул HTML вместо JSON. Проверьте API-адрес и деплой backend.')
+    throw new Error(rawText.trim() || 'Не удалось выполнить запрос. Попробуйте ещё раз.')
   }
 
   return data as T

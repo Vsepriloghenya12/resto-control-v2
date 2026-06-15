@@ -1,47 +1,99 @@
 # Resto Control v2
 
-Fullstack PWA для Railway: сервер Node.js отдаёт готовый frontend из `dist/` и API.
+Fullstack PWA для Railway: Node.js server отдаёт готовый frontend из `dist/` и API из `server/index.js`.
 
-## Что важно
+## Что изменено в этой версии
 
-- Для Railway в архиве уже есть собранный frontend в `dist/`.
-- Сервер запускается командой `npm run start`.
-- Для дальнейшей локальной разработки восстановлены dev-скрипты: `npm run dev`, `npm run build`, `npm run preview`.
-- Railway по-прежнему не пересобирает frontend на деплое: он проверяет сервер и наличие `dist/index.html`.
+- Закрыта опасная автосоздаваемая учётка владельца сервиса: теперь сервисный владелец создаётся только через `SERVICE_OWNER_EMAIL` / `SERVICE_OWNER_PASSWORD`.
+- В production больше не используются демо-пароли `admin123`, `owner123`, `employee123` по умолчанию.
+- Демо-данные включаются только локально или явно через `ENABLE_DEMO_DATA=true`.
+- Просроченные сессии автоматически очищаются при загрузке/сохранении состояния.
+- Повреждённый `server/data/db.json` больше не перезаписывается молча — сервер сообщит, что файл нужно восстановить.
+- Удаление сотрудника больше не удаляет пользователя, если у него есть доступ к другому ресторану.
+- Исправлена защита отдачи статических файлов от выхода за папку `dist`.
+- API теперь явно отклоняет не-JSON body для write-запросов.
+- Frontend-клиент показывает понятную ошибку, если backend вернул HTML вместо JSON.
+- Исправлены typecheck/build-настройки: `tsc` больше не создаёт лишние `vite.config.js`, `vite.config.d.ts`, `*.tsbuildinfo`.
 
-## Деплой на Railway
-
-В репозиторий нужно пушить содержимое этой папки целиком, включая `dist/`.
-
-Переменные Railway:
-
-```env
-DATABASE_URL=...
-NODE_ENV=production
-SERVICE_OWNER_EMAIL=admin@resto-control.ru
-SERVICE_OWNER_PASSWORD=...
-SERVICE_OWNER_NAME=Владелец сервиса
-```
-
-## Проверка локально без пересборки frontend
-
-```bash
-npm install --omit=dev
-npm run check
-npm run start
-```
-
-Сайт откроется на порту из `PORT` или на `4173`.
-
-## Локальная разработка frontend
+## Запуск локально
 
 ```bash
 npm install
 npm run dev
 ```
 
-После правок frontend перед передачей/деплоем нужно обновить `dist`:
+Для проверки production-сборки:
 
 ```bash
+npm run check:all
 npm run build
+npm run start
 ```
+
+Сайт откроется на порту из `PORT` или на `4173`.
+
+## Локальные демо-доступы
+
+Локально, если `NODE_ENV` не равен `production`, демо-данные включены по умолчанию:
+
+```text
+Владелец сервиса: admin@resto.local / admin123
+Владелец ресторана: owner@resto.local / owner123
+Сотрудник: employee@resto.local / employee123
+```
+
+Чтобы запустить локально без демо-данных:
+
+```bash
+ENABLE_DEMO_DATA=false npm run start
+```
+
+## Railway / production
+
+В репозиторий нужно пушить содержимое этой папки целиком, включая `dist/`.
+
+Обязательные переменные Railway:
+
+```env
+NODE_ENV=production
+DATABASE_URL=...
+SERVICE_OWNER_EMAIL=admin@resto-control.ru
+SERVICE_OWNER_PASSWORD=сложный_пароль
+SERVICE_OWNER_NAME=Владелец сервиса
+ENABLE_DEMO_DATA=false
+```
+
+`SERVICE_OWNER_PASSWORD` в production обязателен. Без него backend не будет создавать сервисного владельца с дефолтным паролем.
+
+## Команды
+
+```bash
+npm run start          # запуск fullstack-сервера
+npm run dev            # Vite dev frontend
+npm run build          # typecheck + сборка dist
+npm run preview        # просмотр frontend-сборки
+npm run check          # быстрая серверная проверка для Railway
+npm run check:all      # серверная проверка + TypeScript
+```
+
+## Важное перед реальным деплоем
+
+- Не хранить реальные `.env` и `server/data` в репозитории.
+- Для production использовать PostgreSQL через `DATABASE_URL`.
+- После правок frontend всегда делать `npm run build`, чтобы обновить `dist`.
+
+## Обновление: график сотрудников план/факт
+
+В разделе «Сотрудники» обновлён модуль графика:
+
+- менеджер может ставить смены одному сотруднику, подразделению или выбранной группе сотрудников;
+- смена хранит плановое время, фактическое время, плановые/фактические часы;
+- факт автоматически считается по плану, если чек-листы не заполнены;
+- цвет смены в общем графике:
+  - зелёный — выполнены чек-листы открытия и закрытия;
+  - жёлтый — выполнен один чек-лист;
+  - красный — чек-листы не выполнены;
+- сверху показаны итоги: смены факт/план, часы факт/план, отклонение, статусы чек-листов;
+- смену можно редактировать постфактум с комментарием;
+- можно копировать день, неделю, месяц или год;
+- при копировании можно заменить одного сотрудника другим, сохранив роль и время смены.

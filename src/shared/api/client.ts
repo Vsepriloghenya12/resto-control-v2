@@ -13,10 +13,13 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   })
 
   const contentType = response.headers.get('content-type') ?? ''
-  const data = contentType.includes('application/json') ? await response.json() : null
+  const rawText = contentType.includes('application/json') ? '' : await response.text().catch(() => '')
+  const data = contentType.includes('application/json') ? await response.json().catch(() => null) : null
 
   if (!response.ok) {
-    throw new Error(data?.message || 'Не удалось выполнить действие.')
+    if (data?.message) throw new Error(data.message)
+    if (rawText.trim().startsWith('<')) throw new Error('Сервер вернул HTML вместо JSON. Проверьте API-адрес и деплой backend.')
+    throw new Error(rawText.trim() || 'Не удалось выполнить действие.')
   }
 
   return data as T

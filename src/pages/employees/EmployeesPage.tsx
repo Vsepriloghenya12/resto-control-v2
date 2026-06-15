@@ -1,10 +1,13 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AlertCircleIcon, ChecklistIcon, SearchIcon, TeamIcon, UserIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 
 type EmployeeStatus = 'active' | 'fired' | 'blocked'
 type ShiftStatus = 'open' | 'closed'
 type AttestationTone = 'good' | 'medium' | 'low'
+type ScheduleScope = 'employee' | 'department' | 'selection'
+type CopyPeriod = 'day' | 'week' | 'month' | 'year'
+type ChecklistColor = 'green' | 'yellow' | 'red'
 
 type Employee = {
   id: string
@@ -21,15 +24,72 @@ type Employee = {
 type StaffSchedule = {
   id: string
   employeeId: string
+  employeeName?: string
+  position?: string
+  department?: string
   month: string
   day: number
+  date?: string
   value?: string
+  plannedStart?: string
+  plannedEnd?: string
+  plannedHours?: number
+  actualStart?: string
+  actualEnd?: string
+  actualHours?: number
+  openChecklistDone?: boolean
+  closeChecklistDone?: boolean
+  editedAfterFact?: boolean
   note?: string
+  editHistory?: Array<{ at: string; reason: string }>
+  createdAt?: string
+  updatedAt?: string
+}
+
+type ScheduleForm = {
+  scope: ScheduleScope
+  employeeId: string
+  department: string
+  employeeIds: string[]
+  day: number
+  plannedStart: string
+  plannedEnd: string
+}
+
+type CopyForm = {
+  period: CopyPeriod
+  fromDay: number
+  toDay: number
+  targetMonth: string
+  replaceFromId: string
+  replaceToId: string
+}
+
+type ShiftEditor = {
+  id: string
+  plannedStart: string
+  plannedEnd: string
+  actualStart: string
+  actualEnd: string
+  openChecklistDone: boolean
+  closeChecklistDone: boolean
+  note: string
 }
 
 const positions = ['Все', 'Официант', 'Старший официант', 'Бармен', 'Старший бармен', 'Повар', 'Су-шеф', 'Шеф-повар', 'Хостес', 'Администратор', 'Управляющий', 'Курьер', 'Мойщик', 'Уборщик', 'Клининг']
 const statuses = ['Все', 'На смене', 'Не на смене']
+const scheduleDepartments = ['Зал', 'Бар', 'Кухня', 'Клининг']
 const emptyForm = { name: '', login: '', position: '', password: '', shiftStatus: 'closed' as ShiftStatus, attestationPercent: 0 }
+
+const emptyScheduleForm: ScheduleForm = {
+  scope: 'employee',
+  employeeId: '',
+  department: 'Зал',
+  employeeIds: [],
+  day: new Date().getDate(),
+  plannedStart: '09:00',
+  plannedEnd: '18:00',
+}
 
 function getInitials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'С'
@@ -56,6 +116,12 @@ function getCurrentMonth() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+function shiftMonth(month: string, offset: number) {
+  const [year, monthIndex] = month.split('-').map(Number)
+  const date = new Date(year, monthIndex - 1 + offset, 1)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 function getDaysInMonth(month: string) {
   const [year, monthIndex] = month.split('-').map(Number)
   return new Date(year, monthIndex, 0).getDate()
@@ -71,6 +137,10 @@ function getWeekdayLabel(month: string, day: number) {
   return new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(new Date(year, monthIndex - 1, day)).replace('.', '')
 }
 
+function getDateIso(month: string, day: number) {
+  return `${month}-${String(day).padStart(2, '0')}`
+}
+
 function getDepartment(position: string) {
   const value = position.toLowerCase()
   if (value.includes('бар')) return 'Бар'
@@ -79,18 +149,87 @@ function getDepartment(position: string) {
   return 'Зал'
 }
 
-function getNextScheduleValue(value?: string) {
-  if (value === '1') return '0.5'
-  if (value === '0.5') return ''
-  return '1'
+function timeToMinutes(value?: string) {
+  const [hoursRaw, minutesRaw] = String(value || '').split(':')
+  const hours = Number(hoursRaw)
+  const minutes = Number(minutesRaw)
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0
+  return hours * 60 + minutes
 }
 
-function getScheduleNumber(value?: string) {
-  const normalized = String(value || '').replace(',', '.')
-  const number = Number(normalized)
-  return Number.isFinite(number) ? number : 0
+function hoursBetween(start?: string, end?: string) {
+  const startMinutes = timeToMinutes(start)
+  let endMinutes = timeToMinutes(end)
+  if (!startMinutes && !endMinutes) return 0
+  if (endMinutes < startMinutes) endMinutes += 24 * 60
+  return Math.max(0, Math.round(((endMinutes - startMinutes) / 60) * 100) / 100)
 }
 
+function formatHours(value: number) {
+  if (!value) return '0 ч'
+  const rounded = Math.round(value * 100) / 100
+  return `${String(rounded).replace('.', ',')} ч`
+}
+
+function getPlannedStart(shift?: StaffSchedule) {
+  return shift?.plannedStart || '09:00'
+}
+
+function getPlannedEnd(shift?: StaffSchedule) {
+  if (shift?.plannedEnd) return shift.plannedEnd
+  if (shift?.value === '0.5') return '14:00'
+  return '18:00'
+}
+
+function getPlannedHours(shift?: StaffSchedule) {
+  if (!shift) return 0
+  if (typeof shift.plannedHours === 'number') return shift.plannedHours
+  if (shift.plannedStart || shift.plannedEnd) return hoursBetween(getPlannedStart(shift), getPlannedEnd(shift))
+  if (shift.value === '0.5') return 4.5
+  if (shift.value === '1') return 9
+  return 0
+}
+
+function getActualStart(shift?: StaffSchedule) {
+  if (!shift) return ''
+  return shift.actualStart || getPlannedStart(shift)
+}
+
+function getActualEnd(shift?: StaffSchedule) {
+  if (!shift) return ''
+  return shift.actualEnd || getPlannedEnd(shift)
+}
+
+function getActualHours(shift?: StaffSchedule) {
+  if (!shift) return 0
+  if (typeof shift.actualHours === 'number') return shift.actualHours
+  return hoursBetween(getActualStart(shift), getActualEnd(shift)) || getPlannedHours(shift)
+}
+
+function getShiftColor(shift?: StaffSchedule): ChecklistColor | '' {
+  if (!shift) return ''
+  if (shift.openChecklistDone && shift.closeChecklistDone) return 'green'
+  if (shift.openChecklistDone || shift.closeChecklistDone) return 'yellow'
+  return 'red'
+}
+
+function getChecklistStatusText(shift?: StaffSchedule) {
+  if (!shift) return 'Нет смены'
+  if (shift.openChecklistDone && shift.closeChecklistDone) return 'Открытие и закрытие выполнены'
+  if (shift.openChecklistDone) return 'Выполнено только открытие'
+  if (shift.closeChecklistDone) return 'Выполнено только закрытие'
+  return 'Чек-листы не выполнены, факт по графику'
+}
+
+function getShiftDeviation(shift?: StaffSchedule) {
+  return getActualHours(shift) - getPlannedHours(shift)
+}
+
+function formatDeviation(value: number) {
+  const rounded = Math.round(value * 100) / 100
+  if (!rounded) return '0 ч'
+  return `${rounded > 0 ? '+' : ''}${String(rounded).replace('.', ',')} ч`
+}
 
 function EmployeeMetric({ icon, value, label, hint, tone }: { icon: ReactNode; value: string; label: string; hint: string; tone: 'blue' | 'green' | 'purple' }) {
   return (
@@ -126,6 +265,10 @@ export function EmployeesPage() {
   const [form, setForm] = useState(emptyForm)
   const [scheduleMonth, setScheduleMonth] = useState(getCurrentMonth())
   const [schedules, setSchedules] = useState<StaffSchedule[]>([])
+  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(emptyScheduleForm)
+  const [copyForm, setCopyForm] = useState<CopyForm>({ period: 'day', fromDay: new Date().getDate(), toDay: new Date().getDate() + 1, targetMonth: shiftMonth(getCurrentMonth(), 1), replaceFromId: '', replaceToId: '' })
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('')
+  const [shiftEditor, setShiftEditor] = useState<ShiftEditor | null>(null)
 
   async function loadEmployees() {
     setIsLoading(true)
@@ -144,6 +287,7 @@ export function EmployeesPage() {
           shiftStatus: visible[0].shiftStatus || 'closed',
           attestationPercent: visible[0].attestationPercent || 0,
         })
+        setScheduleForm((current) => ({ ...current, employeeId: visible[0].id, employeeIds: [visible[0].id], department: getDepartment(visible[0].position) }))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось загрузить сотрудников')
@@ -151,7 +295,6 @@ export function EmployeesPage() {
       setIsLoading(false)
     }
   }
-
 
   async function loadSchedule() {
     try {
@@ -180,8 +323,7 @@ export function EmployeesPage() {
   const avgAttestation = employees.length ? Math.round(employees.reduce((sum, item) => sum + (item.attestationPercent || 0), 0) / employees.length) : 0
   const managersCount = employees.filter((item) => ['Управляющий', 'Администратор', 'Старший официант', 'Старший бармен', 'Су-шеф', 'Шеф-повар'].includes(item.position)).length
   const scheduleDays = Array.from({ length: getDaysInMonth(scheduleMonth) }, (_, index) => index + 1)
-  const currentMonth = getCurrentMonth()
-  const todayDay = new Date().getDate()
+  const monthSchedules = schedules.filter((item) => item.month === scheduleMonth)
   const employeesByDepartment = useMemo(() => {
     return employees.reduce<Record<string, Employee[]>>((groups, employee) => {
       const department = getDepartment(employee.position)
@@ -190,6 +332,17 @@ export function EmployeesPage() {
       return groups
     }, {})
   }, [employees])
+
+  const scheduleSummary = useMemo(() => {
+    const planShifts = monthSchedules.length
+    const factShifts = monthSchedules.filter((shift) => shift.openChecklistDone || shift.closeChecklistDone).length
+    const planHours = monthSchedules.reduce((sum, shift) => sum + getPlannedHours(shift), 0)
+    const factHours = monthSchedules.reduce((sum, shift) => sum + getActualHours(shift), 0)
+    const green = monthSchedules.filter((shift) => getShiftColor(shift) === 'green').length
+    const yellow = monthSchedules.filter((shift) => getShiftColor(shift) === 'yellow').length
+    const red = monthSchedules.filter((shift) => getShiftColor(shift) === 'red').length
+    return { planShifts, factShifts, planHours, factHours, green, yellow, red }
+  }, [monthSchedules])
 
   function startCreate() {
     setSelectedId('')
@@ -207,6 +360,7 @@ export function EmployeesPage() {
       shiftStatus: employee.shiftStatus || 'closed',
       attestationPercent: employee.attestationPercent || 0,
     })
+    setScheduleForm((current) => ({ ...current, employeeId: employee.id, employeeIds: Array.from(new Set([...current.employeeIds, employee.id])), department: getDepartment(employee.position) }))
     setError('')
   }
 
@@ -265,65 +419,280 @@ export function EmployeesPage() {
     }
   }
 
-  function getScheduleEntry(employeeId: string, day: number) {
-    return schedules.find((item) => item.employeeId === employeeId && item.month === scheduleMonth && Number(item.day) === day)
+  function getScheduleEntries(employeeId: string, day: number, month = scheduleMonth) {
+    return schedules.filter((item) => item.employeeId === employeeId && item.month === month && Number(item.day) === day)
   }
 
-  async function toggleScheduleCell(employee: Employee, day: number) {
-    const entry = getScheduleEntry(employee.id, day)
-    const nextValue = getNextScheduleValue(entry?.value)
+  function getFirstScheduleEntry(employeeId: string, day: number, month = scheduleMonth) {
+    return getScheduleEntries(employeeId, day, month)[0]
+  }
+
+  function getTargetEmployees() {
+    if (scheduleForm.scope === 'employee') return employees.filter((employee) => employee.id === scheduleForm.employeeId)
+    if (scheduleForm.scope === 'department') return employees.filter((employee) => getDepartment(employee.position) === scheduleForm.department)
+    return employees.filter((employee) => scheduleForm.employeeIds.includes(employee.id))
+  }
+
+  async function upsertShift(employee: Employee, month: string, day: number, patch: Partial<StaffSchedule>) {
+    const existing = getFirstScheduleEntry(employee.id, day, month)
+    const payload = {
+      employeeId: employee.id,
+      employeeName: employee.name,
+      position: employee.position,
+      department: getDepartment(employee.position),
+      month,
+      day,
+      date: getDateIso(month, day),
+      ...patch,
+    }
+
+    if (existing) {
+      const updated = await api.update<StaffSchedule>('staff-schedules', existing.id, payload)
+      setSchedules((items) => items.map((item) => item.id === existing.id ? updated : item))
+      return updated
+    }
+
+    const created = await api.create<StaffSchedule>('staff-schedules', payload)
+    setSchedules((items) => [...items, created])
+    return created
+  }
+
+  async function createScheduleShifts() {
+    const targets = getTargetEmployees()
+    if (!targets.length) {
+      setError('Выберите сотрудника, подразделение или несколько сотрудников.')
+      return
+    }
 
     try {
-      if (entry && !nextValue) {
-        await api.remove('staff-schedules', entry.id)
-        setSchedules((items) => items.filter((item) => item.id !== entry.id))
-        return
+      for (const employee of targets) {
+        await upsertShift(employee, scheduleMonth, scheduleForm.day, {
+          plannedStart: scheduleForm.plannedStart,
+          plannedEnd: scheduleForm.plannedEnd,
+          plannedHours: hoursBetween(scheduleForm.plannedStart, scheduleForm.plannedEnd),
+          actualStart: '',
+          actualEnd: '',
+          actualHours: undefined,
+          openChecklistDone: false,
+          closeChecklistDone: false,
+          editedAfterFact: false,
+          note: '',
+        })
       }
-
-      if (entry) {
-        const updated = await api.update<StaffSchedule>('staff-schedules', entry.id, { value: nextValue })
-        setSchedules((items) => items.map((item) => item.id === entry.id ? updated : item))
-        return
-      }
-
-      const created = await api.create<StaffSchedule>('staff-schedules', {
-        employeeId: employee.id,
-        employeeName: employee.name,
-        position: employee.position,
-        month: scheduleMonth,
-        day,
-        value: nextValue,
-      })
-      setSchedules((items) => [...items, created])
+      setError('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сохранить график')
+      setError(err instanceof Error ? err.message : 'Не удалось поставить смены')
     }
   }
 
-  function getScheduleTotal(employeeId: string) {
-    return schedules
-      .filter((item) => item.employeeId === employeeId && item.month === scheduleMonth)
-      .reduce((sum, item) => sum + getScheduleNumber(item.value), 0)
+  async function quickCreateShift(employee: Employee, day: number) {
+    try {
+      await upsertShift(employee, scheduleMonth, day, {
+        plannedStart: scheduleForm.plannedStart,
+        plannedEnd: scheduleForm.plannedEnd,
+        plannedHours: hoursBetween(scheduleForm.plannedStart, scheduleForm.plannedEnd),
+        actualStart: '',
+        actualEnd: '',
+        openChecklistDone: false,
+        closeChecklistDone: false,
+        note: '',
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось создать смену')
+    }
   }
 
-  function getScheduleCellClass(employee: Employee, day: number, value?: string) {
-    const classes = ['employees-schedule__cell-button']
-    if (value) classes.push('is-filled')
-    if (scheduleMonth === currentMonth && day === todayDay) {
-      if (value && employee.shiftStatus !== 'open') classes.push('is-missed-shift')
-      if (!value && employee.shiftStatus === 'open') classes.push('is-open-out-of-schedule')
+  function openShiftEditor(shift: StaffSchedule) {
+    setSelectedShiftId(shift.id)
+    setShiftEditor({
+      id: shift.id,
+      plannedStart: getPlannedStart(shift),
+      plannedEnd: getPlannedEnd(shift),
+      actualStart: shift.actualStart || '',
+      actualEnd: shift.actualEnd || '',
+      openChecklistDone: Boolean(shift.openChecklistDone),
+      closeChecklistDone: Boolean(shift.closeChecklistDone),
+      note: shift.note || '',
+    })
+  }
+
+  async function saveShiftEditor() {
+    if (!shiftEditor) return
+    const shift = schedules.find((item) => item.id === shiftEditor.id)
+    if (!shift) return
+    try {
+      const updated = await api.update<StaffSchedule>('staff-schedules', shift.id, {
+        plannedStart: shiftEditor.plannedStart,
+        plannedEnd: shiftEditor.plannedEnd,
+        plannedHours: hoursBetween(shiftEditor.plannedStart, shiftEditor.plannedEnd),
+        actualStart: shiftEditor.actualStart,
+        actualEnd: shiftEditor.actualEnd,
+        actualHours: shiftEditor.actualStart && shiftEditor.actualEnd ? hoursBetween(shiftEditor.actualStart, shiftEditor.actualEnd) : undefined,
+        openChecklistDone: shiftEditor.openChecklistDone,
+        closeChecklistDone: shiftEditor.closeChecklistDone,
+        editedAfterFact: true,
+        note: shiftEditor.note,
+        editHistory: [...(shift.editHistory || []), { at: new Date().toISOString(), reason: 'Редактирование менеджером' }],
+      })
+      setSchedules((items) => items.map((item) => item.id === updated.id ? updated : item))
+      setSelectedShiftId(updated.id)
+      openShiftEditor(updated)
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить смену')
     }
-    return classes.join(' ')
+  }
+
+  async function deleteSelectedShift() {
+    if (!shiftEditor) return
+    try {
+      await api.remove('staff-schedules', shiftEditor.id)
+      setSchedules((items) => items.filter((item) => item.id !== shiftEditor.id))
+      setShiftEditor(null)
+      setSelectedShiftId('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить смену')
+    }
+  }
+
+  function toggleScheduleEmployee(employeeId: string) {
+    setScheduleForm((current) => {
+      const exists = current.employeeIds.includes(employeeId)
+      return { ...current, employeeIds: exists ? current.employeeIds.filter((id) => id !== employeeId) : [...current.employeeIds, employeeId] }
+    })
+  }
+
+  function getCopyTargets() {
+    const sourceMonth = scheduleMonth
+    if (copyForm.period === 'day') return [{ fromMonth: sourceMonth, fromDay: copyForm.fromDay, toMonth: sourceMonth, toDay: copyForm.toDay }]
+    if (copyForm.period === 'week') {
+      return Array.from({ length: 7 }, (_, index) => ({ fromMonth: sourceMonth, fromDay: copyForm.fromDay + index, toMonth: sourceMonth, toDay: copyForm.toDay + index }))
+        .filter((item) => item.fromDay <= getDaysInMonth(sourceMonth) && item.toDay <= getDaysInMonth(sourceMonth))
+    }
+    if (copyForm.period === 'month') {
+      const days = getDaysInMonth(sourceMonth)
+      return Array.from({ length: days }, (_, index) => ({ fromMonth: sourceMonth, fromDay: index + 1, toMonth: copyForm.targetMonth, toDay: index + 1 }))
+        .filter((item) => item.toDay <= getDaysInMonth(item.toMonth))
+    }
+    const [targetYear] = copyForm.targetMonth.split('-')
+    return Array.from({ length: 12 }, (_, monthIndex) => {
+      const month = `${targetYear}-${String(monthIndex + 1).padStart(2, '0')}`
+      return Array.from({ length: Math.min(getDaysInMonth(sourceMonth), getDaysInMonth(month)) }, (_, dayIndex) => ({ fromMonth: sourceMonth, fromDay: dayIndex + 1, toMonth: month, toDay: dayIndex + 1 }))
+    }).flat()
+  }
+
+  async function copySchedule() {
+    const targets = getCopyTargets()
+    const replaceFrom = employees.find((employee) => employee.id === copyForm.replaceFromId)
+    const replaceTo = employees.find((employee) => employee.id === copyForm.replaceToId)
+
+    try {
+      for (const target of targets) {
+        const sourceShifts = schedules.filter((item) => item.month === target.fromMonth && Number(item.day) === target.fromDay)
+        for (const source of sourceShifts) {
+          const originalEmployee = employees.find((employee) => employee.id === source.employeeId)
+          const targetEmployee = replaceFrom && replaceTo && source.employeeId === replaceFrom.id ? replaceTo : originalEmployee
+          if (!targetEmployee) continue
+          await upsertShift(targetEmployee, target.toMonth, target.toDay, {
+            plannedStart: getPlannedStart(source),
+            plannedEnd: getPlannedEnd(source),
+            plannedHours: getPlannedHours(source),
+            actualStart: '',
+            actualEnd: '',
+            actualHours: undefined,
+            openChecklistDone: false,
+            closeChecklistDone: false,
+            editedAfterFact: false,
+            note: source.note ? `Скопировано: ${source.note}` : '',
+          })
+        }
+      }
+      setError('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось скопировать график')
+    }
+  }
+
+  function renderScheduleCell(employee: Employee, day: number) {
+    const entries = getScheduleEntries(employee.id, day)
+    const entry = entries[0]
+    if (!entry) {
+      return (
+        <button type="button" className="employees-schedule__cell-button employees-schedule__cell-button--empty" onClick={() => void quickCreateShift(employee, day)}>
+          +
+        </button>
+      )
+    }
+
+    return (
+      <button type="button" className={`employees-schedule__cell-button employees-schedule__cell-button--${getShiftColor(entry)} ${selectedShiftId === entry.id ? 'is-selected' : ''}`} onClick={() => openShiftEditor(entry)}>
+        <strong>{getPlannedStart(entry)}–{getPlannedEnd(entry)}</strong>
+        <span>{entries.length > 1 ? `+${entries.length - 1}` : formatHours(getPlannedHours(entry))}</span>
+      </button>
+    )
+  }
+
+  function renderScheduleEditor() {
+    if (!shiftEditor) {
+      return (
+        <aside className="employees-schedule-editor employees-schedule-editor--empty">
+          <h4>Редактирование смены</h4>
+          <p>Нажмите на смену в таблице. Пустая ячейка создаёт смену с временем из формы.</p>
+        </aside>
+      )
+    }
+
+    const shift = schedules.find((item) => item.id === shiftEditor.id)
+    const employee = employees.find((item) => item.id === shift?.employeeId)
+    const planHours = hoursBetween(shiftEditor.plannedStart, shiftEditor.plannedEnd)
+    const factHours = shiftEditor.actualStart && shiftEditor.actualEnd ? hoursBetween(shiftEditor.actualStart, shiftEditor.actualEnd) : planHours
+
+    return (
+      <aside className="employees-schedule-editor">
+        <div className="employees-schedule-editor__header">
+          <div>
+            <h4>{employee?.name || shift?.employeeName || 'Смена'}</h4>
+            <p>{shift?.position || employee?.position || 'Должность'} · {shift?.day} {getMonthLabel(shift?.month || scheduleMonth).toLowerCase()}</p>
+          </div>
+          <span className={`employees-schedule-status employees-schedule-status--${getShiftColor(shift)}`}>{getChecklistStatusText(shift)}</span>
+        </div>
+
+        <div className="employees-schedule-editor__grid">
+          <label><span>План начало</span><input type="time" value={shiftEditor.plannedStart} onChange={(event) => setShiftEditor((current) => current ? { ...current, plannedStart: event.target.value } : current)} /></label>
+          <label><span>План конец</span><input type="time" value={shiftEditor.plannedEnd} onChange={(event) => setShiftEditor((current) => current ? { ...current, plannedEnd: event.target.value } : current)} /></label>
+          <label><span>Факт начало</span><input type="time" value={shiftEditor.actualStart} onChange={(event) => setShiftEditor((current) => current ? { ...current, actualStart: event.target.value } : current)} /></label>
+          <label><span>Факт конец</span><input type="time" value={shiftEditor.actualEnd} onChange={(event) => setShiftEditor((current) => current ? { ...current, actualEnd: event.target.value } : current)} /></label>
+        </div>
+
+        <div className="employees-schedule-editor__checks">
+          <label><input type="checkbox" checked={shiftEditor.openChecklistDone} onChange={(event) => setShiftEditor((current) => current ? { ...current, openChecklistDone: event.target.checked } : current)} /> Чек-лист открытия выполнен</label>
+          <label><input type="checkbox" checked={shiftEditor.closeChecklistDone} onChange={(event) => setShiftEditor((current) => current ? { ...current, closeChecklistDone: event.target.checked } : current)} /> Чек-лист закрытия выполнен</label>
+        </div>
+
+        <label className="employees-schedule-editor__note"><span>Комментарий / причина правки</span><textarea value={shiftEditor.note} onChange={(event) => setShiftEditor((current) => current ? { ...current, note: event.target.value } : current)} placeholder="Например: сотрудник задержался из-за банкета" /></label>
+
+        <div className="employees-schedule-editor__summary">
+          <span>Часы: {formatHours(factHours)} / {formatHours(planHours)}</span>
+          <span>Отклонение: {formatDeviation(factHours - planHours)}</span>
+        </div>
+
+        <div className="employees-schedule-editor__actions">
+          <button type="button" className="employees-primary-button" onClick={() => void saveShiftEditor()}>Сохранить смену</button>
+          <button type="button" className="employees-cancel-button" onClick={() => void deleteSelectedShift()}>Удалить смену</button>
+        </div>
+      </aside>
+    )
   }
 
   function renderScheduleTable() {
-    const departments = ['Зал', 'Бар', 'Кухня', 'Клининг'].filter((department) => employeesByDepartment[department]?.length)
+    const departments = scheduleDepartments.filter((department) => employeesByDepartment[department]?.length)
+    const scheduleDeviation = scheduleSummary.factHours - scheduleSummary.planHours
     return (
-      <section className="employees-schedule-card" aria-label="График персонала">
-        <div className="employees-schedule-card__header">
+      <section className="employees-schedule-card employees-schedule-card--advanced" aria-label="График персонала">
+        <div className="employees-schedule-card__header employees-schedule-card__header--advanced">
           <div>
-            <h3>График персонала</h3>
-            <p>Смены сотрудников на месяц</p>
+            <h3>График сотрудников</h3>
+            <p>План/факт смен, часы, чек-листы и копирование расписания</p>
           </div>
           <label>
             <span>Месяц</span>
@@ -331,50 +700,96 @@ export function EmployeesPage() {
           </label>
         </div>
 
-        <div className="employees-schedule-legend">
-          <span><i className="legend-full" /> 1 — полная смена</span>
-          <span><i className="legend-half" /> 0.5 — половина смены</span>
-          <span><i className="legend-warning" /> открыта не по графику</span>
+        <div className="employees-schedule-summary-grid">
+          <article><strong>{scheduleSummary.factShifts} / {scheduleSummary.planShifts}</strong><span>Смены факт / план</span></article>
+          <article><strong>{formatHours(scheduleSummary.factHours)} / {formatHours(scheduleSummary.planHours)}</strong><span>Часы факт / план</span></article>
+          <article><strong>{formatDeviation(scheduleDeviation)}</strong><span>Отклонение по часам</span></article>
+          <article><strong>{scheduleSummary.green}/{scheduleSummary.yellow}/{scheduleSummary.red}</strong><span>Зелёные / жёлтые / красные</span></article>
         </div>
 
-        <div className="employees-schedule-wrap">
-          <table className="employees-schedule-table">
-            <thead>
-              <tr>
-                <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
-                {scheduleDays.map((day) => <th key={day}>{day}</th>)}
-                <th>Итог</th>
-              </tr>
-              <tr>
-                <th className="employees-schedule-table__name" />
-                {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {departments.length ? departments.map((department) => (
-                <Fragment key={department}>
-                  <tr className="employees-schedule-table__group"><td colSpan={scheduleDays.length + 2}>{department}</td></tr>
-                  {employeesByDepartment[department].map((employee) => (
-                    <tr key={employee.id}>
-                      <th className="employees-schedule-table__employee">{employee.name}</th>
-                      {scheduleDays.map((day) => {
-                        const entry = getScheduleEntry(employee.id, day)
-                        return (
-                          <td key={day}>
-                            <button type="button" className={getScheduleCellClass(employee, day, entry?.value)} onClick={() => void toggleScheduleCell(employee, day)}>
-                              {entry?.value || ''}
-                            </button>
-                          </td>
-                        )
-                      })}
-                      <td className="employees-schedule-table__total">{getScheduleTotal(employee.id).toLocaleString('ru-RU')}</td>
-                    </tr>
-                  ))}
-                </Fragment>
-              )) : <tr><td colSpan={scheduleDays.length + 2}>Добавьте сотрудников, чтобы составить график.</td></tr>}
-            </tbody>
-          </table>
+        <div className="employees-schedule-legend employees-schedule-legend--advanced">
+          <span><i className="legend-green" /> оба чек-листа</span>
+          <span><i className="legend-yellow" /> один чек-лист</span>
+          <span><i className="legend-red" /> чек-листы не выполнены</span>
+          <span>Факт без чек-листов берётся по графику</span>
+        </div>
+
+        <div className="employees-schedule-builder">
+          <div className="employees-schedule-builder__panel">
+            <h4>Поставить смену</h4>
+            <div className="employees-schedule-builder__grid">
+              <label><span>Кому</span><select value={scheduleForm.scope} onChange={(event) => setScheduleForm((current) => ({ ...current, scope: event.target.value as ScheduleScope }))}><option value="employee">Одному сотруднику</option><option value="department">Подразделению</option><option value="selection">Выбранным сотрудникам</option></select></label>
+              <label><span>День</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={scheduleForm.day} onChange={(event) => setScheduleForm((current) => ({ ...current, day: Number(event.target.value || 1) }))} /></label>
+              <label><span>Начало</span><input type="time" value={scheduleForm.plannedStart} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedStart: event.target.value }))} /></label>
+              <label><span>Конец</span><input type="time" value={scheduleForm.plannedEnd} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedEnd: event.target.value }))} /></label>
+              {scheduleForm.scope === 'employee' ? <label><span>Сотрудник</span><select value={scheduleForm.employeeId} onChange={(event) => setScheduleForm((current) => ({ ...current, employeeId: event.target.value }))}>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.position}</option>)}</select></label> : null}
+              {scheduleForm.scope === 'department' ? <label><span>Подразделение</span><select value={scheduleForm.department} onChange={(event) => setScheduleForm((current) => ({ ...current, department: event.target.value }))}>{scheduleDepartments.map((item) => <option key={item}>{item}</option>)}</select></label> : null}
+            </div>
+            {scheduleForm.scope === 'selection' ? (
+              <div className="employees-schedule-picker">
+                {employees.map((employee) => <label key={employee.id}><input type="checkbox" checked={scheduleForm.employeeIds.includes(employee.id)} onChange={() => toggleScheduleEmployee(employee.id)} /> {employee.name} · {employee.position}</label>)}
+              </div>
+            ) : null}
+            <button className="employees-primary-button" type="button" onClick={() => void createScheduleShifts()}>Поставить смену</button>
+          </div>
+
+          <div className="employees-schedule-builder__panel">
+            <h4>Копировать график</h4>
+            <div className="employees-schedule-builder__grid employees-schedule-builder__grid--copy">
+              <label><span>Период</span><select value={copyForm.period} onChange={(event) => setCopyForm((current) => ({ ...current, period: event.target.value as CopyPeriod }))}><option value="day">День</option><option value="week">Неделя</option><option value="month">Месяц</option><option value="year">Год</option></select></label>
+              <label><span>От дня</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.fromDay} onChange={(event) => setCopyForm((current) => ({ ...current, fromDay: Number(event.target.value || 1) }))} /></label>
+              <label><span>На день</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.toDay} onChange={(event) => setCopyForm((current) => ({ ...current, toDay: Number(event.target.value || 1) }))} /></label>
+              <label><span>Целевой месяц</span><input type="month" value={copyForm.targetMonth} onChange={(event) => setCopyForm((current) => ({ ...current, targetMonth: event.target.value || shiftMonth(scheduleMonth, 1) }))} /></label>
+              <label><span>Заменить</span><select value={copyForm.replaceFromId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceFromId: event.target.value }))}><option value="">Без замены</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+              <label><span>На сотрудника</span><select value={copyForm.replaceToId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceToId: event.target.value }))}><option value="">Не выбран</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+            </div>
+            <button className="employees-primary-button" type="button" onClick={() => void copySchedule()}>Копировать</button>
+            <p className="employees-schedule-builder__hint">При копировании переносятся сотрудники, роли и плановые часы. Факт, чек-листы и отклонения не копируются.</p>
+          </div>
+        </div>
+
+        <div className="employees-schedule-workspace">
+          <div className="employees-schedule-wrap">
+            <table className="employees-schedule-table employees-schedule-table--advanced">
+              <thead>
+                <tr>
+                  <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
+                  {scheduleDays.map((day) => <th key={day}>{day}</th>)}
+                  <th>Смены</th>
+                  <th>Часы</th>
+                </tr>
+                <tr>
+                  <th className="employees-schedule-table__name" />
+                  {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
+                  <th>факт/план</th>
+                  <th>факт/план</th>
+                </tr>
+              </thead>
+              <tbody>
+                {departments.length ? departments.map((department) => (
+                  <>
+                    <tr className="employees-schedule-table__group" key={`${department}-group`}><td colSpan={scheduleDays.length + 3}>{department}</td></tr>
+                    {employeesByDepartment[department].map((employee) => {
+                      const employeeMonthShifts = monthSchedules.filter((shift) => shift.employeeId === employee.id)
+                      const planShifts = employeeMonthShifts.length
+                      const factShifts = employeeMonthShifts.filter((shift) => shift.openChecklistDone || shift.closeChecklistDone).length
+                      const planHours = employeeMonthShifts.reduce((sum, shift) => sum + getPlannedHours(shift), 0)
+                      const factHours = employeeMonthShifts.reduce((sum, shift) => sum + getActualHours(shift), 0)
+                      return (
+                        <tr key={employee.id}>
+                          <th className="employees-schedule-table__employee"><span>{employee.name}</span><small>{employee.position}</small></th>
+                          {scheduleDays.map((day) => <td key={day}>{renderScheduleCell(employee, day)}</td>)}
+                          <td className="employees-schedule-table__total">{factShifts}/{planShifts}</td>
+                          <td className="employees-schedule-table__total">{formatHours(factHours)} / {formatHours(planHours)}</td>
+                        </tr>
+                      )
+                    })}
+                  </>
+                )) : <tr><td colSpan={scheduleDays.length + 3}>Добавьте сотрудников, чтобы составить график.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          {renderScheduleEditor()}
         </div>
       </section>
     )
@@ -451,4 +866,3 @@ export function EmployeesPage() {
     </section>
   )
 }
-

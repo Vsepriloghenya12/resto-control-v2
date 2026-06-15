@@ -13,8 +13,10 @@ const jsonFile = path.join(dataDir, 'db.json')
 const PORT = Number(process.env.PORT || 4173)
 const COOKIE_NAME = 'rc_session'
 const DATABASE_URL = process.env.DATABASE_URL || ''
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const ENABLE_DEMO_DATA = process.env.ENABLE_DEMO_DATA === 'true' || (!IS_PRODUCTION && process.env.ENABLE_DEMO_DATA !== 'false')
 const SERVICE_OWNER_EMAIL = normalizeLogin(process.env.SERVICE_OWNER_EMAIL || 'admin@resto.local')
-const SERVICE_OWNER_PASSWORD = String(process.env.SERVICE_OWNER_PASSWORD || 'admin123')
+const SERVICE_OWNER_PASSWORD = String(process.env.SERVICE_OWNER_PASSWORD || (IS_PRODUCTION ? '' : 'admin123'))
 const SERVICE_OWNER_NAME = String(process.env.SERVICE_OWNER_NAME || 'Владелец сервиса')
 
 let pgPool = null
@@ -50,7 +52,10 @@ function verifyPassword(password, stored) {
   if (!stored || !stored.includes(':')) return false
   const [salt, hash] = stored.split(':')
   const candidate = crypto.scryptSync(String(password), salt, 64).toString('hex')
-  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(candidate, 'hex'))
+  const storedBuffer = Buffer.from(hash, 'hex')
+  const candidateBuffer = Buffer.from(candidate, 'hex')
+  if (storedBuffer.length !== candidateBuffer.length) return false
+  return crypto.timingSafeEqual(storedBuffer, candidateBuffer)
 }
 
 function parseCookies(header = '') {
@@ -58,8 +63,11 @@ function parseCookies(header = '') {
     const index = item.indexOf('=')
     if (index === -1) return acc
     const key = item.slice(0, index).trim()
-    const value = decodeURIComponent(item.slice(index + 1).trim())
-    acc[key] = value
+    try {
+      acc[key] = decodeURIComponent(item.slice(index + 1).trim())
+    } catch {
+      acc[key] = item.slice(index + 1).trim()
+    }
     return acc
   }, {})
 }
@@ -109,6 +117,9 @@ function sessionPayload(state, session) {
 }
 
 function createSession(state, user, membership, remember = true) {
+  state.sessions = Array.isArray(state.sessions)
+    ? state.sessions.filter((item) => new Date(item.expiresAt).getTime() > Date.now())
+    : []
   const session = {
     id: id('session'),
     userId: user.id,
@@ -131,7 +142,70 @@ function cookieHeader(session, clear = false) {
   return `${COOKIE_NAME}=${encodeURIComponent(session.id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`
 }
 
+
+function createEmptyState() {
+  const createdAt = nowIso()
+  return {
+    meta: { version: 1, createdAt, updatedAt: createdAt },
+    users: [],
+    restaurants: [],
+    memberships: [],
+    sessions: [],
+    employees: [],
+    tasks: [],
+    checklistRuns: [],
+    checklistTemplates: [],
+    halls: [],
+    tables: [],
+    bookings: [],
+    inventoryProducts: [],
+    inventoryAssignments: [],
+    ttkItems: [],
+    payments: [],
+    technicalRequests: [],
+    knowledgeMaterials: [],
+    regularGuests: [],
+    pushSubscriptions: [],
+    staffSchedules: [],
+  }
+}
+
+const stateArrayKeys = [
+  'users',
+  'restaurants',
+  'memberships',
+  'sessions',
+  'employees',
+  'tasks',
+  'checklistRuns',
+  'checklistTemplates',
+  'halls',
+  'tables',
+  'bookings',
+  'inventoryProducts',
+  'inventoryAssignments',
+  'ttkItems',
+  'payments',
+  'technicalRequests',
+  'knowledgeMaterials',
+  'regularGuests',
+  'pushSubscriptions',
+  'staffSchedules',
+]
+
+function ensureStateShape(state) {
+  if (!state || typeof state !== 'object') return createEmptyState()
+  for (const key of stateArrayKeys) {
+    if (!Array.isArray(state[key])) state[key] = []
+  }
+  state.sessions = state.sessions.filter((item) => item?.expiresAt && new Date(item.expiresAt).getTime() > Date.now())
+  state.meta = { version: 1, ...(state.meta || {}), updatedAt: state.meta?.updatedAt || nowIso() }
+  return state
+}
+
 function createSeedState() {
+  if (!ENABLE_DEMO_DATA) return createEmptyState()
+
   const createdAt = nowIso()
   const serviceUser = {
     id: 'user_service_owner',
@@ -248,17 +322,19 @@ function createSeedState() {
 
 
 function ensureServiceOwner(state) {
+  state = ensureStateShape(state)
   let changed = false
 
-  if (!Array.isArray(state.users)) state.users = []
-  if (!Array.isArray(state.restaurants)) state.restaurants = []
-  if (!Array.isArray(state.memberships)) state.memberships = []
+  if (IS_PRODUCTION && !SERVICE_OWNER_PASSWORD) {
+    throw new Error('Для production нужно задать переменную SERVICE_OWNER_PASSWORD.')
+  }
 
   if (!state.restaurants.length) {
     const createdAt = nowIso()
     state.restaurants.push({
       id: 'restaurant_service_default',
-      name: 'Resto Control',
+      name: ENABLE_DEMO_DATA ? 'Resto Control' : 'Сервис Resto Control',
+      isServiceHome: !ENABLE_DEMO_DATA,
       legalType: '',
       legalName: '',
       inn: '',
@@ -376,7 +452,7 @@ async function loadState() {
   if (pool) {
     const result = await pool.query('SELECT data FROM resto_state WHERE id = $1', ['main'])
     if (result.rows[0]?.data) {
-      const state = result.rows[0].data
+      const state = ensureStateShape(result.rows[0].data)
       if (ensureServiceOwner(state)) {
         await pool.query('INSERT INTO resto_state (id, data, updated_at) VALUES ($1, $2, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()', ['main', state])
       }
@@ -395,10 +471,15 @@ async function loadState() {
   await fs.mkdir(dataDir, { recursive: true })
   try {
     const content = await fs.readFile(jsonFile, 'utf8')
-    memoryState = JSON.parse(content)
+    try {
+      memoryState = ensureStateShape(JSON.parse(content))
+    } catch {
+      throw new Error('Локальная база server/data/db.json повреждена. Сделайте резервную копию файла и восстановите корректный JSON.')
+    }
     if (ensureServiceOwner(memoryState)) await saveState(memoryState)
     return memoryState
-  } catch {
+  } catch (error) {
+    if (error.code && error.code !== 'ENOENT') throw error
     memoryState = createSeedState()
     ensureServiceOwner(memoryState)
     await fs.writeFile(jsonFile, JSON.stringify(memoryState, null, 2))
@@ -407,6 +488,7 @@ async function loadState() {
 }
 
 async function saveState(state) {
+  state = ensureStateShape(state)
   state.meta = { ...(state.meta || {}), updatedAt: nowIso() }
   const pool = await initPg()
   if (pool) {
@@ -450,6 +532,22 @@ function roleFromPosition(position) {
   if (value.includes('управля')) return 'manager'
   if (value.includes('старш') || value.includes('администратор')) return 'senior'
   return 'employee'
+}
+
+
+function canWriteCollection(name, method, itemId, action, role) {
+  if (['service_owner', 'owner', 'manager'].includes(role)) return true
+  if (!['senior', 'employee'].includes(role)) return false
+
+  if (name === 'push-subscriptions' && method === 'POST' && !itemId) return true
+  if (name === 'technical-requests' && method === 'POST' && !itemId) return true
+  if (name === 'checklist-runs' && ['POST', 'PATCH', 'PUT'].includes(method)) return true
+  if (name === 'tasks' && itemId && ['PATCH', 'PUT'].includes(method)) return true
+  if (name === 'inventory-assignments' && itemId && ['PATCH', 'PUT'].includes(method)) return true
+  if (name === 'bookings' && method === 'POST' && !itemId) return true
+  if (name === 'bookings' && itemId && action === 'status' && ['PATCH', 'PUT'].includes(method)) return true
+
+  return false
 }
 
 function collectionByPath(state, name) {
@@ -500,14 +598,6 @@ async function handleAuth(req, res, state, pathname, auth) {
     if (!login || !password) throw httpError(400, 'Введите логин и пароль.')
 
     let user = state.users.find((item) => item.login === login)
-
-    if (!user && (login.includes('admin') || login.includes('super') || login.includes('service') || login.includes('platform'))) {
-      user = { id: id('user'), name: 'Владелец сервиса', login, passwordHash: hashPassword(password), roleHint: 'service_owner', createdAt: nowIso(), updatedAt: nowIso() }
-      state.users.push(user)
-      const restaurant = state.restaurants[0] || createSeedState().restaurants[0]
-      if (!state.restaurants.find((item) => item.id === restaurant.id)) state.restaurants.push(restaurant)
-      state.memberships.push({ id: id('membership'), userId: user.id, restaurantId: restaurant.id, role: 'service_owner', position: 'Владелец сервиса', status: 'active', createdAt: nowIso(), updatedAt: nowIso() })
-    }
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
       throw httpError(401, 'Неверный логин или пароль.')
@@ -741,6 +831,10 @@ async function handleCollections(req, res, state, pathname, auth) {
   const role = payload.membership.role
   const currentRestaurantId = restaurantIdFrom(auth)
 
+  if (!safeMethods.has(req.method) && !canWriteCollection(name, req.method, itemId, action, role)) {
+    throw httpError(403, 'Недостаточно прав для изменения этого раздела.')
+  }
+
   if (name === 'push-subscriptions' && req.method === 'POST') {
     const body = await readBody(req)
     const item = { id: id('push'), userId: payload.user.id, restaurantId: currentRestaurantId, subscription: body.subscription || body, createdAt: nowIso(), updatedAt: nowIso() }
@@ -841,7 +935,9 @@ async function handleCollections(req, res, state, pathname, auth) {
   if (req.method === 'DELETE' && itemId) {
     if (name === 'employees' && item.userId) {
       state.memberships = state.memberships.filter((membership) => membership.userId !== item.userId || membership.restaurantId !== item.restaurantId)
-      state.users = state.users.filter((user) => user.id !== item.userId)
+      if (!state.memberships.some((membership) => membership.userId === item.userId)) {
+        state.users = state.users.filter((user) => user.id !== item.userId)
+      }
       state.sessions = state.sessions.filter((session) => session.userId !== item.userId)
     }
     state[collection.key] = collection.items.filter((entry) => entry.id !== itemId)
@@ -1113,7 +1209,8 @@ async function serveStatic(req, res, pathname) {
   let safePath = decodeURIComponent(pathname.split('?')[0])
   if (safePath === '/') safePath = '/index.html'
   const target = path.normalize(path.join(distDir, safePath))
-  if (!target.startsWith(distDir)) throw httpError(403, 'Недоступный путь.')
+  const relative = path.relative(distDir, target)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) throw httpError(403, 'Недоступный путь.')
 
   try {
     const stat = await fs.stat(target)
@@ -1134,8 +1231,9 @@ async function serveStatic(req, res, pathname) {
 
 const server = http.createServer(async (req, res) => {
   try {
-    if (!safeMethods.has(req.method) && !req.headers['content-type']?.includes('application/json') && req.url?.startsWith('/api/')) {
-      // Позволяем пустой POST без JSON для logout, но остальные формы должны слать JSON.
+    const contentLength = Number(req.headers['content-length'] || 0)
+    if (!safeMethods.has(req.method) && contentLength > 0 && req.url?.startsWith('/api/') && !req.headers['content-type']?.includes('application/json')) {
+      throw httpError(415, 'API принимает только JSON-запросы.')
     }
     await handleRequest(req, res)
   } catch (error) {

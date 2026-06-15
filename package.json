@@ -1,16 +1,17 @@
 {
   "name": "resto-control-v2",
   "private": true,
-  "version": "0.26.2",
+  "version": "0.26.3",
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc -b && vite build",
+    "build": "npm run check:typecheck && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "check:server": "node --check server/index.js",
-    "check:typecheck": "tsc -b",
-    "check": "npm run check:server"
+    "check:typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "check": "npm run check:server",
+    "check:all": "npm run check:server && npm run check:typecheck"
   },
   "dependencies": {
     "pg": "8.21.0",
