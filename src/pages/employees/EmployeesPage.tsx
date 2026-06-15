@@ -618,16 +618,30 @@ export function EmployeesPage() {
     const entry = entries[0]
     if (!entry) {
       return (
-        <button type="button" className="employees-schedule__cell-button employees-schedule__cell-button--empty" onClick={() => void quickCreateShift(employee, day)}>
-          +
+        <button type="button" className="employees-schedule__cell-button employees-schedule__cell-button--empty" onClick={() => void quickCreateShift(employee, day)} aria-label={`Поставить смену ${employee.name} на ${day} число`}>
+          <span className="employees-schedule__cell-plus">+</span>
         </button>
       )
     }
 
+    const planStart = getPlannedStart(entry)
+    const planEnd = getPlannedEnd(entry)
+    const plannedHours = formatHours(getPlannedHours(entry))
+    const statusText = getChecklistStatusText(entry)
+
     return (
-      <button type="button" className={`employees-schedule__cell-button employees-schedule__cell-button--${getShiftColor(entry)} ${selectedShiftId === entry.id ? 'is-selected' : ''}`} onClick={() => openShiftEditor(entry)}>
-        <strong>{getPlannedStart(entry)}–{getPlannedEnd(entry)}</strong>
-        <span>{entries.length > 1 ? `+${entries.length - 1}` : formatHours(getPlannedHours(entry))}</span>
+      <button
+        type="button"
+        className={`employees-schedule__cell-button employees-schedule__cell-button--${getShiftColor(entry)} ${selectedShiftId === entry.id ? 'is-selected' : ''}`}
+        onClick={() => openShiftEditor(entry)}
+        title={`${employee.name} · ${planStart}–${planEnd} · ${plannedHours}. ${statusText}`}
+      >
+        <strong className="employees-schedule__cell-time">
+          <span>{planStart}</span>
+          <span>{planEnd}</span>
+        </strong>
+        <span className="employees-schedule__cell-hours">{plannedHours}</span>
+        {entries.length > 1 ? <small className="employees-schedule__cell-extra">+{entries.length - 1}</small> : null}
       </button>
     )
   }
