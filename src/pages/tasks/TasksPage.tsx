@@ -127,11 +127,15 @@ export function TasksPage() {
 
   async function deleteTask() {
     if (!selectedId) return
-    await api.remove('tasks', selectedId)
-    const next = tasks.filter((item) => item.id !== selectedId)
-    setTasks(next)
-    setSelectedId(next[0]?.id || '')
-    setDraft(next[0] || emptyTask())
+    try {
+      await api.remove('tasks', selectedId)
+      const next = tasks.filter((item) => item.id !== selectedId)
+      setTasks(next)
+      setSelectedId(next[0]?.id || '')
+      setDraft(next[0] || emptyTask())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить задачу')
+    }
   }
 
   async function completeTask() {

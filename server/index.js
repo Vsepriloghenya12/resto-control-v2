@@ -29,6 +29,17 @@ function nowIso() {
   return new Date().toISOString()
 }
 
+function pickFields(obj, fields) {
+  const result = {}
+  for (const key of fields) {
+    if (key in obj) result[key] = obj[key]
+  }
+  return result
+}
+
+const RESTAURANT_SERVICE_OWNER_WRITABLE = ['name', 'status', 'plan', 'subscriptionStatus', 'subscriptionEndsAt', 'trialEndsAt', 'legalType', 'legalName', 'inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'bik', 'account', 'corrAccount', 'contactEmail', 'contactPhone', 'edo']
+const RESTAURANT_OWNER_WRITABLE = ['name', 'plan', 'legalType', 'legalName', 'inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'bik', 'account', 'corrAccount', 'contactEmail', 'contactPhone', 'edo']
+
 function addDays(date, days) {
   const next = new Date(date)
   next.setDate(next.getDate() + days)
@@ -327,6 +338,10 @@ function ensureServiceOwner(state) {
 
   if (IS_PRODUCTION && !SERVICE_OWNER_PASSWORD) {
     throw new Error('Для production нужно задать переменную SERVICE_OWNER_PASSWORD.')
+  }
+
+  if (IS_PRODUCTION && SERVICE_OWNER_PASSWORD && SERVICE_OWNER_PASSWORD.length < 8) {
+    throw new Error('SERVICE_OWNER_PASSWORD должен содержать не менее 8 символов.')
   }
 
   if (!state.restaurants.length) {
@@ -754,7 +769,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     const restaurant = state.restaurants.find((item) => item.id === restaurantPatch[1] && !item.isServiceHome)
     if (!restaurant) throw httpError(404, 'Ресторан не найден.')
     const body = await readBody(req)
-    Object.assign(restaurant, body, { updatedAt: nowIso() })
+    Object.assign(restaurant, pickFields(body, RESTAURANT_SERVICE_OWNER_WRITABLE), { updatedAt: nowIso() })
     await saveState(state)
     send(res, 200, restaurant)
     return true
@@ -857,6 +872,9 @@ async function handleCollections(req, res, state, pathname, auth) {
       throw httpError(400, 'Должность «Кладовщик» не используется. Используйте «Клининг».')
     }
     const targetRestaurantId = role === 'service_owner' && body.restaurantId ? body.restaurantId : currentRestaurantId
+    if (role === 'service_owner' && body.restaurantId && !state.restaurants.find((r) => r.id === body.restaurantId)) {
+      throw httpError(404, 'Ресторан не найден.')
+    }
 
     if (name === 'employees') {
       const login = normalizeLogin(body.login)
@@ -986,9 +1004,10 @@ async function handleMyRestaurants(req, res, state, pathname, auth) {
     state.restaurants.push(restaurant)
     state.memberships.push(membership)
     state.halls.push({ id: id('hall'), restaurantId: restaurant.id, name: 'Основной зал', tablesCount: 0, seatsCount: 0, active: true, createdAt, updatedAt: createdAt })
+    const oldSessionId = auth.session.id
     const session = createSession(state, payload.user, membership, true)
-    state.sessions = state.sessions.filter((item) => item.id !== auth.session.id)
     await saveState(state)
+    state.sessions = state.sessions.filter((item) => item.id !== oldSessionId)
     send(res, 201, sessionPayload(state, session), { 'Set-Cookie': cookieHeader(session) })
     return true
   }
@@ -998,9 +1017,10 @@ async function handleMyRestaurants(req, res, state, pathname, auth) {
     const restaurantId = switchMatch[1]
     const membership = state.memberships.find((item) => item.userId === userId && item.restaurantId === restaurantId && item.status === 'active')
     if (!membership) throw httpError(404, 'Доступ к ресторану не найден.')
+    const oldSessionId = auth.session.id
     const session = createSession(state, payload.user, membership, true)
-    state.sessions = state.sessions.filter((item) => item.id !== auth.session.id)
     await saveState(state)
+    state.sessions = state.sessions.filter((item) => item.id !== oldSessionId)
     send(res, 200, sessionPayload(state, session), { 'Set-Cookie': cookieHeader(session) })
     return true
   }
@@ -1022,7 +1042,8 @@ async function handleRestaurant(req, res, state, pathname, auth) {
 
   if (req.method === 'PATCH' || req.method === 'PUT') {
     const body = await readBody(req)
-    Object.assign(restaurant, body, { updatedAt: nowIso() })
+    const allowed = payload.membership.role === 'service_owner' ? RESTAURANT_SERVICE_OWNER_WRITABLE : RESTAURANT_OWNER_WRITABLE
+    Object.assign(restaurant, pickFields(body, allowed), { updatedAt: nowIso() })
     await saveState(state)
     send(res, 200, restaurant)
     return true

@@ -55,15 +55,23 @@ export function PaymentPage() {
   const latestInvoice = invoices[0]
 
   async function selectTariff(tariff: Tariff) {
-    const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify({ plan: tariff.id }) })
-    setRestaurant(updated)
-    setMessage(`Выбран тариф «${tariff.title}». Счёт выставляет владелец сервиса.`)
+    try {
+      const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify({ plan: tariff.id }) })
+      setRestaurant(updated)
+      setMessage(`Выбран тариф «${tariff.title}». Счёт выставляет владелец сервиса.`)
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Не удалось изменить тариф.')
+    }
   }
 
   async function saveRequisites() {
-    const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify(requisites) })
-    setRestaurant(updated)
-    setMessage('Реквизиты сохранены в карточке ресторана.')
+    try {
+      const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify(requisites) })
+      setRestaurant(updated)
+      setMessage('Реквизиты сохранены в карточке ресторана.')
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Не удалось сохранить реквизиты.')
+    }
   }
 
   async function reportPaid(invoice: Invoice) {

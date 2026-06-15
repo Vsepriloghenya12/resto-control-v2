@@ -91,11 +91,15 @@ export function ChecklistsPage() {
 
   async function deleteChecklist() {
     if (!selectedId) return
-    await api.remove('checklists', selectedId)
-    const next = checklists.filter((item) => item.id !== selectedId)
-    setChecklists(next)
-    setSelectedId(next[0]?.id || '')
-    setDraft(next[0] ? normalizeChecklist(next[0]) : emptyChecklist())
+    try {
+      await api.remove('checklists', selectedId)
+      const next = checklists.filter((item) => item.id !== selectedId)
+      setChecklists(next)
+      setSelectedId(next[0]?.id || '')
+      setDraft(next[0] ? normalizeChecklist(next[0]) : emptyChecklist())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить чек-лист')
+    }
   }
 
   function updateItem(index: number, patch: Partial<ChecklistItem>) {
