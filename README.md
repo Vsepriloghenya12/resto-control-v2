@@ -97,3 +97,9 @@ npm run check:all      # серверная проверка + TypeScript
 - смену можно редактировать постфактум с комментарием;
 - можно копировать день, неделю, месяц или год;
 - при копировании можно заменить одного сотрудника другим, сохранив роль и время смены.
+
+## Railway build note
+
+This archive is Railway-ready and uses the already built `dist/` frontend. During Railway deployment it installs only the runtime backend dependency `pg` with a no-lock install command in `nixpacks.toml`. This avoids npm CLI failures caused by stale/foreign `package-lock.json` files and prevents Railway from trying to install frontend build tools in production.
+
+If frontend source files are changed later, rebuild `dist/` before packaging a new Railway archive.

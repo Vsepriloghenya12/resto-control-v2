@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npm install --omit=dev --no-audit --no-fund"]
+cmds = ["npm install pg@8.21.0 --no-save --omit=dev --no-audit --no-fund --ignore-scripts --no-package-lock"]
 
 [phases.build]
 cmds = ["npm run check", "test -f dist/index.html"]
