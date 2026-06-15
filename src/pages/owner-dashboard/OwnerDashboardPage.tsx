@@ -184,7 +184,7 @@ function buildDashboardModel(summary: DashboardSummary | null) {
   const operationRows: OperationRow[] = [
     { label: 'Активные чек-листы', value: `${activeChecklists} из ${checklists.length}`, percent: percent(activeChecklists, checklists.length), tone: toneByPercent(percent(activeChecklists, checklists.length)), icon: <ChecklistIcon />, target: 'checklists' },
     { label: 'Выполнено задач', value: `${tasksDone} из ${tasks.length}`, percent: percent(tasksDone, tasks.length), tone: toneByPercent(percent(tasksDone, tasks.length)), icon: <ClockIcon />, target: 'tasks' },
-    { label: 'Требует внимания', value: String(problemCount), percent: problemCount ? 30 : 100, tone: problemCount ? 'low' : 'good', icon: <AlertCircleIcon />, target: problemCount ? 'tasks' : 'dashboard' },
+    { label: 'Требует внимания', value: String(problemCount), percent: problemCount ? Math.min(100, problemCount * 15) : 0, tone: problemCount ? 'low' : 'good', icon: <AlertCircleIcon />, target: problemCount ? 'tasks' : 'dashboard' },
     { label: 'Сотрудники на смене', value: `${employeesOnShift} из ${employees.length}`, percent: percent(employeesOnShift, employees.length), tone: toneByPercent(percent(employeesOnShift, employees.length)), icon: <TeamIcon />, target: 'employees' },
   ]
 
@@ -328,17 +328,12 @@ function DonutSegment({ value, offset, color, active, index, onHover }: { value:
   )
 }
 
-function getOperationWeight(value: string) {
-  const firstNumber = String(value || '').replace(',', '.').match(/\d+(?:\.\d+)?/)
-  return firstNumber ? Number(firstNumber[0]) : 0
-}
-
 function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof buildDashboardModel>; onOpen: (section: OwnerSection) => void }) {
   const palette = ['#22c55e', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444']
   const baseRows = model.operationRows.map((row, index) => ({
     ...row,
     color: palette[index % palette.length],
-    weight: getOperationWeight(row.value),
+    weight: row.percent,
   }))
   const positiveRows = baseRows.filter((row) => row.weight > 0)
   const totalWeight = positiveRows.reduce((sum, row) => sum + row.weight, 0)
@@ -349,13 +344,13 @@ function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof bu
     ? positiveRows.map((row, index) => {
         const isLast = index === positiveRows.length - 1
         const segmentLength = isLast
-          ? Math.max(0.1, 100 - gap * (positiveRows.length - 1) - preparedLength)
+          ? Math.max(0.1, drawableLength - preparedLength)
           : Math.max(0.1, (row.weight / totalWeight) * drawableLength)
         preparedLength += segmentLength
         return {
           ...row,
           share: segmentLength,
-          displayPercent: Math.round((row.weight / totalWeight) * 100),
+          displayPercent: row.percent,
         }
       })
     : [{ ...baseRows[0], label: 'Нет данных', value: '0', color: '#cbd5e1', weight: 1, share: 100, displayPercent: 0, target: 'dashboard' as OwnerSection }]
