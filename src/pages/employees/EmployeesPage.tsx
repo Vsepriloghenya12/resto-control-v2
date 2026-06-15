@@ -684,116 +684,198 @@ export function EmployeesPage() {
     )
   }
 
+  function renderScheduleShiftCard(shift: StaffSchedule) {
+    const employee = employees.find((item) => item.id === shift.employeeId)
+    const color = getShiftColor(shift) || 'red'
+    const planStart = getPlannedStart(shift)
+    const planEnd = getPlannedEnd(shift)
+    const actualStart = getActualStart(shift)
+    const actualEnd = getActualEnd(shift)
+    const planHours = getPlannedHours(shift)
+    const actualHours = getActualHours(shift)
+    const deviation = getShiftDeviation(shift)
+    const usesScheduleFact = !shift.actualStart && !shift.actualEnd
+
+    return (
+      <button type="button" key={shift.id} className={`employees-schedule-shift-card employees-schedule-shift-card--${color} ${selectedShiftId === shift.id ? 'is-selected' : ''}`} onClick={() => openShiftEditor(shift)}>
+        <span className={`employees-schedule-shift-card__status employees-schedule-shift-card__status--${color}`} />
+        <div className="employees-schedule-shift-card__main">
+          <div className="employees-schedule-shift-card__topline">
+            <strong>{employee?.name || shift.employeeName || 'Сотрудник'}</strong>
+            <span>{shift.day} {getMonthLabel(shift.month).toLowerCase()}</span>
+          </div>
+          <p>{shift.position || employee?.position || 'Должность'} · {shift.department || getDepartment(shift.position || employee?.position || '')}</p>
+          <div className="employees-schedule-shift-card__time-grid">
+            <span><b>План</b>{planStart}–{planEnd} · {formatHours(planHours)}</span>
+            <span><b>Факт</b>{usesScheduleFact ? 'по графику' : `${actualStart}–${actualEnd}`} · {formatHours(actualHours)}</span>
+          </div>
+          <div className="employees-schedule-shift-card__meta">
+            <em>{getChecklistStatusText(shift)}</em>
+            <small>Отклонение: {formatDeviation(deviation)}</small>
+          </div>
+        </div>
+        <span className="employees-schedule-shift-card__edit">Изменить</span>
+      </button>
+    )
+  }
+
   function renderScheduleTable() {
     const departments = scheduleDepartments.filter((department) => employeesByDepartment[department]?.length)
     const scheduleDeviation = scheduleSummary.factHours - scheduleSummary.planHours
+    const shiftsByDepartment = departments.reduce<Record<string, StaffSchedule[]>>((groups, department) => {
+      groups[department] = monthSchedules
+        .filter((shift) => (shift.department || getDepartment(shift.position || '')) === department)
+        .sort((a, b) => Number(a.day) - Number(b.day) || getPlannedStart(a).localeCompare(getPlannedStart(b)))
+      return groups
+    }, {})
+
     return (
-      <section className="employees-schedule-card employees-schedule-card--advanced" aria-label="График персонала">
-        <div className="employees-schedule-card__header employees-schedule-card__header--advanced">
+      <section className="employees-schedule-card employees-schedule-card--advanced employees-schedule-card--redesign" aria-label="График персонала">
+        <div className="employees-schedule-redesign__hero">
           <div>
+            <span className="employees-schedule-redesign__eyebrow">План / факт</span>
             <h3>График сотрудников</h3>
-            <p>План/факт смен, часы, чек-листы и копирование расписания</p>
+            <p>Смены, часы, чек-листы и отклонения без лишнего шума.</p>
           </div>
-          <label>
+          <div className="employees-schedule-redesign__month">
             <span>Месяц</span>
             <input type="month" value={scheduleMonth} onChange={(event) => setScheduleMonth(event.target.value || getCurrentMonth())} />
-          </label>
+          </div>
         </div>
 
-        <div className="employees-schedule-summary-grid">
-          <article><strong>{scheduleSummary.factShifts} / {scheduleSummary.planShifts}</strong><span>Смены факт / план</span></article>
-          <article><strong>{formatHours(scheduleSummary.factHours)} / {formatHours(scheduleSummary.planHours)}</strong><span>Часы факт / план</span></article>
-          <article><strong>{formatDeviation(scheduleDeviation)}</strong><span>Отклонение по часам</span></article>
-          <article><strong>{scheduleSummary.green}/{scheduleSummary.yellow}/{scheduleSummary.red}</strong><span>Зелёные / жёлтые / красные</span></article>
+        <div className="employees-schedule-redesign__summary">
+          <article>
+            <span>Смены</span>
+            <strong>{scheduleSummary.factShifts} / {scheduleSummary.planShifts}</strong>
+            <small>факт / план</small>
+          </article>
+          <article>
+            <span>Часы</span>
+            <strong>{formatHours(scheduleSummary.factHours)} / {formatHours(scheduleSummary.planHours)}</strong>
+            <small>факт / план</small>
+          </article>
+          <article className={scheduleDeviation < 0 ? 'is-negative' : scheduleDeviation > 0 ? 'is-positive' : ''}>
+            <span>Отклонение</span>
+            <strong>{formatDeviation(scheduleDeviation)}</strong>
+            <small>по фактическим часам</small>
+          </article>
+          <article>
+            <span>Чек-листы</span>
+            <strong>{scheduleSummary.green}/{scheduleSummary.yellow}/{scheduleSummary.red}</strong>
+            <small>оба / один / нет</small>
+          </article>
         </div>
 
-        <div className="employees-schedule-legend employees-schedule-legend--advanced">
-          <span><i className="legend-green" /> оба чек-листа</span>
+        <div className="employees-schedule-redesign__legend">
+          <span><i className="legend-green" /> оба чек-листа выполнены</span>
           <span><i className="legend-yellow" /> один чек-лист</span>
           <span><i className="legend-red" /> чек-листы не выполнены</span>
-          <span>Факт без чек-листов берётся по графику</span>
+          <span className="employees-schedule-redesign__legend-note">Если чек-листов нет, факт считается по графику</span>
         </div>
 
-        <div className="employees-schedule-builder">
-          <div className="employees-schedule-builder__panel">
-            <h4>Поставить смену</h4>
-            <div className="employees-schedule-builder__grid">
-              <label><span>Кому</span><select value={scheduleForm.scope} onChange={(event) => setScheduleForm((current) => ({ ...current, scope: event.target.value as ScheduleScope }))}><option value="employee">Одному сотруднику</option><option value="department">Подразделению</option><option value="selection">Выбранным сотрудникам</option></select></label>
-              <label><span>День</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={scheduleForm.day} onChange={(event) => setScheduleForm((current) => ({ ...current, day: Number(event.target.value || 1) }))} /></label>
-              <label><span>Начало</span><input type="time" value={scheduleForm.plannedStart} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedStart: event.target.value }))} /></label>
-              <label><span>Конец</span><input type="time" value={scheduleForm.plannedEnd} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedEnd: event.target.value }))} /></label>
-              {scheduleForm.scope === 'employee' ? <label><span>Сотрудник</span><select value={scheduleForm.employeeId} onChange={(event) => setScheduleForm((current) => ({ ...current, employeeId: event.target.value }))}>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.position}</option>)}</select></label> : null}
-              {scheduleForm.scope === 'department' ? <label><span>Подразделение</span><select value={scheduleForm.department} onChange={(event) => setScheduleForm((current) => ({ ...current, department: event.target.value }))}>{scheduleDepartments.map((item) => <option key={item}>{item}</option>)}</select></label> : null}
-            </div>
-            {scheduleForm.scope === 'selection' ? (
-              <div className="employees-schedule-picker">
-                {employees.map((employee) => <label key={employee.id}><input type="checkbox" checked={scheduleForm.employeeIds.includes(employee.id)} onChange={() => toggleScheduleEmployee(employee.id)} /> {employee.name} · {employee.position}</label>)}
+        <div className="employees-schedule-redesign__actions">
+          <details className="employees-schedule-redesign__panel">
+            <summary><span>+ Смена</span><small>один сотрудник, подразделение или группа</small></summary>
+            <div className="employees-schedule-redesign__panel-body">
+              <div className="employees-schedule-builder__grid">
+                <label><span>Кому</span><select value={scheduleForm.scope} onChange={(event) => setScheduleForm((current) => ({ ...current, scope: event.target.value as ScheduleScope }))}><option value="employee">Одному сотруднику</option><option value="department">Подразделению</option><option value="selection">Выбранным сотрудникам</option></select></label>
+                <label><span>День</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={scheduleForm.day} onChange={(event) => setScheduleForm((current) => ({ ...current, day: Number(event.target.value || 1) }))} /></label>
+                <label><span>Начало</span><input type="time" value={scheduleForm.plannedStart} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedStart: event.target.value }))} /></label>
+                <label><span>Конец</span><input type="time" value={scheduleForm.plannedEnd} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedEnd: event.target.value }))} /></label>
+                {scheduleForm.scope === 'employee' ? <label><span>Сотрудник</span><select value={scheduleForm.employeeId} onChange={(event) => setScheduleForm((current) => ({ ...current, employeeId: event.target.value }))}>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.position}</option>)}</select></label> : null}
+                {scheduleForm.scope === 'department' ? <label><span>Подразделение</span><select value={scheduleForm.department} onChange={(event) => setScheduleForm((current) => ({ ...current, department: event.target.value }))}>{scheduleDepartments.map((item) => <option key={item}>{item}</option>)}</select></label> : null}
               </div>
-            ) : null}
-            <button className="employees-primary-button" type="button" onClick={() => void createScheduleShifts()}>Поставить смену</button>
-          </div>
-
-          <div className="employees-schedule-builder__panel">
-            <h4>Копировать график</h4>
-            <div className="employees-schedule-builder__grid employees-schedule-builder__grid--copy">
-              <label><span>Период</span><select value={copyForm.period} onChange={(event) => setCopyForm((current) => ({ ...current, period: event.target.value as CopyPeriod }))}><option value="day">День</option><option value="week">Неделя</option><option value="month">Месяц</option><option value="year">Год</option></select></label>
-              <label><span>От дня</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.fromDay} onChange={(event) => setCopyForm((current) => ({ ...current, fromDay: Number(event.target.value || 1) }))} /></label>
-              <label><span>На день</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.toDay} onChange={(event) => setCopyForm((current) => ({ ...current, toDay: Number(event.target.value || 1) }))} /></label>
-              <label><span>Целевой месяц</span><input type="month" value={copyForm.targetMonth} onChange={(event) => setCopyForm((current) => ({ ...current, targetMonth: event.target.value || shiftMonth(scheduleMonth, 1) }))} /></label>
-              <label><span>Заменить</span><select value={copyForm.replaceFromId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceFromId: event.target.value }))}><option value="">Без замены</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
-              <label><span>На сотрудника</span><select value={copyForm.replaceToId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceToId: event.target.value }))}><option value="">Не выбран</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+              {scheduleForm.scope === 'selection' ? (
+                <div className="employees-schedule-picker employees-schedule-picker--redesign">
+                  {employees.map((employee) => <label key={employee.id}><input type="checkbox" checked={scheduleForm.employeeIds.includes(employee.id)} onChange={() => toggleScheduleEmployee(employee.id)} /> {employee.name} · {employee.position}</label>)}
+                </div>
+              ) : null}
+              <button className="employees-primary-button" type="button" onClick={() => void createScheduleShifts()}>Поставить смену</button>
             </div>
-            <button className="employees-primary-button" type="button" onClick={() => void copySchedule()}>Копировать</button>
-            <p className="employees-schedule-builder__hint">При копировании переносятся сотрудники, роли и плановые часы. Факт, чек-листы и отклонения не копируются.</p>
-          </div>
+          </details>
+
+          <details className="employees-schedule-redesign__panel">
+            <summary><span>Копировать</span><small>день, неделю, месяц или год с заменой сотрудника</small></summary>
+            <div className="employees-schedule-redesign__panel-body">
+              <div className="employees-schedule-builder__grid employees-schedule-builder__grid--copy">
+                <label><span>Период</span><select value={copyForm.period} onChange={(event) => setCopyForm((current) => ({ ...current, period: event.target.value as CopyPeriod }))}><option value="day">День</option><option value="week">Неделя</option><option value="month">Месяц</option><option value="year">Год</option></select></label>
+                <label><span>От дня</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.fromDay} onChange={(event) => setCopyForm((current) => ({ ...current, fromDay: Number(event.target.value || 1) }))} /></label>
+                <label><span>На день</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.toDay} onChange={(event) => setCopyForm((current) => ({ ...current, toDay: Number(event.target.value || 1) }))} /></label>
+                <label><span>Целевой месяц</span><input type="month" value={copyForm.targetMonth} onChange={(event) => setCopyForm((current) => ({ ...current, targetMonth: event.target.value || shiftMonth(scheduleMonth, 1) }))} /></label>
+                <label><span>Заменить</span><select value={copyForm.replaceFromId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceFromId: event.target.value }))}><option value="">Без замены</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+                <label><span>На сотрудника</span><select value={copyForm.replaceToId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceToId: event.target.value }))}><option value="">Не выбран</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
+              </div>
+              <button className="employees-primary-button" type="button" onClick={() => void copySchedule()}>Скопировать график</button>
+              <p className="employees-schedule-builder__hint">Копируются плановые смены, роли и часы. Факт, чек-листы и отклонения остаются только у исходных смен.</p>
+            </div>
+          </details>
         </div>
 
-        <div className="employees-schedule-workspace">
-          <div className="employees-schedule-wrap">
-            <table className="employees-schedule-table employees-schedule-table--advanced">
-              <thead>
-                <tr>
-                  <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
-                  {scheduleDays.map((day) => <th key={day}>{day}</th>)}
-                  <th>Смены</th>
-                  <th>Часы</th>
-                </tr>
-                <tr>
-                  <th className="employees-schedule-table__name" />
-                  {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
-                  <th>факт/план</th>
-                  <th>факт/план</th>
-                </tr>
-              </thead>
-              <tbody>
-                {departments.length ? departments.map((department) => (
-                  <>
-                    <tr className="employees-schedule-table__group" key={`${department}-group`}><td colSpan={scheduleDays.length + 3}>{department}</td></tr>
-                    {employeesByDepartment[department].map((employee) => {
-                      const employeeMonthShifts = monthSchedules.filter((shift) => shift.employeeId === employee.id)
-                      const planShifts = employeeMonthShifts.length
-                      const factShifts = employeeMonthShifts.filter((shift) => shift.openChecklistDone || shift.closeChecklistDone).length
-                      const planHours = employeeMonthShifts.reduce((sum, shift) => sum + getPlannedHours(shift), 0)
-                      const factHours = employeeMonthShifts.reduce((sum, shift) => sum + getActualHours(shift), 0)
-                      return (
-                        <tr key={employee.id}>
-                          <th className="employees-schedule-table__employee"><span>{employee.name}</span><small>{employee.position}</small></th>
-                          {scheduleDays.map((day) => <td key={day}>{renderScheduleCell(employee, day)}</td>)}
-                          <td className="employees-schedule-table__total">{factShifts}/{planShifts}</td>
-                          <td className="employees-schedule-table__total">{formatHours(factHours)} / {formatHours(planHours)}</td>
-                        </tr>
-                      )
-                    })}
-                  </>
-                )) : <tr><td colSpan={scheduleDays.length + 3}>Добавьте сотрудников, чтобы составить график.</td></tr>}
-              </tbody>
-            </table>
+        <div className="employees-schedule-redesign__workspace">
+          <div className="employees-schedule-redesign__groups">
+            {departments.length ? departments.map((department) => {
+              const departmentShifts = shiftsByDepartment[department] || []
+              return (
+                <section className="employees-schedule-redesign__department" key={department}>
+                  <div className="employees-schedule-redesign__department-head">
+                    <h4>{department}</h4>
+                    <span>{departmentShifts.length} смен</span>
+                  </div>
+                  {departmentShifts.length ? <div className="employees-schedule-redesign__shift-list">{departmentShifts.map(renderScheduleShiftCard)}</div> : <p className="employees-schedule-redesign__empty">Смены в этом месяце ещё не поставлены.</p>}
+                </section>
+              )
+            }) : <p className="employees-schedule-redesign__empty">Добавьте сотрудников, чтобы составить график.</p>}
+
+            <details className="employees-schedule-calendar-details">
+              <summary>Открыть календарную сетку месяца</summary>
+              <div className="employees-schedule-wrap employees-schedule-wrap--redesign">
+                <table className="employees-schedule-table employees-schedule-table--advanced employees-schedule-table--compact">
+                  <thead>
+                    <tr>
+                      <th className="employees-schedule-table__name">{getMonthLabel(scheduleMonth)}</th>
+                      {scheduleDays.map((day) => <th key={day}>{day}</th>)}
+                      <th>Смены</th>
+                      <th>Часы</th>
+                    </tr>
+                    <tr>
+                      <th className="employees-schedule-table__name" />
+                      {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
+                      <th>факт/план</th>
+                      <th>факт/план</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {departments.length ? departments.map((department) => (
+                      <>
+                        <tr className="employees-schedule-table__group" key={`${department}-group`}><td colSpan={scheduleDays.length + 3}>{department}</td></tr>
+                        {employeesByDepartment[department].map((employee) => {
+                          const employeeMonthShifts = monthSchedules.filter((shift) => shift.employeeId === employee.id)
+                          const planShifts = employeeMonthShifts.length
+                          const factShifts = employeeMonthShifts.filter((shift) => shift.openChecklistDone || shift.closeChecklistDone).length
+                          const planHours = employeeMonthShifts.reduce((sum, shift) => sum + getPlannedHours(shift), 0)
+                          const factHours = employeeMonthShifts.reduce((sum, shift) => sum + getActualHours(shift), 0)
+                          return (
+                            <tr key={employee.id}>
+                              <th className="employees-schedule-table__employee"><span>{employee.name}</span><small>{employee.position}</small></th>
+                              {scheduleDays.map((day) => <td key={day}>{renderScheduleCell(employee, day)}</td>)}
+                              <td className="employees-schedule-table__total">{factShifts}/{planShifts}</td>
+                              <td className="employees-schedule-table__total">{formatHours(factHours)} / {formatHours(planHours)}</td>
+                            </tr>
+                          )
+                        })}
+                      </>
+                    )) : <tr><td colSpan={scheduleDays.length + 3}>Добавьте сотрудников, чтобы составить график.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           </div>
           {renderScheduleEditor()}
         </div>
       </section>
     )
   }
+
 
   return (
     <section className="employees-page">
