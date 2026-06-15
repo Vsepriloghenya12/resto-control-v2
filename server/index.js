@@ -340,10 +340,6 @@ function ensureServiceOwner(state) {
     throw new Error('Для production нужно задать переменную SERVICE_OWNER_PASSWORD.')
   }
 
-  if (IS_PRODUCTION && SERVICE_OWNER_PASSWORD && SERVICE_OWNER_PASSWORD.length < 8) {
-    throw new Error('SERVICE_OWNER_PASSWORD должен содержать не менее 8 символов.')
-  }
-
   if (!state.restaurants.length) {
     const createdAt = nowIso()
     state.restaurants.push({
