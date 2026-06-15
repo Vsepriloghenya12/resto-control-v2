@@ -319,7 +319,7 @@ function DonutSegment({ value, offset, color, active, index, onHover }: { value:
       r="96"
       pathLength="100"
       stroke={color}
-      strokeDasharray={`${safeValue} 100`}
+      strokeDasharray={`${safeValue} ${100 - safeValue}`}
       strokeDashoffset={String(-offset)}
       onMouseEnter={() => onHover(index)}
       onFocus={() => onHover(index)}
