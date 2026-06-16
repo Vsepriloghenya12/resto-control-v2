@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookIcon, SearchIcon } from '../../shared/ui/Icon'
+import { BookIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 
 type RecipeLine = { ingredient: string; amount?: string; quantity?: string }
@@ -106,7 +106,7 @@ export function TtkPage() {
 
       <div className="ttk-content-grid">
         <main className="ttk-list-panel">
-          <div className="ttk-list-toolbar"><label><SearchIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по позициям, ингредиентам, тэгам..." /></label><button className="ttk-primary-button" type="button" onClick={() => void createItem()}>+ Позиция</button></div>
+          <div className="ttk-list-toolbar"><label><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по позициям, ингредиентам, тэгам..." /></label><button className="ttk-primary-button" type="button" onClick={() => void createItem()}>+ Позиция</button></div>
           <div className="ttk-table-wrap"><table className="ttk-table ttk-table--clickable"><thead><tr><th>Фото</th><th>Наименование</th><th>Ед.</th><th>Цена</th><th>Тэг</th><th>Скидки</th><th>Онлайн</th><th>На вынос</th></tr></thead><tbody>{filteredItems.map((item) => <tr className={item.id === selectedItem?.id ? 'ttk-row--active' : ''} key={item.id} onClick={() => setSelectedItemId(item.id)}><td><span className="ttk-photo-cell">{item.photoLabel || '🍽'}</span></td><td><strong>{item.name}</strong></td><td>{item.unit}</td><td>{Number(item.price || 0).toLocaleString('ru-RU')} ₽</td><td>{item.tag || '—'}</td><td>{item.discounts ? 'Да' : 'Нет'}</td><td>{item.online ? 'Да' : 'Нет'}</td><td>{item.takeaway ? 'Да' : 'Нет'}</td></tr>)}{filteredItems.length === 0 ? <tr><td colSpan={8}>В этой группе пока нет позиций.</td></tr> : null}</tbody></table></div>
         </main>
 
