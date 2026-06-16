@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircleIcon, SearchIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 import './TasksPage.css'
 
@@ -23,9 +22,7 @@ type Task = {
 }
 
 const statusLabels: Record<TaskStatus, string> = { not_started: 'Не начата', in_progress: 'В работе', done: 'Выполнена', overdue: 'Просрочена' }
-const statuses = ['Все', 'Не начата', 'В работе', 'Выполнена', 'Просрочена']
-const assignmentOptions = ['Все', 'Должность', 'Сотрудник']
-const photoOptions = ['Все', 'Нужно фото', 'Фото не нужно']
+const statuses: TaskStatus[] = ['not_started', 'in_progress', 'done', 'overdue']
 const positions = ['Официант', 'Старший официант', 'Бармен', 'Старший бармен', 'Повар', 'Су-шеф', 'Шеф-повар', 'Хостес', 'Администратор', 'Управляющий', 'Курьер', 'Мойщик', 'Уборщик', 'Клининг']
 
 function assigneeName(task: Task) {
@@ -36,17 +33,7 @@ function StatusBadge({ status }: { status: TaskStatus }) {
   return <span className={`tasks-status tasks-status--${status}`}>{statusLabels[status]}</span>
 }
 
-function TaskListItem({ task, active, onSelect }: { task: Task; active: boolean; onSelect: () => void }) {
-  return (
-    <button className={active ? 'tasks-list-item tasks-list-item--active' : 'tasks-list-item'} type="button" onClick={onSelect}>
-      <div className="tasks-list-item__top"><strong>{task.title}</strong><StatusBadge status={task.status} /></div>
-      <p>{assigneeName(task)} · {task.dueDate} до {task.dueTime}</p>
-      <div className="tasks-list-item__meta"><span>{task.requiresPhoto ? 'Нужно фото' : 'Фото не нужно'}</span><span>{task.assignmentType === 'position' ? 'Должность' : 'Сотрудник'}</span></div>
-    </button>
-  )
-}
-
-const emptyTask = (): Partial<Task> => ({
+const emptyDraft = (): Partial<Task> => ({
   title: '',
   description: '',
   assignmentType: 'position',
@@ -61,129 +48,200 @@ const emptyTask = (): Partial<Task> => ({
 
 export function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([])
-  const [selectedId, setSelectedId] = useState('')
-  const [draft, setDraft] = useState<Partial<Task>>(emptyTask())
-  const [query, setQuery] = useState('')
-  const [status, setStatus] = useState('Все')
-  const [assignment, setAssignment] = useState('Все')
-  const [photo, setPhoto] = useState('Все')
-  const [error, setError] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
+  const [notice, setNotice] = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<Partial<Task>>(emptyDraft())
+  const [saving, setSaving] = useState(false)
 
   async function loadTasks() {
-    try {
-      const result = await api.list<Task>('tasks')
-      setTasks(result.items)
-      const first = result.items[0]
-      if (first) { setSelectedId(first.id); setDraft(first) }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось загрузить задачи')
-    }
+    const result = await api.list<Task>('tasks')
+    setTasks(result.items)
   }
 
   useEffect(() => { void loadTasks() }, [])
 
-  const selectedTask = useMemo(() => tasks.find((item) => item.id === selectedId), [selectedId, tasks])
-
   const filteredTasks = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    return tasks.filter((task) => {
-      const matchesQuery = !normalized || task.title.toLowerCase().includes(normalized) || assigneeName(task).toLowerCase().includes(normalized)
-      const matchesStatus = status === 'Все' || statusLabels[task.status] === status
-      const matchesAssignment = assignment === 'Все' || (assignment === 'Должность' ? task.assignmentType === 'position' : task.assignmentType === 'employee')
-      const matchesPhoto = photo === 'Все' || (photo === 'Нужно фото' ? task.requiresPhoto : !task.requiresPhoto)
-      return matchesQuery && matchesStatus && matchesAssignment && matchesPhoto
-    })
-  }, [assignment, photo, query, status, tasks])
+    return tasks.filter((task) => statusFilter === 'all' || task.status === statusFilter)
+  }, [statusFilter, tasks])
 
-  function selectTask(task: Task) {
-    setSelectedId(task.id)
-    setDraft(task)
+  function openCreate() {
+    setEditingId(null)
+    setDraft(emptyDraft())
+    setModalOpen(true)
   }
 
-  function createNewTask() {
-    setSelectedId('')
-    setDraft(emptyTask())
+  function openEdit(task: Task) {
+    setEditingId(task.id)
+    setDraft({ ...task })
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+  }
+
+  function showNotice(msg: string) {
+    setNotice(msg)
+    setTimeout(() => setNotice(''), 3000)
   }
 
   async function saveTask() {
-    if (!draft.title?.trim()) { setError('Введите название задачи.'); return }
-    const payload = {
-      ...draft,
-      title: draft.title.trim(),
-      description: draft.description || '',
-      assignedPosition: draft.assignmentType === 'position' ? draft.assignedPosition : undefined,
-      status: draft.status || 'not_started',
-    }
+    if (!draft.title?.trim()) return
+    setSaving(true)
     try {
-      const saved = selectedId ? await api.update<Task>('tasks', selectedId, payload) : await api.create<Task>('tasks', payload)
-      setTasks((items) => selectedId ? items.map((item) => item.id === saved.id ? saved : item) : [saved, ...items])
-      setSelectedId(saved.id)
-      setDraft(saved)
-      setError('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сохранить задачу')
+      const payload = {
+        ...draft,
+        title: draft.title.trim(),
+        description: draft.description || '',
+        assignedPosition: draft.assignmentType === 'position' ? draft.assignedPosition : undefined,
+        status: draft.status || 'not_started',
+      }
+      const saved = editingId
+        ? await api.update<Task>('tasks', editingId, payload)
+        : await api.create<Task>('tasks', payload)
+      setTasks((items) => editingId ? items.map((item) => item.id === saved.id ? saved : item) : [saved, ...items])
+      closeModal()
+      showNotice(editingId ? 'Задача обновлена.' : 'Задача создана.')
+    } finally {
+      setSaving(false)
     }
   }
 
   async function deleteTask() {
-    if (!selectedId) return
-    try {
-      await api.remove('tasks', selectedId)
-      const next = tasks.filter((item) => item.id !== selectedId)
-      setTasks(next)
-      setSelectedId(next[0]?.id || '')
-      setDraft(next[0] || emptyTask())
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось удалить задачу')
-    }
+    if (!editingId) return
+    if (!window.confirm('Удалить задачу?')) return
+    await api.remove('tasks', editingId)
+    setTasks((items) => items.filter((item) => item.id !== editingId))
+    closeModal()
+    showNotice('Задача удалена.')
   }
 
-  async function completeTask() {
-    if (!selectedId) return
-    const updated = await api.update<Task>('tasks', selectedId, { status: 'done' })
+  async function setTaskStatus(id: string, status: TaskStatus) {
+    const updated = await api.update<Task>('tasks', id, { status })
     setTasks((items) => items.map((item) => item.id === updated.id ? updated : item))
-    setDraft(updated)
+    showNotice(`Статус: ${statusLabels[status]}`)
   }
 
   return (
     <section className="tasks-page">
-      <aside className="tasks-list-panel">
-        <div className="tasks-list-panel__top">
-          <button className="tasks-create-button" type="button" onClick={createNewTask}>+ Создать задачу</button>
-          <label className="tasks-search"><SearchIcon /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по названию..." /></label>
-          <div className="tasks-filters-row">
-            <label className="tasks-filter"><span>Статус:</span><select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <label className="tasks-filter"><span>Назначено:</span><select value={assignment} onChange={(event) => setAssignment(event.target.value)}>{assignmentOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <label className="tasks-filter"><span>Фото:</span><select value={photo} onChange={(event) => setPhoto(event.target.value)}>{photoOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <button className="tasks-reset-button" type="button" onClick={() => { setQuery(''); setStatus('Все'); setAssignment('Все'); setPhoto('Все') }}>Сбросить</button>
-          </div>
-        </div>
-        <div className="tasks-list">{filteredTasks.map((task) => <TaskListItem task={task} active={task.id === selectedTask?.id} onSelect={() => selectTask(task)} key={task.id} />)}</div>
-        <div className="tasks-list-panel__footer">Всего задач: {tasks.length}</div>
-      </aside>
+      {notice ? <div className="tasks-notice">{notice}</div> : null}
 
-      <section className="tasks-editor">
-        <div className="tasks-editor-toolbar">
-          <div><h2>{selectedId ? 'Редактирование задачи' : 'Создание задачи'}</h2></div>
-          <div className="tasks-editor-toolbar__actions"><button className="tasks-secondary-button" type="button" onClick={completeTask}>Выполнена</button><button className="tasks-danger-button" type="button" onClick={deleteTask}>Удалить</button><button className="tasks-save-button" type="button" onClick={saveTask}>Сохранить</button></div>
+      <div className="tasks-toolbar">
+        <button className="tasks-create-btn" type="button" onClick={openCreate}>+ Создать задачу</button>
+        <div className="tasks-status-tabs">
+          <button type="button" className={statusFilter === 'all' ? 'active' : ''} onClick={() => setStatusFilter('all')}>Все <span>{tasks.length}</span></button>
+          {statuses.map((s) => (
+            <button key={s} type="button" className={statusFilter === s ? 'active' : ''} onClick={() => setStatusFilter(s)}>
+              {statusLabels[s]} <span>{tasks.filter((t) => t.status === s).length}</span>
+            </button>
+          ))}
         </div>
-        {error ? <div className="tasks-info-card"><AlertCircleIcon /><p>{error}</p></div> : null}
-        <div className="tasks-editor-card">
-          <div className="tasks-active-row"><label className="tasks-switch"><span>Активна</span><input type="checkbox" checked={Boolean(draft.active)} onChange={(e) => setDraft((v) => ({ ...v, active: e.target.checked }))} /></label></div>
-          <label className="tasks-field tasks-field--full"><span>Название задачи</span><input value={draft.title || ''} onChange={(e) => setDraft((v) => ({ ...v, title: e.target.value }))} /></label>
-          <label className="tasks-field tasks-field--full"><span>Описание задачи</span><textarea value={draft.description || ''} onChange={(e) => setDraft((v) => ({ ...v, description: e.target.value }))} /></label>
-          <div className="tasks-form-grid">
-            <label className="tasks-field"><span>Кому назначить</span><select value={draft.assignedPosition || 'Официант'} onChange={(e) => setDraft((v) => ({ ...v, assignedPosition: e.target.value }))}>{positions.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <div className="tasks-assignment-card"><span>Тип назначения</span><label><input type="radio" checked={draft.assignmentType === 'position'} onChange={() => setDraft((v) => ({ ...v, assignmentType: 'position' }))} /><strong>Должность</strong></label><label><input type="radio" checked={draft.assignmentType === 'employee'} onChange={() => setDraft((v) => ({ ...v, assignmentType: 'employee' }))} /><strong>Конкретный сотрудник</strong></label></div>
+      </div>
+
+      <div className="tasks-list">
+        {filteredTasks.length === 0 ? (
+          <div className="tasks-empty">Задач нет. Нажмите «+ Создать задачу».</div>
+        ) : filteredTasks.map((task) => (
+          <div key={task.id} className="tasks-row" onClick={() => openEdit(task)}>
+            <div className="tasks-row__main">
+              <div className="tasks-row__title">{task.title}</div>
+              {task.description ? <div className="tasks-row__desc">{task.description}</div> : null}
+            </div>
+            <div className="tasks-row__meta">
+              <span className="tasks-row__assignee">{assigneeName(task)}</span>
+              <span className="tasks-row__due">{task.dueDate} · {task.dueTime}</span>
+              {task.requiresPhoto ? <span className="tasks-row__photo-badge">Фото</span> : null}
+            </div>
+            <StatusBadge status={task.status} />
+            <div className="tasks-row__actions" onClick={(e) => e.stopPropagation()}>
+              {task.status !== 'done' ? (
+                <button type="button" className="tasks-row__done-btn" onClick={() => void setTaskStatus(task.id, 'done')}>✓</button>
+              ) : null}
+            </div>
           </div>
-          <div className="tasks-form-grid tasks-form-grid--three">
-            <label className="tasks-field"><span>Дата выполнения</span><input type="date" value={draft.dueDate || ''} onChange={(e) => setDraft((v) => ({ ...v, dueDate: e.target.value }))} /></label>
-            <label className="tasks-field"><span>Время выполнения</span><input type="time" value={draft.dueTime || ''} onChange={(e) => setDraft((v) => ({ ...v, dueTime: e.target.value }))} /></label>
-            <label className="tasks-photo-toggle"><span>Нужно фото выполнения</span><input type="checkbox" checked={Boolean(draft.requiresPhoto)} onChange={(e) => setDraft((v) => ({ ...v, requiresPhoto: e.target.checked }))} /></label>
+        ))}
+      </div>
+
+      {modalOpen ? (
+        <div className="tasks-modal-backdrop" onMouseDown={closeModal}>
+          <div className="tasks-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="tasks-modal__header">
+              <h3>{editingId ? 'Редактирование задачи' : 'Новая задача'}</h3>
+              <button type="button" className="tasks-modal__close" onClick={closeModal}>✕</button>
+            </div>
+            <div className="tasks-modal__body">
+              <label className="tasks-modal__field tasks-modal__field--full">
+                <span>Название задачи *</span>
+                <input type="text" value={draft.title || ''} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} placeholder="Что нужно сделать?" />
+              </label>
+              <label className="tasks-modal__field tasks-modal__field--full">
+                <span>Описание</span>
+                <textarea value={draft.description || ''} onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Подробности задачи..." />
+              </label>
+              <div className="tasks-modal__row">
+                <label className="tasks-modal__field">
+                  <span>Дата выполнения</span>
+                  <input type="date" value={draft.dueDate || ''} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} />
+                </label>
+                <label className="tasks-modal__field">
+                  <span>Время выполнения</span>
+                  <input type="time" value={draft.dueTime || ''} onChange={(e) => setDraft((d) => ({ ...d, dueTime: e.target.value }))} />
+                </label>
+                <label className="tasks-modal__field">
+                  <span>Статус</span>
+                  <select value={draft.status || 'not_started'} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as TaskStatus }))}>
+                    {statuses.map((s) => <option key={s} value={s}>{statusLabels[s]}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="tasks-modal__row">
+                <div className="tasks-modal__field">
+                  <span>Тип назначения</span>
+                  <div className="tasks-modal__radio-group">
+                    <label><input type="radio" checked={draft.assignmentType === 'position'} onChange={() => setDraft((d) => ({ ...d, assignmentType: 'position' }))} /> Должность</label>
+                    <label><input type="radio" checked={draft.assignmentType === 'employee'} onChange={() => setDraft((d) => ({ ...d, assignmentType: 'employee' }))} /> Сотрудник</label>
+                  </div>
+                </div>
+                {draft.assignmentType === 'position' ? (
+                  <label className="tasks-modal__field">
+                    <span>Должность</span>
+                    <select value={draft.assignedPosition || 'Официант'} onChange={(e) => setDraft((d) => ({ ...d, assignedPosition: e.target.value }))}>
+                      {positions.map((p) => <option key={p}>{p}</option>)}
+                    </select>
+                  </label>
+                ) : (
+                  <label className="tasks-modal__field">
+                    <span>ФИО сотрудника</span>
+                    <input type="text" value={draft.assignee || ''} onChange={(e) => setDraft((d) => ({ ...d, assignee: e.target.value }))} placeholder="Иванов Иван" />
+                  </label>
+                )}
+              </div>
+              <label className="tasks-modal__field tasks-modal__field--full">
+                <span>Дополнительно</span>
+                <input type="text" value={draft.extraNote || ''} onChange={(e) => setDraft((d) => ({ ...d, extraNote: e.target.value }))} placeholder="Примечание" />
+              </label>
+              <div className="tasks-modal__toggles">
+                <label className="tasks-modal__toggle">
+                  <input type="checkbox" checked={Boolean(draft.requiresPhoto)} onChange={(e) => setDraft((d) => ({ ...d, requiresPhoto: e.target.checked }))} />
+                  <span>Требуется фото выполнения</span>
+                </label>
+                <label className="tasks-modal__toggle">
+                  <input type="checkbox" checked={Boolean(draft.active)} onChange={(e) => setDraft((d) => ({ ...d, active: e.target.checked }))} />
+                  <span>Активна</span>
+                </label>
+              </div>
+              <div className="tasks-modal__footer">
+                {editingId ? <button type="button" className="tasks-modal__delete-btn" onClick={() => void deleteTask()}>Удалить</button> : <span />}
+                <button type="button" className="tasks-modal__save-btn" disabled={!draft.title?.trim() || saving} onClick={() => void saveTask()}>
+                  {saving ? 'Сохранение...' : editingId ? 'Сохранить' : 'Создать задачу'}
+                </button>
+              </div>
+            </div>
           </div>
-          <label className="tasks-field tasks-field--full"><span>Дополнительно</span><textarea value={draft.extraNote || ''} onChange={(e) => setDraft((v) => ({ ...v, extraNote: e.target.value }))} /></label>
         </div>
-      </section>
+      ) : null}
     </section>
   )
 }

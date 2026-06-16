@@ -1040,20 +1040,21 @@
 
 .employees-schedule-table--advanced th,
 .employees-schedule-table--advanced td {
-  height: 70px;
+  height: 80px;
   border: 0;
   border-right: 1px solid #edf1f6;
   border-bottom: 1px solid #edf1f6;
   background: #ffffff;
-  vertical-align: top;
+  vertical-align: middle;
+  text-align: center;
 }
 
 .employees-schedule-table--advanced thead th {
-  height: 34px;
+  height: 38px;
   border-color: #dbe1ea;
   background: #f8fafc;
   color: #111827;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
   text-align: center;
   position: sticky;
@@ -1066,15 +1067,16 @@
   position: sticky;
   left: 0;
   z-index: 5;
-  width: 168px;
-  min-width: 168px;
-  max-width: 168px;
-  padding: 10px 12px;
+  width: 180px;
+  min-width: 180px;
+  max-width: 180px;
+  padding: 10px 14px;
   background: #ffffff !important;
   color: #111827;
   border-right: 1px solid #dbe1ea;
   box-shadow: 8px 0 16px rgba(15, 23, 42, 0.04);
   text-align: left;
+  vertical-align: middle;
 }
 
 .employees-schedule-table--advanced .employees-schedule-table__employee span,
@@ -1082,34 +1084,42 @@
   display: block;
 }
 
+.employees-schedule-table--advanced .employees-schedule-table__employee span {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
 .employees-schedule-table--advanced .employees-schedule-table__employee small {
   margin-top: 3px;
   color: #667085;
-  font-size: 10px;
-  font-weight: 750;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .employees-schedule-table--advanced .employees-schedule-table__group td {
-  height: 34px;
-  padding-left: 12px;
+  height: 38px;
+  padding-left: 14px;
   border-right: 0;
   background: #f1f5f9;
   color: #111827;
-  font-size: 12px;
+  font-size: 13px;
   font-style: normal;
   font-weight: 900;
   text-align: left;
+  vertical-align: middle;
 }
 
 .employees-schedule__cell-button {
   width: 100%;
-  min-height: 70px;
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 4px;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   border: 0;
-  padding: 6px 3px;
+  padding: 6px 4px;
   background: #ffffff;
   color: #111827;
   font-family: inherit;
@@ -1118,26 +1128,27 @@
 }
 
 .employees-schedule__cell-button strong {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1;
   font-weight: 950;
 }
 
 .employees-schedule__cell-button span {
-  font-size: 10px;
+  font-size: 11px;
   color: rgba(17, 24, 39, 0.74);
   font-weight: 850;
 }
 
 .employees-schedule__cell-time {
-  display: grid;
-  gap: 2px;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .employees-schedule__cell-time span {
   color: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 950;
   letter-spacing: -0.02em;
 }
@@ -1146,11 +1157,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 18px;
-  padding: 0 6px;
+  min-height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
   background: rgba(255,255,255,0.6);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -1202,15 +1213,16 @@
 .employees-schedule-table--advanced .employees-schedule-table__total {
   position: sticky;
   z-index: 4;
-  min-width: 92px;
-  width: 92px;
-  max-width: 92px;
+  min-width: 100px;
+  width: 100px;
+  max-width: 100px;
   padding: 10px 8px;
   background: #f8fafc;
   color: #111827;
-  font-size: 11px;
-  font-weight: 950;
+  font-size: 13px;
+  font-weight: 850;
   text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
@@ -1222,20 +1234,20 @@
 
 .employees-schedule-table--advanced thead th:nth-last-child(2),
 .employees-schedule-table--advanced tbody tr:not(.employees-schedule-table__group) td:nth-last-child(2) {
-  right: 92px;
+  right: 100px;
 }
 
 .employees-schedule-table--advanced tbody td:not(.employees-schedule-table__total) {
-  width: 62px;
-  min-width: 62px;
-  max-width: 62px;
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
   padding: 0;
 }
 
 .employees-schedule-table--advanced thead th:not(.employees-schedule-table__name):not(:nth-last-child(2)):not(:last-child) {
-  width: 62px;
-  min-width: 62px;
-  max-width: 62px;
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
 }
 
 .employees-schedule-editor {
@@ -1880,7 +1892,7 @@
 
 .employees-schedule-card--grid-view .employees-schedule__cell-button {
   width: 100%;
-  min-height: 70px;
+  min-height: 80px;
   border-radius: 0;
 }
 
@@ -1962,4 +1974,392 @@
   .employees-schedule-editor__actions--modal {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Модал нового сотрудника ──────────────────────────────────── */
+.employees-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.employees-modal {
+  width: min(540px, 100%);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.employees-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.employees-modal__header h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.employees-modal__close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.employees-modal__close:hover {
+  background: #e5e7eb;
+}
+
+.employees-modal__body {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 20px 24px;
+}
+
+.employees-modal__body label {
+  display: grid;
+  gap: 7px;
+}
+
+.employees-modal__body label:last-of-type,
+.employees-modal__body .employees-error {
+  grid-column: 1 / -1;
+}
+
+.employees-modal__body label span {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.employees-modal__body input,
+.employees-modal__body select {
+  height: 42px;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.employees-modal__body input:focus,
+.employees-modal__body select:focus {
+  border-color: #2563eb;
+}
+
+.employees-modal__footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #f2f4f7;
+}
+
+.employees-modal__footer .employees-create-button {
+  flex: 1;
+  margin-top: 0;
+}
+
+.employees-modal__footer .employees-cancel-button {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 20px;
+  margin-top: 0;
+}
+
+.employees-modal__footer--edit {
+  justify-content: flex-start;
+}
+
+.employees-modal__footer--edit .employees-create-button {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0 20px;
+}
+
+.employees-modal__footer--edit .employees-cancel-button--danger {
+  border-color: #fda29b;
+  background: #fff5f5;
+  color: #d92d20;
+  margin-left: auto;
+}
+
+/* ── Режим работы ─────────────────────────────────────────────── */
+.employees-schedule-work-modes {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  padding: 14px 16px;
+  margin-bottom: 4px;
+}
+
+.employees-schedule-work-modes__header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.employees-schedule-work-modes__header strong {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.employees-schedule-work-modes__header small {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.employees-schedule-work-modes__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.employees-schedule-work-modes__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.employees-schedule-work-modes__row > span {
+  min-width: 60px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.employees-schedule-work-modes__row label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.employees-schedule-work-modes__row label > span {
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.employees-schedule-work-modes__row input[type="time"] {
+  height: 32px;
+  border: 1px solid #dbe1ea;
+  border-radius: 7px;
+  padding: 0 6px;
+  background: #f9fafb;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  width: 90px;
+}
+
+.employees-schedule-work-modes__row input[type="time"]:focus {
+  border-color: #2563eb;
+  background: #fff;
+}
+
+/* ── Salary fund card ── */
+.employees-salary-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.employees-salary-card__hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.employees-salary-card__eyebrow {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #2563eb;
+  margin-bottom: 4px;
+}
+
+.employees-salary-card__hero h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.employees-salary-card__hero p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.employees-salary-card__total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.employees-salary-card__total span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.employees-salary-card__total strong {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.employees-salary-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Department rates table */
+.employees-salary-dept__header,
+.employees-salary-dept__row {
+  display: grid;
+  grid-template-columns: 1fr 100px 130px 100px 120px;
+  align-items: center;
+  gap: 8px;
+}
+
+.employees-salary-dept__header {
+  padding: 0 0 6px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.employees-salary-dept__row {
+  padding: 6px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #111827;
+}
+
+.employees-salary-dept__row--override {
+  background: #eff6ff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+}
+
+.employees-salary-dept__col--name {
+  font-weight: 500;
+}
+
+.employees-salary-dept__col--name small {
+  font-size: 11px;
+  color: #2563eb;
+  margin-left: 4px;
+}
+
+.employees-salary-dept__col {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.employees-salary-dept__col--right {
+  text-align: right;
+}
+
+.employees-salary-dept__fund {
+  font-weight: 700;
+  color: #111827;
+}
+
+.employees-salary-dept__input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid #dbe1ea;
+  border-radius: 8px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 14px;
+  color: #111827;
+  background: #f9fafb;
+  outline: none;
+}
+
+.employees-salary-dept__input:focus {
+  border-color: #2563eb;
+  background: #fff;
+}
+
+.employees-salary-dept__input--pct {
+  width: 80px;
+}
+
+/* Individual overrides */
+.employees-salary-individual > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2563eb;
+  padding: 8px 0;
+  list-style: none;
+  user-select: none;
+}
+
+.employees-salary-individual > summary::before {
+  content: '▶ ';
+  font-size: 10px;
+}
+
+.employees-salary-individual[open] > summary::before {
+  content: '▼ ';
+}
+
+.employees-salary-individual__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
 }

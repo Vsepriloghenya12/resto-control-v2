@@ -552,6 +552,9 @@ function canWriteCollection(name, method, itemId, action, role) {
 
   if (name === 'push-subscriptions' && method === 'POST' && !itemId) return true
   if (name === 'technical-requests' && method === 'POST' && !itemId) return true
+  if (name === 'support-chats' && method === 'POST' && !itemId) return true
+  if (name === 'support-chats' && itemId && ['PATCH', 'PUT'].includes(method)) return true
+  if (name === 'support-messages' && method === 'POST' && !itemId) return true
   if (name === 'checklist-runs' && ['POST', 'PATCH', 'PUT'].includes(method)) return true
   if (name === 'tasks' && itemId && ['PATCH', 'PUT'].includes(method)) return true
   if (name === 'inventory-assignments' && itemId && ['PATCH', 'PUT'].includes(method)) return true
@@ -579,6 +582,8 @@ function collectionByPath(state, name) {
     'inventory-assignments': 'inventoryAssignments',
     'inventory-products': 'inventoryProducts',
     ttk: 'ttkItems',
+    'support-chats': 'supportChats',
+    'support-messages': 'supportMessages',
   }
   const key = allowed[name]
   if (!key) return null
@@ -819,7 +824,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
     state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
 
-    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems']
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages']
     for (const key of keys) {
       if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
     }
@@ -833,7 +838,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
 }
 
 async function handleCollections(req, res, state, pathname, auth) {
-  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk)(?:\/([^/]+))?(?:\/([^/]+))?$/)
+  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|support-chats|support-messages)(?:\/([^/]+))?(?:\/([^/]+))?$/)
   if (!match) return false
   const [, name, itemId, action] = match
   const collection = collectionByPath(state, name)
@@ -856,8 +861,13 @@ async function handleCollections(req, res, state, pathname, auth) {
   }
 
   if (req.method === 'GET' && !itemId) {
+    const url = new URL(req.url, `http://${req.headers.host}`)
     let result = collection.items
     if (role !== 'service_owner') result = result.filter((item) => !item.restaurantId || item.restaurantId === currentRestaurantId)
+    if (name === 'support-messages') {
+      const chatId = url.searchParams.get('chatId')
+      if (chatId) result = result.filter((item) => item.chatId === chatId)
+    }
     send(res, 200, { items: result })
     return true
   }
@@ -914,6 +924,21 @@ async function handleCollections(req, res, state, pathname, auth) {
       updatedAt: nowIso(),
     }
     collection.items.push(item)
+
+    if (name === 'support-messages' && item.chatId) {
+      if (!Array.isArray(state.supportChats)) state.supportChats = []
+      const chat = state.supportChats.find((c) => c.id === item.chatId)
+      if (chat) {
+        chat.lastMessageAt = item.createdAt
+        chat.updatedAt = item.createdAt
+        if (item.fromService) {
+          chat.unreadByRestaurant = true
+        } else {
+          chat.unreadByService = true
+        }
+      }
+    }
+
     await saveState(state)
     send(res, 201, item)
     return true

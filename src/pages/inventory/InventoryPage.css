@@ -9,6 +9,39 @@
   gap: 16px;
 }
 
+.inventory-search-row {
+  margin-bottom: 12px;
+}
+
+.inventory-search-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f9fafb;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 38px;
+  max-width: 360px;
+}
+
+.inventory-search-row label svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #9ca3af;
+}
+
+.inventory-search-row label input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+}
+
 .inventory-tabs {
   display: inline-flex;
   width: fit-content;

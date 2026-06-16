@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import type { Restaurant } from '../../features/auth/authTypes'
 import { api, apiRequest } from '../../shared/api/client'
@@ -108,7 +108,7 @@ const navItems: Array<{ label: string; section: OwnerSection; icon: ReactNode }>
   { label: 'Задачи', section: 'tasks', icon: <ClockIcon /> },
   { label: 'План зала / Брони', section: 'hallBookings', icon: <CalendarIcon /> },
   { label: 'Инвентаризация', section: 'inventory', icon: <BoxIcon /> },
-  { label: 'ТТК', section: 'ttk', icon: <BookIcon /> },
+  { label: 'Номенклатура', section: 'ttk', icon: <BookIcon /> },
   { label: 'База знаний', section: 'knowledge', icon: <BookIcon /> },
   { label: 'Оплата', section: 'payment', icon: <PaymentIcon /> },
 ]
@@ -486,50 +486,113 @@ function AddRestaurantDialog({ onClose, onCreated }: { onClose: () => void; onCr
   )
 }
 
-function SupportDialog({ onClose }: { onClose: () => void }) {
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [message, setMessage] = useState('')
+type SupportChat = { id: string; title: string; status: string; unreadByRestaurant?: boolean; unreadByService?: boolean; lastMessageAt?: string; createdAt: string }
+type SupportMessage = { id: string; chatId: string; text: string; fromService: boolean; createdAt: string }
 
-  async function submitSupport() {
-    if (!title.trim() && !description.trim()) {
-      setMessage('Опишите вопрос.')
-      return
-    }
-    await api.create('technical-requests', {
-      title: title.trim() || 'Обращение в поддержку',
-      description: description.trim(),
-      area: 'Поддержка',
-      priority: 'medium',
-      status: 'new',
-      createdByPosition: 'Владелец / управляющий',
-    })
-    setMessage('Обращение создано. Оно появится в тех. заявках ресторана.')
-    setTitle('')
-    setDescription('')
+function SupportDialog({ onClose, onRead }: { onClose: () => void; onRead: () => void }) {
+  const [chats, setChats] = useState<SupportChat[]>([])
+  const [selectedChat, setSelectedChat] = useState<SupportChat | null>(null)
+  const [messages, setMessages] = useState<SupportMessage[]>([])
+  const [text, setText] = useState('')
+  const [newTitle, setNewTitle] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { void loadChats() }, [])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  async function loadChats() {
+    const result = await api.list<SupportChat>('support-chats')
+    setChats(result.items.sort((a, b) => (b.lastMessageAt || b.createdAt).localeCompare(a.lastMessageAt || a.createdAt)))
   }
+
+  async function openChat(chat: SupportChat) {
+    setSelectedChat(chat)
+    const result = await apiRequest<{ items: SupportMessage[] }>(`/api/support-messages?chatId=${chat.id}`)
+    setMessages(result.items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)))
+    if (chat.unreadByRestaurant) {
+      await api.update('support-chats', chat.id, { unreadByRestaurant: false })
+      setChats((prev) => prev.map((c) => c.id === chat.id ? { ...c, unreadByRestaurant: false } : c))
+      onRead()
+    }
+  }
+
+  async function sendMessage() {
+    if (!text.trim() || !selectedChat || sending) return
+    setSending(true)
+    try {
+      const msg = await api.create<SupportMessage>('support-messages', { chatId: selectedChat.id, text: text.trim(), fromService: false })
+      setMessages((prev) => [...prev, msg])
+      setText('')
+    } finally { setSending(false) }
+  }
+
+  async function createChat() {
+    if (!newTitle.trim()) return
+    const chat = await api.create<SupportChat>('support-chats', { title: newTitle.trim(), status: 'open', unreadByService: true, unreadByRestaurant: false })
+    setNewTitle('')
+    setCreating(false)
+    await loadChats()
+    await openChat(chat)
+  }
+
+  const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="owner-modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <section className="owner-support-dialog" role="dialog" aria-modal="true" aria-label="Поддержка" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="owner-support-dialog__header">
-          <div>
-            <h2>Поддержка</h2>
+      <section className="owner-support-chat" role="dialog" aria-modal="true" aria-label="Поддержка" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="owner-support-chat__sidebar">
+          <div className="owner-support-chat__sidebar-header">
+            <strong>Поддержка</strong>
+            <button type="button" className="owner-support-chat__new-btn" onClick={() => setCreating(true)} title="Новое обращение">+</button>
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть">×</button>
+          {creating && (
+            <div className="owner-support-chat__new-form">
+              <input autoFocus value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Тема обращения" onKeyDown={(e) => { if (e.key === 'Enter') void createChat(); if (e.key === 'Escape') setCreating(false) }} />
+              <button type="button" onClick={() => void createChat()}>Создать</button>
+              <button type="button" onClick={() => setCreating(false)}>✕</button>
+            </div>
+          )}
+          <div className="owner-support-chat__list">
+            {chats.length === 0 && !creating ? (
+              <p className="owner-support-chat__empty">Нет обращений. Нажмите «+», чтобы написать в поддержку.</p>
+            ) : chats.map((chat) => (
+              <button key={chat.id} type="button" className={`owner-support-chat__item${selectedChat?.id === chat.id ? ' is-active' : ''}`} onClick={() => void openChat(chat)}>
+                <span className="owner-support-chat__item-title">{chat.title}</span>
+                <span className={`owner-support-chat__item-status owner-support-chat__item-status--${chat.status}`}>{chat.status === 'open' ? 'Открыто' : 'Закрыто'}</span>
+                {chat.unreadByRestaurant ? <span className="owner-support-chat__badge" /> : null}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="owner-support-chat__close" onClick={onClose}>Закрыть</button>
         </div>
-        <label>
-          <span>Тема</span>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Например: проблема с чек-листом" />
-        </label>
-        <label>
-          <span>Сообщение</span>
-          <textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={5} placeholder="Опишите, что нужно исправить или проверить" />
-        </label>
-        {message ? <p className="owner-form-message">{message}</p> : null}
-        <div className="owner-support-dialog__actions">
-          <button type="button" onClick={() => void submitSupport()}>Создать обращение</button>
-          <button type="button" onClick={onClose}>Закрыть</button>
+        <div className="owner-support-chat__main">
+          {selectedChat ? (
+            <>
+              <div className="owner-support-chat__main-header"><strong>{selectedChat.title}</strong></div>
+              <div className="owner-support-chat__messages">
+                {messages.length === 0 ? <p className="owner-support-chat__empty">Напишите первое сообщение.</p> : null}
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`owner-support-chat__msg${msg.fromService ? ' owner-support-chat__msg--service' : ''}`}>
+                    <span className="owner-support-chat__msg-who">{msg.fromService ? 'Поддержка' : 'Вы'}</span>
+                    <p>{msg.text}</p>
+                    <small>{fmt(msg.createdAt)}</small>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+              <div className="owner-support-chat__compose">
+                <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Введите сообщение..." rows={2} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} />
+                <button type="button" disabled={sending || !text.trim()} onClick={() => void sendMessage()}>Отправить</button>
+              </div>
+            </>
+          ) : (
+            <div className="owner-support-chat__placeholder">
+              <MailIcon />
+              <p>Выберите обращение слева или создайте новое</p>
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -623,6 +686,8 @@ export function OwnerDashboardPage() {
   const { session, logout } = useSession()
   const [section, setSection] = useState<OwnerSection>('dashboard')
   const [globalSearch, setGlobalSearch] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -630,6 +695,7 @@ export function OwnerDashboardPage() {
   const [summaryError, setSummaryError] = useState('')
   const [restaurants, setRestaurants] = useState<Array<Restaurant & { isCurrent?: boolean }>>([])
   const [addRestaurantOpen, setAddRestaurantOpen] = useState(false)
+  const [unreadSupport, setUnreadSupport] = useState(0)
   const userName = session?.user.name ?? 'Пользователь'
   const restaurantName = summary?.restaurant?.name || session?.restaurant.name || 'Ресторан'
   const paymentAccess = getPaymentAccess(summary?.restaurant || session?.restaurant)
@@ -665,7 +731,14 @@ export function OwnerDashboardPage() {
     window.location.reload()
   }
 
-  useEffect(() => { void loadSummary(); void loadRestaurants() }, [])
+  async function loadUnreadSupport() {
+    try {
+      const result = await api.list<{ unreadByRestaurant?: boolean }>('support-chats')
+      setUnreadSupport(result.items.filter((c) => c.unreadByRestaurant).length)
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { void loadSummary(); void loadRestaurants(); void loadUnreadSupport() }, [])
   useEffect(() => {
     if (section === 'dashboard') {
       void loadSummary()
@@ -681,18 +754,25 @@ export function OwnerDashboardPage() {
 
   const handleGlobalSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const value = globalSearch.trim().toLowerCase()
-    if (!value) return
-
-    if (value.includes('сотруд')) openSection('employees')
-    else if (value.includes('чек')) openSection('checklists')
-    else if (value.includes('задач')) openSection('tasks')
-    else if (value.includes('брон') || value.includes('зал') || value.includes('стол')) openSection('hallBookings')
-    else if (value.includes('инвентар') || value.includes('стоп')) openSection('inventory')
-    else if (value.includes('ттк') || value.includes('блюд')) openSection('ttk')
-    else if (value.includes('знани') || value.includes('обуч')) openSection('knowledge')
-    else if (value.includes('оплат') || value.includes('счет') || value.includes('счёт')) openSection('payment')
+    if (searchResults.length) { openSection(searchResults[0].section); setGlobalSearch('') }
   }
+
+  type SearchResult = { label: string; hint: string; section: OwnerSection }
+  const allSections: SearchResult[] = [
+    { label: 'Сотрудники', hint: 'Команда, должности, статус', section: 'employees' },
+    { label: 'Чек-листы', hint: 'Стандарты и задания', section: 'checklists' },
+    { label: 'Задачи', hint: 'Рабочие задачи', section: 'tasks' },
+    { label: 'План зала / Брони', hint: 'Залы, столы, бронирования', section: 'hallBookings' },
+    { label: 'Инвентаризация', hint: 'Товары, бланки, остатки', section: 'inventory' },
+    { label: 'Номенклатура', hint: 'Карточки блюд и товаров', section: 'ttk' },
+    { label: 'База знаний', hint: 'Обучение, материалы', section: 'knowledge' },
+    { label: 'Оплата', hint: 'Тариф, счета, реквизиты', section: 'payment' },
+  ]
+  const searchResults = useMemo<SearchResult[]>(() => {
+    const q = globalSearch.trim().toLowerCase()
+    if (!q) return []
+    return allSections.filter((s) => s.label.toLowerCase().includes(q) || s.hint.toLowerCase().includes(q))
+  }, [globalSearch])
 
   const pageCopy: Record<OwnerSection, { title: string; subtitle: string; searchPlaceholder: string }> = {
     dashboard: { title: `Добрый день, ${userName}!`, subtitle: restaurantName, searchPlaceholder: 'Поиск...' },
@@ -701,7 +781,7 @@ export function OwnerDashboardPage() {
     tasks: { title: 'Задачи', subtitle: 'Создание и назначение рабочих задач', searchPlaceholder: 'Поиск задач...' },
     hallBookings: { title: 'План зала / Брони', subtitle: 'Залы, столы, посадочные места и бронирования', searchPlaceholder: 'Поиск...' },
     inventory: { title: 'Инвентаризация', subtitle: 'Бланки, товары, назначения и сданные остатки', searchPlaceholder: 'Поиск по товарам...' },
-    ttk: { title: 'ТТК', subtitle: 'Карточки блюд и товаров', searchPlaceholder: 'Поиск по позициям...' },
+    ttk: { title: 'Номенклатура', subtitle: 'Карточки блюд и товаров', searchPlaceholder: 'Поиск по позициям...' },
     knowledge: { title: 'База знаний', subtitle: 'Знакомство, обучение и корпоративная жизнь', searchPlaceholder: 'Поиск по материалам...' },
     payment: { title: 'Оплата', subtitle: 'Тариф, реквизиты, счета и закрывающие документы', searchPlaceholder: 'Поиск по счетам...' },
   }
@@ -732,6 +812,7 @@ export function OwnerDashboardPage() {
         <button className="owner-support-button" type="button" onClick={() => setSupportOpen(true)}>
           <MailIcon />
           <span>Поддержка</span>
+          {unreadSupport > 0 ? <span className="owner-support-badge">{unreadSupport}</span> : null}
         </button>
 
 
@@ -749,7 +830,29 @@ export function OwnerDashboardPage() {
           <div className="owner-topbar__actions">
             <form className="owner-search" onSubmit={handleGlobalSearch}>
               <button className="owner-search__submit" type="submit" aria-label="Найти"><SearchIcon /></button>
-              <input value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder={searchPlaceholder} />
+              <input
+                ref={searchRef}
+                value={globalSearch}
+                onChange={(event) => setGlobalSearch(event.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                placeholder={searchPlaceholder}
+              />
+              {globalSearch ? (
+                <button type="button" className="owner-search__clear" onClick={() => { setGlobalSearch(''); searchRef.current?.focus() }}>✕</button>
+              ) : null}
+              {searchFocused && searchResults.length > 0 ? (
+                <div className="owner-search__dropdown">
+                  {searchResults.map((r) => (
+                    <button key={r.section} type="button" className="owner-search__result" onClick={() => { openSection(r.section); setGlobalSearch('') }}>
+                      <span className="owner-search__result-label">{r.label}</span>
+                      <span className="owner-search__result-hint">{r.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : searchFocused && globalSearch.trim() ? (
+                <div className="owner-search__dropdown owner-search__dropdown--empty">Ничего не найдено</div>
+              ) : null}
             </form>
             <div className="owner-notifications-wrap">
               <button className="owner-icon-button" type="button" aria-label="Уведомления" onClick={() => setNotificationsOpen((value) => !value)}>
@@ -788,7 +891,7 @@ export function OwnerDashboardPage() {
 
         {section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent summary={summary} onOpen={openSection} />}
       </section>
-      {supportOpen ? <SupportDialog onClose={() => setSupportOpen(false)} /> : null}
+      {supportOpen ? <SupportDialog onClose={() => { setSupportOpen(false); void loadUnreadSupport() }} onRead={() => setUnreadSupport((n) => Math.max(0, n - 1))} /> : null}
       {profileOpen ? <ProfileDialog userName={userName} login={session?.user.login} roleLabel={roleLabel} restaurantName={restaurantName} onClose={() => setProfileOpen(false)} /> : null}
       {addRestaurantOpen ? <AddRestaurantDialog onClose={() => setAddRestaurantOpen(false)} onCreated={createRestaurant} /> : null}
     </main>

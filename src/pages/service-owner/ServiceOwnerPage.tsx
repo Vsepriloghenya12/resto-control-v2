@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import { api, apiRequest } from '../../shared/api/client'
-import { AlertCircleIcon, BellIcon, CalendarIcon, ChefIcon, LogoutIcon, PaymentIcon, SearchIcon, SettingsIcon, TeamIcon, UserIcon } from '../../shared/ui/Icon'
+import { AlertCircleIcon, BellIcon, CalendarIcon, ChefIcon, LogoutIcon, MailIcon, PaymentIcon, SearchIcon, SettingsIcon, TeamIcon, UserIcon } from '../../shared/ui/Icon'
 
 type OwnerTab = 'restaurants' | 'payments' | 'requisites' | 'support' | 'create'
 type RestaurantStatus = 'trial' | 'active' | 'payment_pending' | 'payment_reported' | 'expired' | 'blocked'
@@ -344,20 +344,100 @@ function RequisitesTab({ message, setMessage }: { message: string; setMessage: (
   )
 }
 
-function SupportTab({ message, setMessage }: { message: string; setMessage: (value: string) => void }) {
-  const items = [
-    ['Оплата', 'Проверить оплату по счёту', 'Нужно сверить платёжное поручение и продлить доступ.'],
-    ['Доступ', 'Ресторан просит продлить доступ', 'Можно продлить доступ на 30 дней из карточки ресторана.'],
-    ['Счёт', 'Не виден счёт', 'Выставьте новый счёт во вкладке Оплаты.'],
-  ]
+type SupportChat = { id: string; title: string; status: string; restaurantId?: string; unreadByRestaurant?: boolean; unreadByService?: boolean; lastMessageAt?: string; createdAt: string }
+type SupportMessage = { id: string; chatId: string; text: string; fromService: boolean; createdAt: string }
+
+function SupportTab({ restaurants }: { restaurants: PlatformRestaurant[] }) {
+  const [chats, setChats] = useState<SupportChat[]>([])
+  const [selectedChat, setSelectedChat] = useState<SupportChat | null>(null)
+  const [messages, setMessages] = useState<SupportMessage[]>([])
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { void loadChats() }, [])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  async function loadChats() {
+    const result = await api.list<SupportChat>('support-chats')
+    setChats(result.items.sort((a, b) => (b.lastMessageAt || b.createdAt).localeCompare(a.lastMessageAt || a.createdAt)))
+  }
+
+  async function openChat(chat: SupportChat) {
+    setSelectedChat(chat)
+    const result = await apiRequest<{ items: SupportMessage[] }>(`/api/support-messages?chatId=${chat.id}`)
+    setMessages(result.items.sort((a, b) => a.createdAt.localeCompare(b.createdAt)))
+    if (chat.unreadByService) {
+      await api.update('support-chats', chat.id, { unreadByService: false })
+      setChats((prev) => prev.map((c) => c.id === chat.id ? { ...c, unreadByService: false } : c))
+    }
+  }
+
+  async function sendMessage() {
+    if (!text.trim() || !selectedChat || sending) return
+    setSending(true)
+    try {
+      const msg = await api.create<SupportMessage>('support-messages', { chatId: selectedChat.id, text: text.trim(), fromService: true })
+      setMessages((prev) => [...prev, msg])
+      setText('')
+    } finally { setSending(false) }
+  }
+
+  const fmt = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const getRestaurantName = (chat: SupportChat) => restaurants.find((r) => r.id === chat.restaurantId)?.name || 'Ресторан'
+  const unreadCount = chats.filter((c) => c.unreadByService).length
+
   return (
-    <section className="service-owner-card">
-      {message && <div className="service-owner-message">{message}</div>}
-      <div className="service-owner-card__header"><div><h2>Техподдержка ресторанов</h2><p>Обращения по оплате, доступу и работе сервиса.</p></div></div>
-      <div className="service-owner-support-list">
-        {items.map(([tag, title, text]) => <article className="service-owner-support-item" key={title}><div><strong>{title}</strong><p>{text}</p><small>Сегодня</small></div><span>{tag}</span><button type="button" onClick={() => setMessage(`${title}: ${text}`)}>Открыть</button></article>)}
+    <div className="service-owner-chat">
+      <div className="service-owner-chat__sidebar">
+        <div className="service-owner-chat__sidebar-header">
+          <strong>Обращения</strong>
+          {unreadCount > 0 ? <span className="service-owner-chat__badge">{unreadCount}</span> : null}
+        </div>
+        <div className="service-owner-chat__list">
+          {chats.length === 0 ? (
+            <p className="service-owner-chat__empty">Обращений пока нет.</p>
+          ) : chats.map((chat) => (
+            <button key={chat.id} type="button" className={`service-owner-chat__item${selectedChat?.id === chat.id ? ' is-active' : ''}`} onClick={() => void openChat(chat)}>
+              <div className="service-owner-chat__item-top">
+                <span className="service-owner-chat__item-title">{chat.title}</span>
+                {chat.unreadByService ? <span className="service-owner-chat__dot" /> : null}
+              </div>
+              <span className="service-owner-chat__item-rest">{getRestaurantName(chat)}</span>
+            </button>
+          ))}
+        </div>
       </div>
-    </section>
+      <div className="service-owner-chat__main">
+        {selectedChat ? (
+          <>
+            <div className="service-owner-chat__main-header">
+              <div><strong>{selectedChat.title}</strong><small>{getRestaurantName(selectedChat)}</small></div>
+            </div>
+            <div className="service-owner-chat__messages">
+              {messages.length === 0 ? <p className="service-owner-chat__empty">Сообщений пока нет.</p> : null}
+              {messages.map((msg) => (
+                <div key={msg.id} className={`service-owner-chat__msg${msg.fromService ? ' service-owner-chat__msg--service' : ''}`}>
+                  <span className="service-owner-chat__msg-who">{msg.fromService ? 'Поддержка (вы)' : getRestaurantName(selectedChat)}</span>
+                  <p>{msg.text}</p>
+                  <small>{fmt(msg.createdAt)}</small>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+            <div className="service-owner-chat__compose">
+              <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Ответить..." rows={2} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage() } }} />
+              <button type="button" disabled={sending || !text.trim()} onClick={() => void sendMessage()}>Отправить</button>
+            </div>
+          </>
+        ) : (
+          <div className="service-owner-chat__placeholder">
+            <MailIcon />
+            <p>Выберите обращение слева</p>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -415,6 +495,7 @@ export function ServiceOwnerPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [unreadSupportCount, setUnreadSupportCount] = useState(0)
   const userName = session?.user.name ?? 'Владелец сервиса'
 
   async function loadOverview() {
@@ -430,7 +511,14 @@ export function ServiceOwnerPage() {
     }
   }
 
-  useEffect(() => { loadOverview() }, [])
+  async function loadUnreadSupport() {
+    try {
+      const result = await api.list<{ unreadByService?: boolean }>('support-chats')
+      setUnreadSupportCount(result.items.filter((c) => c.unreadByService).length)
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { loadOverview(); loadUnreadSupport() }, [])
 
   const notices = useMemo<Notice[]>(() => {
     const paymentNotices = overview.payments.filter((invoice) => ['payment_reported', 'payment_order_attached', 'overdue', 'issued'].includes(String(invoice.status))).slice(0, 5).map((invoice) => ({
@@ -551,7 +639,13 @@ export function ServiceOwnerPage() {
       <aside className="service-owner-sidebar">
         <ServiceOwnerBrand />
         <nav className="service-owner-nav" aria-label="Меню владельца сервиса">
-          {tabItems.map((item) => <button key={item.id} className={item.id === tab ? 'service-owner-nav__item service-owner-nav__item--active' : 'service-owner-nav__item'} type="button" onClick={() => { setTab(item.id); setMessage('') }}>{item.icon}<span>{item.id === 'payments' && paymentActionCount ? `Оплаты (${paymentActionCount})` : item.label}</span></button>)}
+          {tabItems.map((item) => (
+            <button key={item.id} className={item.id === tab ? 'service-owner-nav__item service-owner-nav__item--active' : 'service-owner-nav__item'} type="button" onClick={() => { setTab(item.id); setMessage(''); if (item.id === 'support') void loadUnreadSupport() }}>
+              {item.icon}
+              <span>{item.id === 'payments' && paymentActionCount ? `Оплаты (${paymentActionCount})` : item.label}</span>
+              {item.id === 'support' && unreadSupportCount > 0 ? <span className="service-owner-nav__badge">{unreadSupportCount}</span> : null}
+            </button>
+          ))}
         </nav>
       </aside>
       <section className="service-owner-main">
@@ -567,7 +661,7 @@ export function ServiceOwnerPage() {
         {tab === 'restaurants' && <RestaurantsTab restaurants={overview.restaurants} selectedId={selectedRestaurantId} setSelectedId={setSelectedRestaurantId} search={search} isLoading={isLoading} message={message} onCreate={() => setTab('create')} onIssueInvoice={handleIssueInvoice} onExtend={handleExtendRestaurant} onToggleBlock={handleToggleBlockRestaurant} onDelete={handleDeleteRestaurant} />}
         {tab === 'payments' && <PaymentsTab payments={overview.payments} restaurants={overview.restaurants} search={search} message={message} onInvoiceStatus={handleInvoiceStatus} onIssueInvoice={handleIssueInvoice} />}
         {tab === 'requisites' && <RequisitesTab message={message} setMessage={setMessage} />}
-        {tab === 'support' && <SupportTab message={message} setMessage={setMessage} />}
+        {tab === 'support' && <SupportTab restaurants={overview.restaurants} />}
         {tab === 'create' && <CreateRestaurantTab onCreated={handleCreateRestaurant} message={message} />}
       </section>
     </main>

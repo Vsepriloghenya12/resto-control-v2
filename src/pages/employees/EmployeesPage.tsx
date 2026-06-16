@@ -4,6 +4,7 @@ import { api } from '../../shared/api/client'
 
 type EmployeeStatus = 'active' | 'fired' | 'blocked'
 type ShiftStatus = 'open' | 'closed'
+type ShiftCloseMethod = 'checklist' | 'button' | 'schedule'
 type AttestationTone = 'good' | 'medium' | 'low'
 type ScheduleScope = 'employee' | 'department' | 'selection'
 type CopyPeriod = 'day' | 'week' | 'month' | 'year'
@@ -16,6 +17,7 @@ type Employee = {
   position: string
   status: EmployeeStatus
   shiftStatus?: ShiftStatus
+  shiftCloseMethod?: ShiftCloseMethod
   attestationPercent?: number
   createdAt?: string
   updatedAt?: string
@@ -79,7 +81,13 @@ type ShiftEditor = {
 const positions = ['Все', 'Официант', 'Старший официант', 'Бармен', 'Старший бармен', 'Повар', 'Су-шеф', 'Шеф-повар', 'Хостес', 'Администратор', 'Управляющий', 'Курьер', 'Мойщик', 'Уборщик', 'Клининг']
 const statuses = ['Все', 'На смене', 'Не на смене']
 const scheduleDepartments = ['Зал', 'Бар', 'Кухня', 'Клининг']
-const emptyForm = { name: '', login: '', position: '', password: '', shiftStatus: 'closed' as ShiftStatus, attestationPercent: 0 }
+const defaultWorkModes: Record<string, { start: string; end: string }> = {
+  'Зал': { start: '10:00', end: '22:00' },
+  'Бар': { start: '12:00', end: '00:00' },
+  'Кухня': { start: '09:00', end: '21:00' },
+  'Клининг': { start: '08:00', end: '16:00' },
+}
+const emptyForm = { name: '', login: '', position: '', password: '', shiftStatus: 'closed' as ShiftStatus, shiftCloseMethod: 'button' as ShiftCloseMethod, attestationPercent: 0 }
 
 const emptyScheduleForm: ScheduleForm = {
   scope: 'employee',
@@ -87,8 +95,8 @@ const emptyScheduleForm: ScheduleForm = {
   department: 'Зал',
   employeeIds: [],
   day: new Date().getDate(),
-  plannedStart: '09:00',
-  plannedEnd: '18:00',
+  plannedStart: defaultWorkModes['Зал'].start,
+  plannedEnd: defaultWorkModes['Зал'].end,
 }
 
 function getInitials(name: string) {
@@ -270,6 +278,14 @@ export function EmployeesPage() {
   const [copyForm, setCopyForm] = useState<CopyForm>({ period: 'day', fromDay: new Date().getDate(), toDay: new Date().getDate() + 1, targetMonth: shiftMonth(getCurrentMonth(), 1), replaceFromId: '', replaceToId: '' })
   const [selectedShiftId, setSelectedShiftId] = useState<string>('')
   const [shiftEditor, setShiftEditor] = useState<ShiftEditor | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [workModes, setWorkModes] = useState<Record<string, { start: string; end: string }>>(defaultWorkModes)
+  const [deptRates, setDeptRates] = useState<Record<string, { hourly: number; bonus: number }>>(() =>
+    Object.fromEntries(scheduleDepartments.map((d) => [d, { hourly: 0, bonus: 0 }]))
+  )
+  const [empRates, setEmpRates] = useState<Record<string, { hourly: number; bonus: number }>>({})
+
 
   async function loadEmployees() {
     setIsLoading(true)
@@ -286,6 +302,7 @@ export function EmployeesPage() {
           position: visible[0].position,
           password: '',
           shiftStatus: visible[0].shiftStatus || 'closed',
+          shiftCloseMethod: visible[0].shiftCloseMethod || 'button',
           attestationPercent: visible[0].attestationPercent || 0,
         })
         setScheduleForm((current) => ({ ...current, employeeId: visible[0].id, employeeIds: [visible[0].id], department: getDepartment(visible[0].position) }))
@@ -349,6 +366,14 @@ export function EmployeesPage() {
     setSelectedId('')
     setForm(emptyForm)
     setError('')
+    setShowEmployeePassword(false)
+    setIsCreating(true)
+  }
+
+  function closeCreateModal() {
+    setIsCreating(false)
+    setForm(emptyForm)
+    setError('')
   }
 
   function openEmployee(employee: Employee) {
@@ -359,9 +384,16 @@ export function EmployeesPage() {
       position: employee.position,
       password: '',
       shiftStatus: employee.shiftStatus || 'closed',
+      shiftCloseMethod: employee.shiftCloseMethod || 'button',
       attestationPercent: employee.attestationPercent || 0,
     })
     setScheduleForm((current) => ({ ...current, employeeId: employee.id, employeeIds: Array.from(new Set([...current.employeeIds, employee.id])), department: getDepartment(employee.position) }))
+    setError('')
+    setIsEditing(true)
+  }
+
+  function closeEditModal() {
+    setIsEditing(false)
     setError('')
   }
 
@@ -383,10 +415,12 @@ export function EmployeesPage() {
           login: form.login.trim(),
           position: form.position,
           shiftStatus: form.shiftStatus,
+          shiftCloseMethod: form.shiftCloseMethod,
           attestationPercent: Number(form.attestationPercent || 0),
           status: 'active',
         })
         setEmployees((items) => items.map((item) => item.id === selectedId ? updated : item))
+        setIsEditing(false)
       } else {
         const created = await api.create<Employee>('employees', {
           name: form.name.trim(),
@@ -399,7 +433,8 @@ export function EmployeesPage() {
         })
         setEmployees((items) => [created, ...items])
         setSelectedId(created.id)
-        setForm({ name: created.name, login: created.login, position: created.position, password: '', shiftStatus: created.shiftStatus || 'closed', attestationPercent: created.attestationPercent || 0 })
+        setForm({ name: created.name, login: created.login, position: created.position, password: '', shiftStatus: created.shiftStatus || 'closed', shiftCloseMethod: created.shiftCloseMethod || 'button', attestationPercent: created.attestationPercent || 0 })
+        setIsCreating(false)
       }
       setError('')
     } catch (err) {
@@ -413,8 +448,8 @@ export function EmployeesPage() {
       await api.remove('employees', selectedId)
       const next = employees.filter((item) => item.id !== selectedId)
       setEmployees(next)
-      if (next[0]) openEmployee(next[0])
-      else startCreate()
+      setIsEditing(false)
+      setSelectedId(next[0]?.id || '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось удалить сотрудника')
     }
@@ -748,8 +783,8 @@ export function EmployeesPage() {
         </div>
 
         <div className="employees-schedule-redesign__summary">
-          <article><span>Смены</span><strong>{scheduleSummary.factShifts} / {scheduleSummary.planShifts}</strong><small>факт / план</small></article>
-          <article><span>Часы</span><strong>{formatHours(scheduleSummary.factHours)} / {formatHours(scheduleSummary.planHours)}</strong><small>факт / план</small></article>
+          <article><span>Смены</span><strong>{scheduleSummary.planShifts} / {scheduleSummary.factShifts}</strong><small>план / факт</small></article>
+          <article><span>Часы</span><strong>{formatHours(scheduleSummary.planHours)} / {formatHours(scheduleSummary.factHours)}</strong><small>план / факт</small></article>
           <article className={scheduleDeviation < 0 ? 'is-negative' : scheduleDeviation > 0 ? 'is-positive' : ''}><span>Отклонение</span><strong>{formatDeviation(scheduleDeviation)}</strong><small>по фактическим часам</small></article>
           <article><span>Чек-листы</span><strong>{scheduleSummary.green} / {scheduleSummary.yellow} / {scheduleSummary.red}</strong><small>зелёные / жёлтые / красные</small></article>
         </div>
@@ -761,43 +796,19 @@ export function EmployeesPage() {
           <span className="employees-schedule-redesign__legend-note">Если чек-листов нет, факт считается по графику</span>
         </div>
 
-        <div className="employees-schedule-redesign__actions">
-          <details className="employees-schedule-redesign__panel">
-            <summary><span>+ Смена</span><small>одному сотруднику, подразделению или выбранной группе</small></summary>
-            <div className="employees-schedule-redesign__panel-body">
-              <div className="employees-schedule-builder__grid">
-                <label><span>Кому</span><select value={scheduleForm.scope} onChange={(event) => setScheduleForm((current) => ({ ...current, scope: event.target.value as ScheduleScope }))}><option value="employee">Один сотрудник</option><option value="department">Подразделение</option><option value="selection">Выбрать нескольких</option></select></label>
-                <label><span>День</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={scheduleForm.day} onChange={(event) => setScheduleForm((current) => ({ ...current, day: Number(event.target.value || 1) }))} /></label>
-                <label><span>Начало</span><input type="time" value={scheduleForm.plannedStart} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedStart: event.target.value }))} /></label>
-                <label><span>Конец</span><input type="time" value={scheduleForm.plannedEnd} onChange={(event) => setScheduleForm((current) => ({ ...current, plannedEnd: event.target.value }))} /></label>
-                {scheduleForm.scope === 'employee' ? <label><span>Сотрудник</span><select value={scheduleForm.employeeId} onChange={(event) => setScheduleForm((current) => ({ ...current, employeeId: event.target.value }))}>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.position}</option>)}</select></label> : null}
-                {scheduleForm.scope === 'department' ? <label><span>Подразделение</span><select value={scheduleForm.department} onChange={(event) => setScheduleForm((current) => ({ ...current, department: event.target.value }))}>{scheduleDepartments.map((item) => <option key={item}>{item}</option>)}</select></label> : null}
+        <div className="employees-schedule-work-modes">
+          <div className="employees-schedule-work-modes__header"><strong>Режим работы</strong><small>Часы по умолчанию при добавлении смены</small></div>
+          <div className="employees-schedule-work-modes__grid">
+            {scheduleDepartments.map((dept) => (
+              <div key={dept} className="employees-schedule-work-modes__row">
+                <span>{dept}</span>
+                <label><span>Начало</span><input type="time" value={workModes[dept]?.start ?? '09:00'} onChange={(e) => setWorkModes((prev) => ({ ...prev, [dept]: { ...prev[dept], start: e.target.value } }))} /></label>
+                <label><span>Конец</span><input type="time" value={workModes[dept]?.end ?? '18:00'} onChange={(e) => setWorkModes((prev) => ({ ...prev, [dept]: { ...prev[dept], end: e.target.value } }))} /></label>
               </div>
-              {scheduleForm.scope === 'selection' ? (
-                <div className="employees-schedule-picker employees-schedule-picker--redesign">
-                  {employees.map((employee) => <label key={employee.id}><input type="checkbox" checked={scheduleForm.employeeIds.includes(employee.id)} onChange={() => toggleScheduleEmployee(employee.id)} /> {employee.name} · {employee.position}</label>)}
-                </div>
-              ) : null}
-              <button className="employees-primary-button" type="button" onClick={() => void createScheduleShifts()}>Поставить смену</button>
-            </div>
-          </details>
-
-          <details className="employees-schedule-redesign__panel">
-            <summary><span>Копировать</span><small>день, неделю, месяц или год с заменой сотрудника</small></summary>
-            <div className="employees-schedule-redesign__panel-body">
-              <div className="employees-schedule-builder__grid employees-schedule-builder__grid--copy">
-                <label><span>Период</span><select value={copyForm.period} onChange={(event) => setCopyForm((current) => ({ ...current, period: event.target.value as CopyPeriod }))}><option value="day">День</option><option value="week">Неделя</option><option value="month">Месяц</option><option value="year">Год</option></select></label>
-                <label><span>От дня</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.fromDay} onChange={(event) => setCopyForm((current) => ({ ...current, fromDay: Number(event.target.value || 1) }))} /></label>
-                <label><span>На день</span><input type="number" min="1" max={getDaysInMonth(scheduleMonth)} value={copyForm.toDay} onChange={(event) => setCopyForm((current) => ({ ...current, toDay: Number(event.target.value || 1) }))} /></label>
-                <label><span>Целевой месяц</span><input type="month" value={copyForm.targetMonth} onChange={(event) => setCopyForm((current) => ({ ...current, targetMonth: event.target.value || shiftMonth(scheduleMonth, 1) }))} /></label>
-                <label><span>Заменить</span><select value={copyForm.replaceFromId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceFromId: event.target.value }))}><option value="">Без замены</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
-                <label><span>На сотрудника</span><select value={copyForm.replaceToId} onChange={(event) => setCopyForm((current) => ({ ...current, replaceToId: event.target.value }))}><option value="">Не выбран</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}</select></label>
-              </div>
-              <button className="employees-primary-button" type="button" onClick={() => void copySchedule()}>Скопировать график</button>
-              <p className="employees-schedule-builder__hint">Копируются плановые смены, роли и часы. Факт, чек-листы и отклонения остаются только у исходных смен.</p>
-            </div>
-          </details>
+            ))}
+          </div>
         </div>
+
 
         <div className="employees-schedule-grid-shell">
           <div className="employees-schedule-wrap employees-schedule-wrap--redesign employees-schedule-wrap--full">
@@ -812,8 +823,8 @@ export function EmployeesPage() {
                 <tr>
                   <th className="employees-schedule-table__name" />
                   {scheduleDays.map((day) => <th key={day}>{getWeekdayLabel(scheduleMonth, day)}</th>)}
-                  <th>факт/план</th>
-                  <th>факт/план</th>
+                  <th>план/факт</th>
+                  <th>план/факт</th>
                 </tr>
               </thead>
               {departments.length ? departments.map((department) => (
@@ -829,8 +840,8 @@ export function EmployeesPage() {
                       <tr key={employee.id}>
                         <th className="employees-schedule-table__employee"><span>{employee.name}</span><small>{employee.position}</small></th>
                         {scheduleDays.map((day) => <td key={day}>{renderScheduleCell(employee, day)}</td>)}
-                        <td className="employees-schedule-table__total">{factShifts}/{planShifts}</td>
-                        <td className="employees-schedule-table__total">{formatHours(factHours)} / {formatHours(planHours)}</td>
+                        <td className="employees-schedule-table__total">{planShifts}/{factShifts}</td>
+                        <td className="employees-schedule-table__total">{formatHours(planHours)} / {formatHours(factHours)}</td>
                       </tr>
                     )
                   })}
@@ -845,6 +856,168 @@ export function EmployeesPage() {
     )
   }
 
+  function renderSalaryFund() {
+    const monthSchedules = schedules.filter((s) => s.month === scheduleMonth)
+
+    // Per-employee planned hours this month
+    const empHours: Record<string, number> = {}
+    for (const s of monthSchedules) {
+      empHours[s.employeeId] = (empHours[s.employeeId] ?? 0) + (s.plannedHours ?? 0)
+    }
+
+    // Rows per department
+    const departments = scheduleDepartments.filter((d) => employeesByDepartment[d]?.length)
+
+    let totalFund = 0
+    const deptTotals: Array<{ dept: string; fund: number; hours: number }> = []
+
+    for (const dept of departments) {
+      let deptFund = 0
+      let deptHours = 0
+      for (const emp of (employeesByDepartment[dept] ?? [])) {
+        const hours = empHours[emp.id] ?? 0
+        const rate = empRates[emp.id] ?? deptRates[dept] ?? { hourly: 0, bonus: 0 }
+        const base = hours * rate.hourly
+        deptFund += base * (1 + rate.bonus / 100)
+        deptHours += hours
+      }
+      deptTotals.push({ dept, fund: deptFund, hours: deptHours })
+      totalFund += deptFund
+    }
+
+    function fmtMoney(n: number) {
+      return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' ₽'
+    }
+
+    return (
+      <section className="employees-salary-card">
+        <div className="employees-salary-card__hero">
+          <div>
+            <span className="employees-salary-card__eyebrow">Зарплатный фонд</span>
+            <h3>Настройка ставок и расчёт ФОТ</h3>
+            <p>Укажите стоимость часа и процент для каждого подразделения. Для отдельного сотрудника можно задать индивидуальную ставку — она перекрывает ставку подразделения.</p>
+          </div>
+          <div className="employees-salary-card__total">
+            <span>Итого план</span>
+            <strong>{fmtMoney(totalFund)}</strong>
+          </div>
+        </div>
+
+        <div className="employees-salary-card__body">
+          {/* Department rates */}
+          <div className="employees-salary-dept">
+            <div className="employees-salary-dept__header">
+              <span className="employees-salary-dept__col--name">Подразделение</span>
+              <span className="employees-salary-dept__col">Часов (план)</span>
+              <span className="employees-salary-dept__col">Ставка, ₽/ч</span>
+              <span className="employees-salary-dept__col">Бонус, %</span>
+              <span className="employees-salary-dept__col employees-salary-dept__col--right">Фонд</span>
+            </div>
+            {departments.map((dept) => {
+              const row = deptTotals.find((r) => r.dept === dept)!
+              const rate = deptRates[dept] ?? { hourly: 0, bonus: 0 }
+              return (
+                <div key={dept} className="employees-salary-dept__row">
+                  <span className="employees-salary-dept__col--name">{dept}</span>
+                  <span className="employees-salary-dept__col">{row.hours.toFixed(1)} ч</span>
+                  <input
+                    className="employees-salary-dept__input"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={rate.hourly || ''}
+                    onChange={(e) => setDeptRates((prev) => ({ ...prev, [dept]: { ...prev[dept], hourly: Number(e.target.value || 0) } }))}
+                  />
+                  <input
+                    className="employees-salary-dept__input employees-salary-dept__input--pct"
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    value={rate.bonus || ''}
+                    onChange={(e) => setDeptRates((prev) => ({ ...prev, [dept]: { ...prev[dept], bonus: Number(e.target.value || 0) } }))}
+                  />
+                  <span className="employees-salary-dept__col employees-salary-dept__col--right employees-salary-dept__fund">{fmtMoney(row.fund)}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Individual overrides */}
+          <details className="employees-salary-individual">
+            <summary>Индивидуальные ставки сотрудников</summary>
+            <div className="employees-salary-individual__body">
+              <div className="employees-salary-dept__header">
+                <span className="employees-salary-dept__col--name">Сотрудник</span>
+                <span className="employees-salary-dept__col">Часов (план)</span>
+                <span className="employees-salary-dept__col">Ставка, ₽/ч</span>
+                <span className="employees-salary-dept__col">Бонус, %</span>
+                <span className="employees-salary-dept__col employees-salary-dept__col--right">Фонд</span>
+              </div>
+              {employees.map((emp) => {
+                const hours = empHours[emp.id] ?? 0
+                const dept = getDepartment(emp.position)
+                const deptRate = deptRates[dept] ?? { hourly: 0, bonus: 0 }
+                const override = empRates[emp.id]
+                const rate = override ?? deptRate
+                const base = hours * rate.hourly
+                const fund = base * (1 + rate.bonus / 100)
+                return (
+                  <div key={emp.id} className={`employees-salary-dept__row${override ? ' employees-salary-dept__row--override' : ''}`}>
+                    <span className="employees-salary-dept__col--name">
+                      {emp.name}
+                      {override ? <small> (инд.)</small> : null}
+                    </span>
+                    <span className="employees-salary-dept__col">{hours.toFixed(1)} ч</span>
+                    <input
+                      className="employees-salary-dept__input"
+                      type="number"
+                      min="0"
+                      placeholder={String(deptRate.hourly || 0)}
+                      value={override?.hourly ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setEmpRates((prev) => {
+                          const cur = prev[emp.id] ?? { hourly: deptRate.hourly, bonus: deptRate.bonus }
+                          if (val === '' && !cur.bonus) {
+                            const next = { ...prev }
+                            delete next[emp.id]
+                            return next
+                          }
+                          return { ...prev, [emp.id]: { ...cur, hourly: Number(val || 0) } }
+                        })
+                      }}
+                    />
+                    <input
+                      className="employees-salary-dept__input employees-salary-dept__input--pct"
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder={String(deptRate.bonus || 0)}
+                      value={override?.bonus ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setEmpRates((prev) => {
+                          const cur = prev[emp.id] ?? { hourly: deptRate.hourly, bonus: deptRate.bonus }
+                          if (val === '' && !cur.hourly) {
+                            const next = { ...prev }
+                            delete next[emp.id]
+                            return next
+                          }
+                          return { ...prev, [emp.id]: { ...cur, bonus: Number(val || 0) } }
+                        })
+                      }}
+                    />
+                    <span className="employees-salary-dept__col employees-salary-dept__col--right employees-salary-dept__fund">{fmtMoney(fund)}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </details>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="employees-page">
@@ -857,7 +1030,7 @@ export function EmployeesPage() {
 
       {error ? <div className="employees-add-panel__hint"><AlertCircleIcon /><p>{error}</p></div> : null}
 
-      <div className="employees-layout employees-layout--with-editor">
+      <div className="employees-layout">
         <section className="employees-table-card">
           <div className="employees-filters employees-filters--compact">
             <label className="employees-search">
@@ -884,7 +1057,7 @@ export function EmployeesPage() {
               <tbody>
                 {isLoading ? <tr><td colSpan={6}>Загрузка...</td></tr> : null}
                 {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className={employee.id === selectedId ? 'employees-row employees-row--active' : 'employees-row'} onClick={() => openEmployee(employee)}>
+                  <tr key={employee.id} className="employees-row employees-table--clickable" onClick={() => openEmployee(employee)}>
                     <td><div className="employees-person"><span>{getInitials(employee.name)}</span><div><strong>{employee.name}</strong><small>{employee.login}</small></div></div></td>
                     <td>{employee.position}</td>
                     <td><span className={`employees-status employees-status--${getStatusClass(employee)}`}>{getStatusLabel(employee)}</span></td>
@@ -900,20 +1073,62 @@ export function EmployeesPage() {
           <div className="employees-table-footer"><span>Показано {filteredEmployees.length} из {employees.length}</span></div>
         </section>
 
-        <aside className="employees-add-panel employees-editor-panel" aria-label="Карточка сотрудника">
-          <div className="employees-add-panel__header"><h3>{selectedEmployee ? 'Карточка сотрудника' : 'Новый сотрудник'}</h3></div>
-          <label><span>Имя сотрудника</span><input value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
-          <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
-          <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positions.filter((item) => item !== 'Все').map((item) => <option key={item}>{item}</option>)}</select></label>
-          <label><span>Смена</span><select value={form.shiftStatus} onChange={(e) => setForm((v) => ({ ...v, shiftStatus: e.target.value as ShiftStatus }))}><option value="closed">Смена не открыта</option><option value="open">Смена открыта</option></select></label>
-          <label><span>Аттестация, %</span><input value={form.attestationPercent} onChange={(e) => setForm((v) => ({ ...v, attestationPercent: Number(e.target.value || 0) }))} type="number" min="0" max="100" /></label>
-          {!selectedEmployee ? <label><span>Временный пароль</span><span style={{position:'relative',display:'flex',alignItems:'center'}}><input style={{flex:1,paddingRight:'40px'}} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} /><button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{position:'absolute',right:'10px',background:'none',border:'none',cursor:'pointer',color:'#8e929c',display:'flex',alignItems:'center'}}><EyeIcon style={{width:'20px',height:'20px'}} /></button></span></label> : null}
-          <button className="employees-create-button" type="button" onClick={saveEmployee}>{selectedEmployee ? 'Сохранить карточку' : 'Создать сотрудника'}</button>
-          {selectedEmployee ? <button className="employees-cancel-button" type="button" onClick={fireEmployee}>Удалить сотрудника</button> : <button className="employees-cancel-button" type="button" onClick={startCreate}>Очистить</button>}
-        </aside>
       </div>
 
       {renderScheduleTable()}
+
+      {renderSalaryFund()}
+
+      {isCreating ? (
+        <div className="employees-modal-backdrop" role="presentation" onMouseDown={closeCreateModal}>
+          <div className="employees-modal" role="dialog" aria-modal="true" aria-label="Новый сотрудник" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="employees-modal__header">
+              <h3>Новый сотрудник</h3>
+              <button type="button" className="employees-modal__close" onClick={closeCreateModal} aria-label="Закрыть">×</button>
+            </div>
+            <div className="employees-modal__body">
+              <label><span>Имя сотрудника</span><input autoFocus value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
+              <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
+              <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positions.filter((item) => item !== 'Все').map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label>
+                <span>Временный пароль</span>
+                <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input style={{ flex: 1, paddingRight: '40px' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} />
+                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#8e929c', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                </span>
+              </label>
+              {error ? <p className="employees-error">{error}</p> : null}
+            </div>
+            <div className="employees-modal__footer">
+              <button className="employees-create-button" type="button" onClick={saveEmployee}>Создать сотрудника</button>
+              <button className="employees-cancel-button" type="button" onClick={closeCreateModal}>Отмена</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isEditing && selectedEmployee ? (
+        <div className="employees-modal-backdrop" role="presentation" onMouseDown={closeEditModal}>
+          <div className="employees-modal" role="dialog" aria-modal="true" aria-label="Редактирование сотрудника" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="employees-modal__header">
+              <h3>Редактирование сотрудника</h3>
+              <button type="button" className="employees-modal__close" onClick={closeEditModal} aria-label="Закрыть">×</button>
+            </div>
+            <div className="employees-modal__body">
+              <label><span>Имя сотрудника</span><input autoFocus value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
+              <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
+              <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positions.filter((item) => item !== 'Все').map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label><span>Закрытие смены</span><select value={form.shiftCloseMethod} onChange={(e) => setForm((v) => ({ ...v, shiftCloseMethod: e.target.value as ShiftCloseMethod }))}><option value="checklist">По чек-листу закрытия</option><option value="button">По кнопке «Закрыть смену»</option><option value="schedule">По графику (автоматически)</option></select></label>
+{error ? <p className="employees-error">{error}</p> : null}
+            </div>
+            <div className="employees-modal__footer employees-modal__footer--edit">
+              <button className="employees-create-button" type="button" onClick={saveEmployee}>Сохранить</button>
+              <button className="employees-cancel-button employees-cancel-button--danger" type="button" onClick={fireEmployee}>Удалить</button>
+              <button className="employees-cancel-button" type="button" onClick={closeEditModal}>Отмена</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

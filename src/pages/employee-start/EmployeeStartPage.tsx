@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import { api, apiRequest } from '../../shared/api/client'
@@ -9,6 +9,7 @@ import {
   BoxIcon,
   CalendarIcon,
   ChecklistIcon,
+  ChevronLeftIcon,
   ChevronRightIcon,
   ClipboardIcon,
   ClockIcon,
@@ -31,7 +32,9 @@ type Task = { id: string; title: string; description?: string; status?: string; 
 type Checklist = { id: string; title: string; position?: string; active?: boolean; startTime?: string; endTime?: string; items?: Array<{ id: string; title: string; required?: boolean; requiresCompletionPhoto?: boolean }> }
 type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; dueDate?: string; rowsCount?: number }
 type Knowledge = { id: string; title: string; section?: string; type?: string; description?: string; status?: string }
-type TtkItem = { id: string; name: string; group?: string; unit?: string; price?: number; tag?: string; description?: string; cookingTime?: string; output?: string; online?: boolean; takeaway?: boolean; stopList?: boolean; inStopList?: boolean; isStopped?: boolean; status?: string }
+type TtkItem = { id: string; name: string; group?: string; groupId?: string; unit?: string; price?: number; tag?: string; description?: string; cookingTime?: string; output?: string; online?: boolean; takeaway?: boolean; stopList?: boolean; inStopList?: boolean; isStopped?: boolean; status?: string }
+type TtkGroup = { id: string; name: string }
+type OrderCartItem = { itemId: string; name: string; price: number; quantity: number; comment?: string }
 type Guest = { id: string; name: string; phone?: string; preferences?: string; restrictions?: string; favoriteTable?: string; serviceComment?: string }
 type TechRequest = { id: string; title: string; description?: string; priority?: string; status?: string }
 type StaffSchedule = { id: string; employeeId: string; employeeName?: string; position?: string; month: string; day: number; value?: string; note?: string }
@@ -198,6 +201,60 @@ function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSav
   )
 }
 
+function SwipeableCartItem({ item, onDelete, onComment, onQty }: {
+  item: OrderCartItem
+  onDelete: () => void
+  onComment: () => void
+  onQty: (delta: number) => void
+}) {
+  const [swipeX, setSwipeX] = useState(0)
+  const startX = useRef(0)
+  const committed = useRef(false)
+
+  function onTouchStart(e: React.TouchEvent) {
+    startX.current = e.touches[0].clientX
+    committed.current = false
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    const dx = e.touches[0].clientX - startX.current
+    setSwipeX(Math.max(-72, Math.min(72, dx)))
+  }
+
+  function onTouchEnd() {
+    if (!committed.current) {
+      if (swipeX < -56) { committed.current = true; onDelete(); return }
+      if (swipeX > 56) { committed.current = true; onComment(); }
+    }
+    setSwipeX(0)
+  }
+
+  return (
+    <div className="order-swipe-wrap">
+      <div className="order-swipe-bg order-swipe-bg--left"><span>✕ Удалить</span></div>
+      <div className="order-swipe-bg order-swipe-bg--right"><span>✎ Коммент</span></div>
+      <div
+        className="order-swipe-item"
+        style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s' : 'none' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="order-swipe-item__info">
+          <strong>{item.name}</strong>
+          {item.comment ? <span className="order-swipe-item__comment">💬 {item.comment}</span> : null}
+          <span>{item.price} ₽ × {item.quantity} = {item.price * item.quantity} ₽</span>
+        </div>
+        <div className="order-swipe-item__qty">
+          <button type="button" onClick={() => onQty(-1)}>−</button>
+          <span>{item.quantity}</span>
+          <button type="button" onClick={() => onQty(1)}>+</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function EmployeeStartPage() {
   const { session, logout } = useSession()
   const [activeTab, setActiveTab] = useState<MobileTab>('overview')
@@ -214,7 +271,67 @@ export function EmployeeStartPage() {
   const [selectedTable, setSelectedTable] = useState<MobileHallTable | null>(null)
   const [detail, setDetail] = useState<DetailState | null>(null)
   const [notice, setNotice] = useState('')
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function showNotice(msg: string) {
+    setNotice(msg)
+    if (noticeTimer.current) clearTimeout(noticeTimer.current)
+    noticeTimer.current = setTimeout(() => showNotice(''), 3000)
+  }
   const [taskFilter, setTaskFilter] = useState<'all' | 'active' | 'overdue' | 'done'>('all')
+  const [bookingForm, setBookingForm] = useState<{ guestName: string; phone: string; date: string; time: string; guestsCount: number; comment: string } | null>(null)
+  const [bookingSaving, setBookingSaving] = useState(false)
+  const [orderModal, setOrderModal] = useState(false)
+  const [orderStep, setOrderStep] = useState<'table' | 'order'>('table')
+  const [orderHallId, setOrderHallId] = useState('')
+  const [orderDraft, setOrderDraft] = useState({ tableId: '', guestsCount: 2, comment: '' })
+  const [orderSaving, setOrderSaving] = useState(false)
+  const [ttkGroups, setTtkGroups] = useState<TtkGroup[]>([])
+  const [orderCategoryId, setOrderCategoryId] = useState('')
+  const [orderCart, setOrderCart] = useState<OrderCartItem[]>([])
+  const [orderCartOpen, setOrderCartOpen] = useState(false)
+  const [commentTarget, setCommentTarget] = useState<string | null>(null)
+  const [commentText, setCommentText] = useState('')
+
+  function cartTotal() { return orderCart.reduce((sum, i) => sum + i.price * i.quantity, 0) }
+  function cartCount() { return orderCart.reduce((sum, i) => sum + i.quantity, 0) }
+
+  function addToCart(item: TtkItem) {
+    setOrderCart((prev) => {
+      const existing = prev.find((c) => c.itemId === item.id)
+      if (existing) return prev.map((c) => c.itemId === item.id ? { ...c, quantity: c.quantity + 1 } : c)
+      return [...prev, { itemId: item.id, name: item.name, price: item.price || 0, quantity: 1 }]
+    })
+  }
+
+  function removeFromCart(itemId: string) {
+    setOrderCart((prev) => prev.filter((c) => c.itemId !== itemId))
+  }
+
+  function changeQty(itemId: string, delta: number) {
+    setOrderCart((prev) => {
+      const item = prev.find((c) => c.itemId === itemId)
+      if (!item) return prev
+      if (item.quantity + delta <= 0) return prev.filter((c) => c.itemId !== itemId)
+      return prev.map((c) => c.itemId === itemId ? { ...c, quantity: c.quantity + delta } : c)
+    })
+  }
+  const [navHistory, setNavHistory] = useState<Array<{ tab: MobileTab; detail: DetailState | null }>>([])
+
+  function navigate(tab: MobileTab, nextDetail: DetailState | null = null) {
+    setNavHistory((prev) => [...prev, { tab: activeTab, detail }])
+    setActiveTab(tab)
+    setDetail(nextDetail)
+  }
+
+  function goBack() {
+    const prev = navHistory[navHistory.length - 1]
+    if (!prev) return
+    setNavHistory((h) => h.slice(0, -1))
+    setActiveTab(prev.tab)
+    setDetail(prev.detail)
+  }
+
+  const canGoBack = navHistory.length > 0
 
   const employee = {
     name: session?.user.name || 'Сотрудник',
@@ -278,6 +395,10 @@ export function EmployeeStartPage() {
     setSummary(nextSummary)
     const currentEmployee = nextSummary.employees?.find((item) => item.userId === session?.user.id || item.name === session?.user.name)
     if (currentEmployee?.shiftStatus) setShiftOpen(currentEmployee.shiftStatus === 'open')
+    try {
+      const groupsResult = await api.list<TtkGroup>('ttk-groups')
+      setTtkGroups(groupsResult.items)
+    } catch { /* groups optional */ }
   }
 
   async function loadHallPlan() {
@@ -299,16 +420,16 @@ export function EmployeeStartPage() {
     setShiftOpen(nextOpen)
     try {
       await apiRequest('/api/mobile/shift', { method: 'PATCH', body: JSON.stringify({ open: nextOpen }) })
-      setNotice(nextOpen ? 'Смена открыта.' : 'Смена закрыта.')
+      showNotice(nextOpen ? 'Смена открыта.' : 'Смена закрыта.')
       await loadData()
     } catch (error) {
       setShiftOpen(!nextOpen)
-      setNotice(error instanceof Error ? error.message : 'Не удалось сохранить смену.')
+      showNotice(error instanceof Error ? error.message : 'Не удалось сохранить смену.')
     }
   }
 
   useEffect(() => {
-    void loadData().catch(() => setNotice('Не удалось загрузить данные смены.'))
+    void loadData().catch(() => showNotice('Не удалось загрузить данные смены.'))
     void loadHallPlan().catch(() => undefined)
   }, [])
 
@@ -334,7 +455,7 @@ export function EmployeeStartPage() {
       kind: 'checklist',
       title: checklist.title,
       subtitle: `${checklist.startTime || '—'} — ${checklist.endTime || '—'}`,
-      body: <ChecklistRunPanel checklist={checklist} onSaved={async () => { setNotice('Прохождение чек-листа сохранено.'); setDetail(null); await loadData() }} />,
+      body: <ChecklistRunPanel checklist={checklist} onSaved={async () => { showNotice('Прохождение чек-листа сохранено.'); setDetail(null); await loadData() }} />,
     }
   }
 
@@ -434,7 +555,7 @@ export function EmployeeStartPage() {
       body: (
         <div className="employee-mobile__detail-list">
           {materials.length ? materials.map((item) => (
-            <button key={item.id} type="button" onClick={() => setDetail(knowledgeDetail(item))}>
+            <button key={item.id} type="button" onClick={() => navigate(activeTab, knowledgeDetail(item))}>
               <strong>{item.title}</strong>
               <span>{item.description || item.type || 'Материал'}</span>
             </button>
@@ -453,7 +574,7 @@ export function EmployeeStartPage() {
       body: (
         <div className="employee-mobile__detail-list">
           {guests.length ? guests.map((guest) => (
-            <button key={guest.id} type="button" onClick={() => setDetail(guestDetail(guest))}>
+            <button key={guest.id} type="button" onClick={() => navigate(activeTab, guestDetail(guest))}>
               <strong>{guest.name}</strong>
               <span>{guest.preferences || guest.serviceComment || guest.phone || 'Карточка гостя'}</span>
             </button>
@@ -505,20 +626,20 @@ export function EmployeeStartPage() {
       kind: 'support',
       title: 'Поддержка',
       subtitle: 'Обращение управляющему',
-      actions: <button type="button" onClick={async () => { await api.create('technical-requests', { title: 'Обращение в поддержку', description: 'Запрос помощи из мобильного приложения', area: 'Поддержка', priority: 'medium', status: 'new', createdByPosition: employee.position }); setNotice('Обращение создано.'); setDetail(null) }}>Создать обращение</button>,
+      actions: <button type="button" onClick={async () => { await api.create('technical-requests', { title: 'Обращение в поддержку', description: 'Запрос помощи из мобильного приложения', area: 'Поддержка', priority: 'medium', status: 'new', createdByPosition: employee.position }); showNotice('Обращение создано.'); setDetail(null) }}>Создать обращение</button>,
     }
   }
 
   async function completeTask(id: string) {
     await api.update('tasks', id, { status: 'done' })
-    setNotice('Задача выполнена.')
+    showNotice('Задача выполнена.')
     setDetail(null)
     await loadData()
   }
 
   async function submitInventory(id: string) {
     await api.update('inventory-assignments', id, { status: 'submitted', submittedAt: new Date().toISOString() })
-    setNotice('Инвентаризация отмечена как сданная.')
+    showNotice('Инвентаризация отмечена как сданная.')
     setDetail(null)
     await loadData()
   }
@@ -528,6 +649,67 @@ export function EmployeeStartPage() {
     await api.bookingStatus(selectedTable.booking.id, status)
     await loadHallPlan()
     setSelectedTable(null)
+  }
+
+  async function saveOrder() {
+    setOrderSaving(true)
+    try {
+      const table = hallTables.find((t) => t.id === orderDraft.tableId)
+      await api.create('orders', {
+        tableId: orderDraft.tableId || null,
+        tableName: table?.name || 'Без стола',
+        hallId: table?.hallId || null,
+        guestsCount: orderDraft.guestsCount,
+        comment: orderDraft.comment.trim(),
+        items: orderCart,
+        total: cartTotal(),
+        status: 'new',
+        createdByPosition: employee.position,
+        createdByName: employee.name,
+        createdAt: new Date().toISOString(),
+      })
+      showNotice('Заказ принят.')
+      setOrderModal(false)
+      setOrderCart([])
+      setOrderDraft({ tableId: '', guestsCount: 2, comment: '' })
+    } finally {
+      setOrderSaving(false)
+    }
+  }
+
+  function openBookingForm() {
+    setBookingForm({
+      guestName: '',
+      phone: '',
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toTimeString().slice(0, 5),
+      guestsCount: selectedTable?.seats || 2,
+      comment: '',
+    })
+  }
+
+  async function saveBookingForm() {
+    if (!selectedTable || !bookingForm) return
+    setBookingSaving(true)
+    try {
+      await api.create('bookings', {
+        hallId: selectedTable.hallId,
+        tableId: selectedTable.id,
+        guestName: bookingForm.guestName.trim() || 'Гость',
+        phone: bookingForm.phone.trim(),
+        date: bookingForm.date,
+        time: bookingForm.time,
+        guestsCount: bookingForm.guestsCount,
+        status: 'confirmed',
+        comment: bookingForm.comment.trim(),
+      })
+      showNotice('Бронь создана.')
+      setBookingForm(null)
+      setSelectedTable(null)
+      await loadHallPlan()
+    } finally {
+      setBookingSaving(false)
+    }
   }
 
   async function seatWalkIn(table: MobileHallTable | null) {
@@ -544,7 +726,7 @@ export function EmployeeStartPage() {
       comment: 'Посадка без предварительной брони',
     })
     await api.bookingStatus(booking.id, 'seated')
-    setNotice('Гости посажены за стол.')
+    showNotice('Гости посажены за стол.')
     await loadHallPlan()
     setSelectedTable(null)
   }
@@ -572,7 +754,7 @@ export function EmployeeStartPage() {
       meta: activeChecklists[0] ? `${activeChecklists[0].startTime || '—'} — ${activeChecklists[0].endTime || '—'}` : 'без назначений',
       tone: 'green' as const,
       icon: <ChecklistIcon />,
-      onClick: () => setActiveTab('checklists'),
+      onClick: () => navigate('checklists'),
     },
     {
       id: 'tasks',
@@ -581,7 +763,7 @@ export function EmployeeStartPage() {
       meta: userTasks.some((item) => item.status === 'overdue') ? 'есть просроченные' : 'без просрочек',
       tone: 'blue' as const,
       icon: <ClipboardIcon />,
-      onClick: () => setActiveTab('tasks'),
+      onClick: () => navigate('tasks'),
     },
     {
       id: 'hall',
@@ -590,7 +772,7 @@ export function EmployeeStartPage() {
       meta: freeTablesCount ? `${freeTablesCount} свободных столов` : `${halls.length} залов`,
       tone: 'purple' as const,
       icon: <CalendarIcon />,
-      onClick: () => setActiveTab('hallPlan'),
+      onClick: () => navigate('hallPlan'),
     },
     {
       id: 'stop-list',
@@ -599,7 +781,7 @@ export function EmployeeStartPage() {
       meta: 'блюда и товары под запретом',
       tone: 'red' as const,
       icon: <AlertCircleIcon />,
-      onClick: () => setDetail(stopListDetail()),
+      onClick: () => navigate(activeTab, stopListDetail()),
     },
     ...userInventory.slice(0, 1).map((item) => ({
       id: `inventory-${item.id}`,
@@ -608,7 +790,7 @@ export function EmployeeStartPage() {
       meta: `${item.rowsCount || 0} позиций${item.dueDate ? ` · до ${item.dueDate}` : ''}`,
       tone: 'orange' as const,
       icon: <BoxIcon />,
-      onClick: () => setDetail(inventoryDetail(item)),
+      onClick: () => navigate(activeTab, inventoryDetail(item)),
     })),
   ]
 
@@ -627,6 +809,11 @@ export function EmployeeStartPage() {
             {shiftOpen ? 'Закрыть' : 'Открыть'}
           </button>
         </section>
+
+        <button type="button" className="employee-mobile__accept-order-btn" onClick={() => { setOrderDraft({ tableId: '', guestsCount: 2, comment: '' }); setOrderStep('table'); setOrderHallId(halls[0]?.id || ''); setOrderCart([]); setOrderCartOpen(false); setOrderCategoryId(ttkGroups[0]?.id || ''); setOrderModal(true) }}>
+          <ClipboardIcon />
+          <span>Принять заказ</span>
+        </button>
 
         <section className="employee-mobile__section employee-mobile__section--tools">
           <div className="employee-mobile__section-title"><h2>Главная</h2></div>
@@ -647,7 +834,7 @@ export function EmployeeStartPage() {
         {notifications.length ? (
           <section className="employee-mobile__section employee-mobile__section--compact">
             <div className="employee-mobile__section-title"><h2>События</h2><button type="button" onClick={() => setShowNotifications(true)}>Все</button></div>
-            <button className="employee-mobile__alert-card" type="button" onClick={() => { setActiveTab(notifications[0].target); setDetail(notifications[0].detail) }}>
+            <button className="employee-mobile__alert-card" type="button" onClick={() => navigate(notifications[0].target, notifications[0].detail)}>
               <div className="employee-mobile__alert-icon"><AlertCircleIcon /></div>
               <div className="employee-mobile__alert-content"><strong>{notifications[0].title}</strong><span>{notifications[0].text}</span></div>
             </button>
@@ -672,7 +859,7 @@ export function EmployeeStartPage() {
         </div>
         <div className="employee-mobile__plain-list">
           {filtered.length ? filtered.map((task) => (
-            <button key={task.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail(taskDetail(task))}>
+            <button key={task.id} className="employee-mobile__list-card" type="button" onClick={() => navigate(activeTab, taskDetail(task))}>
               <div className={`employee-mobile__list-card__accent employee-mobile__list-card__accent--${accentColor(task.status)}`} />
               <div className="employee-mobile__list-card__body"><strong>{task.title}</strong><p className={task.status === 'overdue' ? 'employee-mobile__danger' : ''}>{statusText(task.status)}</p><small>{task.dueTime || 'срок не указан'}</small></div>
               <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
@@ -689,7 +876,7 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__section-title"><h2>Чек-листы</h2></div>
         <div className="employee-mobile__plain-list">
           {userChecklists.length ? userChecklists.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail(checklistDetail(item))}>
+            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => navigate(activeTab, checklistDetail(item))}>
               <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--green" />
               <div className="employee-mobile__list-card__body"><strong>{item.title}</strong><p>{item.items?.length || 0} пунктов</p><small>{item.startTime || '—'} — {item.endTime || '—'}</small></div>
               <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
@@ -711,13 +898,11 @@ export function EmployeeStartPage() {
 
     return (
       <section className="employee-mobile__hall-page">
-        <div className="employee-mobile__hall-header">
-          <div><h2>План зала</h2><p>{employee.restaurantName}</p></div>
-          <button type="button" className="employee-mobile__hall-search" aria-label="Обновить" onClick={() => { void loadHallPlan(); setNotice('План зала обновлён.') }}><SearchIcon /></button>
-        </div>
-
-        <div className="employee-mobile__hall-tabs" aria-label="Залы">
-          {halls.map((hall) => <button type="button" key={hall.id} className={hall.id === selectedHallId ? 'is-active' : ''} onClick={() => { setSelectedHallId(hall.id); setHallFilter('all'); setSelectedTable(null) }}><strong>{hall.name}</strong><span>{hall.tablesCount} столов</span></button>)}
+        <div className="employee-mobile__hall-tabs-row">
+          <div className="employee-mobile__hall-tabs" aria-label="Залы">
+            {halls.map((hall) => <button type="button" key={hall.id} className={hall.id === selectedHallId ? 'is-active' : ''} onClick={() => { setSelectedHallId(hall.id); setHallFilter('all'); setSelectedTable(null) }}><strong>{hall.name}</strong><span>{hall.tablesCount} столов</span></button>)}
+          </div>
+          <button type="button" className="employee-mobile__hall-search" aria-label="Обновить" onClick={() => { void loadHallPlan(); showNotice('План зала обновлён.') }}><SearchIcon /></button>
         </div>
 
         <div className="employee-mobile__hall-mode" aria-label="Режим плана зала">
@@ -760,7 +945,7 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__section-title"><h2>ТТК</h2></div>
         <div className="employee-mobile__plain-list">
           {ttkItems.length ? ttkItems.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail(ttkDetail(item))}>
+            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => navigate(activeTab, ttkDetail(item))}>
               <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--orange" />
               <div className="employee-mobile__list-card__body"><strong>{item.name}</strong><p>{item.group || 'Без группы'}{item.price ? ` · ${item.price} ₽` : ''}</p><small>{item.tag || item.cookingTime || 'карточка позиции'}</small></div>
               <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
@@ -783,7 +968,7 @@ export function EmployeeStartPage() {
         <div className="employee-mobile__section-title"><h2>База знаний</h2></div>
         <div className="employee-mobile__plain-list">
           {sections.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card employee-mobile__knowledge-row" type="button" onClick={item.action}>
+            <button key={item.id} className="employee-mobile__list-card employee-mobile__knowledge-row" type="button" onClick={() => { setNavHistory((prev) => [...prev, { tab: activeTab, detail }]); item.action() }}>
               <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--blue" />
               <div className="employee-mobile__more-icon">{item.icon}</div>
               <div className="employee-mobile__list-card__body"><strong>{item.title}</strong><p>{item.subtitle}</p></div>
@@ -813,7 +998,7 @@ export function EmployeeStartPage() {
         ) : null}
         <div className="employee-mobile__plain-list">
           {visibleSchedule.length ? visibleSchedule.map((item) => (
-            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => setDetail({ kind: 'schedule', title: 'Смена по графику', subtitle: getScheduleDateLabel(item.month, Number(item.day)), body: <div className="employee-mobile__detail-text"><span>{item.value === '0.5' ? 'Половина смены' : 'Полная смена'}</span>{item.note ? <p>{item.note}</p> : null}</div> })}>
+            <button key={item.id} className="employee-mobile__list-card" type="button" onClick={() => navigate(activeTab, { kind: 'schedule', title: 'Смена по графику', subtitle: getScheduleDateLabel(item.month, Number(item.day)), body: <div className="employee-mobile__detail-text"><span>{item.value === '0.5' ? 'Половина смены' : 'Полная смена'}</span>{item.note ? <p>{item.note}</p> : null}</div> })}>
               <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--blue" />
               <div className="employee-mobile__list-card__body"><strong>{getScheduleDateLabel(item.month, Number(item.day))}</strong><p>{item.value === '0.5' ? '0.5 смены' : '1 смена'}</p><small>{item.position || employee.position}</small></div>
               <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
@@ -826,16 +1011,35 @@ export function EmployeeStartPage() {
 
 
 
+  const tabTitles: Record<MobileTab, string> = {
+    overview: 'Главная',
+    tasks: 'Мои задачи',
+    checklists: 'Чек-листы',
+    hallPlan: 'План зала',
+    ttk: 'Номенклатура',
+    knowledge: 'База знаний',
+    schedule: 'График',
+  }
+
   return (
     <main className="employee-mobile">
       <header className="employee-mobile__header">
-        <div><div className="employee-mobile__header-name">Доброе утро,<br />{employee.name}!</div><p className="employee-mobile__header-sub">{employee.position} · {employee.restaurantName}</p></div>
+        {canGoBack ? (
+          <button type="button" className="employee-mobile__back-btn" onClick={goBack} aria-label="Назад"><ChevronLeftIcon /></button>
+        ) : null}
+        <div className={canGoBack ? 'employee-mobile__header-info employee-mobile__header-info--shifted' : 'employee-mobile__header-info'}>
+          <div className="employee-mobile__header-name">
+            {canGoBack ? (detail?.title || tabTitles[activeTab]) : employee.name}
+          </div>
+          <p className="employee-mobile__header-sub">{canGoBack ? (detail?.subtitle || employee.restaurantName) : `${employee.position} · ${employee.restaurantName}`}</p>
+        </div>
         <div className="employee-mobile__header-actions">
-          <button type="button" onClick={() => setShowNotifications(true)} aria-label="Уведомления"><BellIcon />{notifications.length ? <b>{notifications.length}</b> : null}</button>
+          {!canGoBack ? <button type="button" onClick={() => setShowNotifications(true)} aria-label="Уведомления"><BellIcon />{notifications.length ? <b>{notifications.length}</b> : null}</button> : null}
+          {!canGoBack ? <button type="button" onClick={() => { if (window.confirm('Выйти из аккаунта?')) logout() }} aria-label="Выйти"><LogoutIcon /></button> : null}
         </div>
       </header>
 
-      {notice ? <button className="employee-mobile__notice" type="button" onClick={() => setNotice('')}>{notice}</button> : null}
+      {notice ? <div className="employee-mobile__notice">{notice}</div> : null}
 
       <section className="employee-mobile__content">
         {activeTab === 'overview' && renderOverview()}
@@ -848,27 +1052,54 @@ export function EmployeeStartPage() {
       </section>
 
       <nav className="employee-mobile__bottom-nav employee-mobile__bottom-nav--compact" aria-label="Нижнее меню">
-        <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => setActiveTab('overview')}><OverviewIcon /><span>Главная</span></button>
-        <button type="button" className={activeTab === 'ttk' ? 'is-active' : ''} onClick={() => setActiveTab('ttk')}><BookIcon /><span>ТТК</span></button>
+        <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => { setActiveTab('overview'); setDetail(null); setNavHistory([]) }}><OverviewIcon /><span>Главная</span></button>
+        <button type="button" className={activeTab === 'ttk' ? 'is-active' : ''} onClick={() => { setActiveTab('ttk'); setDetail(null); setNavHistory([]) }}><BookIcon /><span>Номенклатура</span></button>
         <button type="button" className="employee-mobile__plus-button" onClick={() => setShowRequestModal(true)}><span><PlusIcon /></span><strong>Заявка</strong></button>
-        <button type="button" className={activeTab === 'knowledge' ? 'is-active' : ''} onClick={() => setActiveTab('knowledge')}><ChecklistIcon /><span>База знаний</span></button>
-        <button type="button" className={activeTab === 'schedule' ? 'is-active' : ''} onClick={() => setActiveTab('schedule')}><CalendarIcon /><span>График</span></button>
+        <button type="button" className={activeTab === 'knowledge' ? 'is-active' : ''} onClick={() => { setActiveTab('knowledge'); setDetail(null); setNavHistory([]) }}><ChecklistIcon /><span>База знаний</span></button>
+        <button type="button" className={activeTab === 'schedule' ? 'is-active' : ''} onClick={() => { setActiveTab('schedule'); setDetail(null); setNavHistory([]) }}><CalendarIcon /><span>График</span></button>
       </nav>
 
-      {selectedTable ? (
+      {selectedTable && !bookingForm ? (
         <div className="employee-mobile__sheet-backdrop" onClick={() => setSelectedTable(null)}>
           <div className="employee-mobile__sheet employee-mobile__hall-sheet" onClick={(event) => event.stopPropagation()}>
             <div className="employee-mobile__sheet-handle" />
             <div className="employee-mobile__hall-sheet-title"><div><strong>{selectedTable.name}</strong><p>{selectedHall?.name || 'Зал'} · {selectedTable.seats} места</p></div><button type="button" onClick={() => setSelectedTable(null)}>×</button></div>
-            {selectedTable.booking ? <div className="employee-mobile__booking-card"><small>Бронь на сегодня</small><strong>{selectedTable.booking.guestName}</strong><p>{selectedTable.booking.time} · {selectedTable.booking.guestsCount} гостей</p>{selectedTable.booking.phone ? <span>Телефон: {selectedTable.booking.phone}</span> : null}{selectedTable.booking.comment ? <span>Комментарий: {selectedTable.booking.comment}</span> : null}</div> : <div className="employee-mobile__booking-card"><small>Бронь на сегодня</small><strong>Брони нет</strong><p>{selectedTable.status === 'disabled' ? 'Стол недоступен' : 'Стол свободен для посадки'}</p></div>}
+            {selectedTable.booking
+              ? <div className="employee-mobile__booking-card"><small>Активная бронь</small><strong>{selectedTable.booking.guestName}</strong><p>{selectedTable.booking.time} · {selectedTable.booking.guestsCount} гостей</p>{selectedTable.booking.phone ? <span>Телефон: {selectedTable.booking.phone}</span> : null}{selectedTable.booking.comment ? <span>Комментарий: {selectedTable.booking.comment}</span> : null}</div>
+              : <div className="employee-mobile__booking-card"><small>Бронь</small><strong>Брони нет</strong><p>{selectedTable.status === 'disabled' ? 'Стол недоступен' : 'Стол свободен для посадки'}</p></div>}
             <div className="employee-mobile__hall-actions">
               {selectedTable.booking ? <>
-                <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus('arrived')}>Пришли</button>
-                <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus('seated')}>Гости сели</button>
+                {selectedTable.booking.status !== 'arrived' && selectedTable.booking.status !== 'seated' ? <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus('arrived')}>Пришли</button> : null}
+                {selectedTable.booking.status !== 'seated' ? <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus('seated')}>Гости сели</button> : null}
+                {selectedTable.booking.status === 'seated' || selectedTable.booking.status === 'arrived' ? <button type="button" className="employee-mobile__hall-actions-green" onClick={() => updateSelectedBookingStatus('cancelled')}>Гости ушли</button> : null}
                 {selectedTable.booking.phone ? <button type="button" onClick={() => { window.location.href = `tel:${selectedTable.booking?.phone}` }}>Позвонить</button> : null}
                 <button type="button" className="employee-mobile__hall-actions-red" onClick={() => updateSelectedBookingStatus('no_show')}>Не пришли</button>
-              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => { void seatWalkIn(selectedTable) }}>Посадить гостей</button>}
+              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => { void seatWalkIn(selectedTable) }}>Посадить без брони</button>}
+              <button type="button" className="employee-mobile__hall-actions-create" onClick={openBookingForm}>+ Создать бронь</button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {bookingForm ? (
+        <div className="employee-mobile__sheet-backdrop" onClick={() => setBookingForm(null)}>
+          <div className="employee-mobile__sheet employee-mobile__sheet--form" onClick={(e) => e.stopPropagation()}>
+            <div className="employee-mobile__sheet-handle" />
+            <div className="employee-mobile__hall-sheet-title">
+              <div><strong>Новая бронь</strong><p>{selectedTable?.name} · {selectedHall?.name}</p></div>
+              <button type="button" onClick={() => setBookingForm(null)}>×</button>
+            </div>
+            <form className="employee-mobile__booking-form" onSubmit={(e) => { e.preventDefault(); void saveBookingForm() }}>
+              <label><span>Имя гостя</span><input type="text" value={bookingForm.guestName} onChange={(e) => setBookingForm((f) => f && ({ ...f, guestName: e.target.value }))} placeholder="Иван Иванов" /></label>
+              <label><span>Телефон</span><input type="tel" value={bookingForm.phone} onChange={(e) => setBookingForm((f) => f && ({ ...f, phone: e.target.value }))} placeholder="+7 900 000-00-00" /></label>
+              <div className="employee-mobile__booking-form__row">
+                <label><span>Дата</span><input type="date" value={bookingForm.date} onChange={(e) => setBookingForm((f) => f && ({ ...f, date: e.target.value }))} /></label>
+                <label><span>Время</span><input type="time" value={bookingForm.time} onChange={(e) => setBookingForm((f) => f && ({ ...f, time: e.target.value }))} /></label>
+              </div>
+              <label><span>Количество гостей</span><input type="number" min="1" max="50" value={bookingForm.guestsCount} onChange={(e) => setBookingForm((f) => f && ({ ...f, guestsCount: Number(e.target.value) || 1 }))} /></label>
+              <label><span>Комментарий</span><input type="text" value={bookingForm.comment} onChange={(e) => setBookingForm((f) => f && ({ ...f, comment: e.target.value }))} placeholder="Необязательно" /></label>
+              <button type="submit" className="employee-mobile__hall-actions-create" disabled={bookingSaving}>{bookingSaving ? 'Сохраняю...' : 'Создать бронь'}</button>
+            </form>
           </div>
         </div>
       ) : null}
@@ -879,7 +1110,7 @@ export function EmployeeStartPage() {
             <div className="employee-mobile__sheet-handle" />
             <div className="employee-mobile__sheet-title"><strong>Уведомления</strong><p>Важные события по смене</p></div>
             <div className="employee-mobile__notification-list">
-              {notifications.length ? notifications.map((item) => <button key={`${item.title}-${item.text}`} type="button" onClick={() => { setShowNotifications(false); setActiveTab(item.target); setDetail(item.detail) }}><strong>{item.title}</strong><span>{item.text}</span></button>) : <p className="employee-mobile__empty">Новых уведомлений нет.</p>}
+              {notifications.length ? notifications.map((item) => <button key={`${item.title}-${item.text}`} type="button" onClick={() => { setShowNotifications(false); navigate(item.target, item.detail) }}><strong>{item.title}</strong><span>{item.text}</span></button>) : <p className="employee-mobile__empty">Новых уведомлений нет.</p>}
             </div>
           </div>
         </div>
@@ -895,6 +1126,137 @@ export function EmployeeStartPage() {
           </div>
         </div>
       ) : null}
+
+      {orderModal ? (
+        <div className="order-modal-backdrop" onClick={() => { setOrderModal(false); setOrderCart([]) }}>
+          <div className="order-modal" onClick={(e) => e.stopPropagation()}>
+
+            {/* Шаг 1: выбор стола */}
+            {orderStep === 'table' && <>
+              <div className="order-modal__header">
+                <strong>Выберите стол</strong>
+                <button type="button" onClick={() => { setOrderModal(false); setOrderCart([]) }}>×</button>
+              </div>
+              <div className="employee-mobile__order-halls" style={{ padding: '0 16px' }}>
+                {halls.map((hall) => (
+                  <button key={hall.id} type="button" className={`employee-mobile__order-hall-tab${orderHallId === hall.id ? ' is-active' : ''}`} onClick={() => setOrderHallId(hall.id)}>{hall.name}</button>
+                ))}
+              </div>
+              <div className="employee-mobile__order-tables" style={{ padding: '0 16px' }}>
+                {hallTables.filter((t) => t.hallId === (orderHallId || halls[0]?.id)).map((table) => (
+                  <button key={table.id} type="button" className={`employee-mobile__order-table employee-mobile__order-table--${table.status}`}
+                    onClick={() => { setOrderDraft((d) => ({ ...d, tableId: table.id, guestsCount: table.seats })); setOrderCategoryId(ttkGroups[0]?.id || 'all'); setOrderStep('order') }}>
+                    <strong>{table.name}</strong>
+                    <span>{table.seats} мест</span>
+                    <small>{table.status === 'free' ? 'Свободен' : table.status === 'reserved' ? 'Бронь' : table.status === 'occupied' ? 'Занят' : table.status === 'arrived' ? 'Пришли' : 'Недоступен'}</small>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="employee-mobile__order-skip" style={{ margin: '0 16px 16px' }} onClick={() => { setOrderDraft((d) => ({ ...d, tableId: '' })); setOrderCategoryId(ttkGroups[0]?.id || 'all'); setOrderStep('order') }}>Продолжить без стола</button>
+            </>}
+
+            {/* Шаг 2: меню + заказ на одном экране */}
+            {orderStep === 'order' && (() => {
+              const selectedGroup = ttkGroups.find((g) => g.id === orderCategoryId)
+              const categoryItems = !orderCategoryId || orderCategoryId === 'all'
+                ? ttkItems
+                : ttkItems.filter((it) => it.group === orderCategoryId || it.groupId === orderCategoryId || it.group === selectedGroup?.name)
+              const tableName = hallTables.find((t) => t.id === orderDraft.tableId)?.name || 'Без стола'
+              return <>
+                <div className="order-modal__header">
+                  <button type="button" className="employee-mobile__order-back" onClick={() => setOrderStep('table')}><ChevronLeftIcon /></button>
+                  <strong>{tableName}</strong>
+                  <button type="button" onClick={() => { setOrderModal(false); setOrderCart([]) }}>×</button>
+                </div>
+
+                {/* Категории */}
+                <div className="order-modal__cats">
+                  {ttkGroups.map((g) => (
+                    <button key={g.id} type="button" className={`order-modal__cat-tab${orderCategoryId === g.id ? ' is-active' : ''}`} onClick={() => setOrderCategoryId(g.id)}>{g.name}</button>
+                  ))}
+                  {ttkGroups.length === 0 && <button type="button" className="order-modal__cat-tab is-active">Все блюда</button>}
+                </div>
+
+                {/* Список блюд */}
+                <div className="order-modal__dishes">
+                  {categoryItems.map((item) => {
+                    const inCart = orderCart.find((c) => c.itemId === item.id)
+                    return (
+                      <div key={item.id} className="order-modal__dish">
+                        <div className="order-modal__dish__info">
+                          <strong>{item.name}</strong>
+                          <span>{item.price ? `${item.price} ₽` : '—'}{item.cookingTime ? ` · ${item.cookingTime}` : ''}</span>
+                        </div>
+                        <div className="order-modal__dish__qty">
+                          {inCart ? <>
+                            <button type="button" onClick={() => changeQty(item.id, -1)}>−</button>
+                            <span>{inCart.quantity}</span>
+                            <button type="button" onClick={() => changeQty(item.id, 1)}>+</button>
+                          </> : (
+                            <button type="button" className="order-modal__dish__add" onClick={() => addToCart(item)}>+</button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {categoryItems.length === 0 && <p className="employee-mobile__empty" style={{ padding: 16 }}>Нет блюд в этой категории.</p>}
+                </div>
+
+                {/* Нижняя панель — корзина */}
+                <div className="order-modal__cart-panel">
+                  {orderCartOpen && orderCart.length > 0 && (
+                    <div className="order-modal__cart-list">
+                      {orderCart.map((ci) => (
+                        <SwipeableCartItem
+                          key={ci.itemId}
+                          item={ci}
+                          onDelete={() => removeFromCart(ci.itemId)}
+                          onComment={() => { setCommentTarget(ci.itemId); setCommentText(ci.comment || '') }}
+                          onQty={(d) => changeQty(ci.itemId, d)}
+                        />
+                      ))}
+                      <div className="order-modal__cart-fields">
+                        <label><span>Гостей</span><input type="number" min="1" max="50" value={orderDraft.guestsCount} onChange={(e) => setOrderDraft((d) => ({ ...d, guestsCount: Number(e.target.value) || 1 }))} /></label>
+                        <label><span>Комментарий</span><input type="text" value={orderDraft.comment} onChange={(e) => setOrderDraft((d) => ({ ...d, comment: e.target.value }))} placeholder="Пожелания..." /></label>
+                      </div>
+                    </div>
+                  )}
+                  <div className="order-modal__cart-bar" onClick={() => cartCount() > 0 && setOrderCartOpen((v) => !v)}>
+                    <div className="order-modal__cart-bar__left">
+                      {cartCount() > 0
+                        ? <><span className="order-modal__cart-count">{cartCount()}</span><span>позиций · {cartTotal()} ₽</span></>
+                        : <span style={{ color: '#9ca3af' }}>Заказ пуст</span>}
+                    </div>
+                    <button
+                      type="button"
+                      className="order-modal__send-btn"
+                      disabled={orderSaving || orderCart.length === 0}
+                      onClick={(e) => { e.stopPropagation(); void saveOrder() }}
+                    >
+                      {orderSaving ? '...' : 'Отправить'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            })()}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Модалка комментария к позиции */}
+      {commentTarget && (
+        <div className="order-modal-backdrop" onClick={() => setCommentTarget(null)}>
+          <div className="order-comment-modal" onClick={(e) => e.stopPropagation()}>
+            <strong>Комментарий к блюду</strong>
+            <p>{orderCart.find((c) => c.itemId === commentTarget)?.name}</p>
+            <input type="text" value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Без лука, средняя прожарка..." autoFocus />
+            <button type="button" onClick={() => {
+              setOrderCart((prev) => prev.map((c) => c.itemId === commentTarget ? { ...c, comment: commentText.trim() } : c))
+              setCommentTarget(null)
+            }}>Сохранить</button>
+          </div>
+        </div>
+      )}
 
       {showRequestModal ? (
         <div className="employee-mobile__sheet-backdrop" onClick={() => setShowRequestModal(false)}>
