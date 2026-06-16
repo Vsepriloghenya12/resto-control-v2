@@ -7,6 +7,7 @@ import { EyeIcon, LockIcon, MailIcon } from '../../shared/ui/Icon'
 export function LoginForm() {
   const { login } = useSession()
   const [form, setForm] = useState({ login: '', password: '', remember: true })
+  const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,9 +44,10 @@ export function LoginForm() {
       <Input
         id="password"
         label="Пароль"
-        type="password"
+        type={showPassword ? 'text' : 'password'}
         icon={<LockIcon />}
         rightSlot={<EyeIcon />}
+        onRightSlotClick={() => setShowPassword((v) => !v)}
         placeholder="Введите пароль"
         autoComplete="current-password"
         value={form.password}

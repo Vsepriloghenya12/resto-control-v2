@@ -79,6 +79,20 @@
   padding-right: 16px;
 }
 
+.rc-input-wrap__right--btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding-right: 16px;
+  color: #8e929c;
+  display: grid;
+  place-items: center;
+}
+
+.rc-input-wrap__right--btn:hover {
+  color: #374151;
+}
+
 .rc-input-wrap svg {
   width: 24px;
   height: 24px;

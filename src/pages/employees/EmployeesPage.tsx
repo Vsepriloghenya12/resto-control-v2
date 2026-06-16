@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { AlertCircleIcon, ChecklistIcon, SearchIcon, TeamIcon, UserIcon } from '../../shared/ui/Icon'
+import { AlertCircleIcon, ChecklistIcon, EyeIcon, SearchIcon, TeamIcon, UserIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 
 type EmployeeStatus = 'active' | 'fired' | 'blocked'
@@ -263,6 +263,7 @@ export function EmployeesPage() {
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<string>('')
   const [form, setForm] = useState(emptyForm)
+  const [showEmployeePassword, setShowEmployeePassword] = useState(false)
   const [scheduleMonth, setScheduleMonth] = useState(getCurrentMonth())
   const [schedules, setSchedules] = useState<StaffSchedule[]>([])
   const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(emptyScheduleForm)
@@ -906,7 +907,7 @@ export function EmployeesPage() {
           <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positions.filter((item) => item !== 'Все').map((item) => <option key={item}>{item}</option>)}</select></label>
           <label><span>Смена</span><select value={form.shiftStatus} onChange={(e) => setForm((v) => ({ ...v, shiftStatus: e.target.value as ShiftStatus }))}><option value="closed">Смена не открыта</option><option value="open">Смена открыта</option></select></label>
           <label><span>Аттестация, %</span><input value={form.attestationPercent} onChange={(e) => setForm((v) => ({ ...v, attestationPercent: Number(e.target.value || 0) }))} type="number" min="0" max="100" /></label>
-          {!selectedEmployee ? <label><span>Временный пароль</span><input value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type="password" /></label> : null}
+          {!selectedEmployee ? <label><span>Временный пароль</span><span style={{position:'relative',display:'flex',alignItems:'center'}}><input style={{flex:1,paddingRight:'40px'}} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} /><button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{position:'absolute',right:'10px',background:'none',border:'none',cursor:'pointer',color:'#8e929c',display:'flex',alignItems:'center'}}><EyeIcon style={{width:'20px',height:'20px'}} /></button></span></label> : null}
           <button className="employees-create-button" type="button" onClick={saveEmployee}>{selectedEmployee ? 'Сохранить карточку' : 'Создать сотрудника'}</button>
           {selectedEmployee ? <button className="employees-cancel-button" type="button" onClick={fireEmployee}>Удалить сотрудника</button> : <button className="employees-cancel-button" type="button" onClick={startCreate}>Очистить</button>}
         </aside>
