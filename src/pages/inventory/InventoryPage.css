@@ -322,6 +322,71 @@
 .inv-nom-search input { flex: 1; border: none; background: transparent; font: inherit; font-size: 14px; color: #111; outline: none; }
 .inv-nom-search input::placeholder { color: #b0b5bf; }
 
+/* Nomenclature category tabs */
+.inv-nom-cats {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 2px solid #f3f4f6;
+  flex-shrink: 0;
+}
+.inv-nom-cats::-webkit-scrollbar { height: 0; }
+
+.inv-nom-cat {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.inv-nom-cat.is-active { color: #111827; border-bottom-color: #111827; }
+.inv-nom-cat span {
+  font-size: 11px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 20px;
+  padding: 0 6px;
+  min-width: 20px;
+  text-align: center;
+}
+.inv-nom-cat.is-active span { background: #111827; color: #fff; }
+
+/* Category badge in table */
+.inv-cat-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Description cell */
+.inv-desc-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #6b7280; font-size: 12px; }
+
+/* Row action buttons */
+.inv-row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+
+/* Edit button */
+.inv-edit-btn {
+  width: 28px; height: 28px;
+  border: 1px solid #e5e7eb; border-radius: 8px;
+  background: #fff; font-size: 13px; color: #6b7280; cursor: pointer;
+  display: grid; place-items: center;
+}
+.inv-edit-btn:hover { background: #f0f9ff; border-color: #93c5fd; color: #2563eb; }
+
 /* Card actions group */
 .inv-card__actions { display: flex; align-items: center; gap: 10px; }
 

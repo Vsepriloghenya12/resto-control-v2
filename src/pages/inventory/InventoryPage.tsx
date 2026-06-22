@@ -6,6 +6,7 @@ type MainTab = 'assign' | 'submitted' | 'nomenclature'
 type SectionKey = 'bar' | 'kitchen' | 'household' | 'dishes'
 type InventoryProduct = { id: string; name: string; unit: string; category: string; section: string; minBalance?: number; active?: boolean; updatedAt?: string }
 type InventoryAssignment = { id: string; title?: string; template?: string; section: string; assignedPosition?: string; assignee?: string; dueDate?: string; date?: string; status: string; rowsCount?: number }
+type MenuItem = { id: string; name: string; unit: string; category: string; price?: number; description?: string; active?: boolean }
 
 const sectionNames: Record<SectionKey, string> = { bar: 'Бар', kitchen: 'Кухня', household: 'Хозтовары', dishes: 'Посуда' }
 const sections: { id: SectionKey; title: string }[] = [
@@ -42,30 +43,117 @@ export function InventoryPage() {
   const [assignDate, setAssignDate] = useState(new Date().toISOString().slice(0, 10))
   const [assignTitle, setAssignTitle] = useState('Вечерняя инвентаризация')
 
-  // Номенклатура
+  // ── Номенклатура (меню / ТТК) ──
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [nomQuery, setNomQuery] = useState('')
-  const [nomSection, setNomSection] = useState<SectionKey | 'all'>('all')
+  const [nomCat, setNomCat] = useState('all')
 
-  // Добавить товар вручную
-  const [addOpen, setAddOpen] = useState(false)
-  const [addName, setAddName] = useState('')
-  const [addUnit, setAddUnit] = useState('шт')
-  const [addCategory, setAddCategory] = useState('')
-  const [addSection, setAddSection] = useState<SectionKey>('bar')
-  const [addSaving, setAddSaving] = useState(false)
+  // Добавить / редактировать позицию
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<MenuItem | null>(null) // null = новый
+  const [editName, setEditName] = useState('')
+  const [editUnit, setEditUnit] = useState('шт')
+  const [editCategory, setEditCategory] = useState('')
+  const [editPrice, setEditPrice] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
 
-  async function doAddProduct() {
-    if (!addName.trim()) return
-    setAddSaving(true)
-    const created = await api.create<InventoryProduct>('inventory-products', {
-      name: addName.trim(), unit: addUnit.trim() || 'шт',
-      category: addCategory.trim() || 'Без категории',
-      section: sectionNames[addSection], minBalance: 0, active: true,
+  function openEdit(item?: MenuItem) {
+    setEditTarget(item ?? null)
+    setEditName(item?.name ?? '')
+    setEditUnit(item?.unit ?? 'шт')
+    setEditCategory(item?.category ?? '')
+    setEditPrice(item?.price != null ? String(item.price) : '')
+    setEditDesc(item?.description ?? '')
+    setEditOpen(true)
+  }
+
+  async function doSaveEdit() {
+    if (!editName.trim()) return
+    setEditSaving(true)
+    const payload = {
+      name: editName.trim(), unit: editUnit.trim() || 'шт',
+      category: editCategory.trim() || 'Без категории',
+      price: editPrice ? parseFloat(editPrice) : undefined,
+      description: editDesc.trim() || undefined,
+      active: true,
+    }
+    if (editTarget) {
+      const updated = await api.update<MenuItem>('menu-items', editTarget.id, payload)
+      setMenuItems(prev => prev.map(m => m.id === editTarget.id ? updated : m))
+    } else {
+      const created = await api.create<MenuItem>('menu-items', payload)
+      setMenuItems(prev => [...prev, created])
+    }
+    setEditOpen(false); setEditSaving(false)
+    showNotice(editTarget ? 'Позиция обновлена.' : 'Позиция добавлена.')
+  }
+
+  async function deleteMenuItem(id: string) {
+    await api.update<MenuItem>('menu-items', id, { active: false })
+    setMenuItems(prev => prev.filter(m => m.id !== id))
+  }
+
+  // iiko импорт для меню (отдельный от инвентарного)
+  const [menuIikoOpen, setMenuIikoOpen] = useState(false)
+  const [menuIikoLoading, setMenuIikoLoading] = useState(false)
+  const [menuIikoError, setMenuIikoError] = useState('')
+  const [menuIikoItems, setMenuIikoItems] = useState<{ name: string; unit: string; category: string }[]>([])
+  const [menuIikoCat, setMenuIikoCat] = useState('all')
+  const [menuIikoChecked, setMenuIikoChecked] = useState<Set<number>>(new Set())
+  const [menuIikoSearch, setMenuIikoSearch] = useState('')
+  const [menuIikoImporting, setMenuIikoImporting] = useState(false)
+
+  async function openMenuIiko() {
+    setMenuIikoOpen(true); setMenuIikoLoading(true); setMenuIikoError('')
+    setMenuIikoItems([]); setMenuIikoChecked(new Set()); setMenuIikoSearch(''); setMenuIikoCat('all')
+    try {
+      const resp = await fetch('/api/iiko/inventory?filter=prepared', { credentials: 'include' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки')
+      setMenuIikoItems(data.items)
+    } catch (e) { setMenuIikoError(e instanceof Error ? e.message : 'Ошибка') }
+    finally { setMenuIikoLoading(false) }
+  }
+
+  const menuIikoCats = useMemo(() =>
+    Array.from(new Set(menuIikoItems.map(i => i.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ru'))
+  , [menuIikoItems])
+
+  const menuIikoVisible = useMemo(() => {
+    const q = menuIikoSearch.trim().toLowerCase()
+    return menuIikoItems.map((item, idx) => ({ item, idx })).filter(({ item }) => {
+      if (menuIikoCat !== 'all' && item.category !== menuIikoCat) return false
+      if (q && !item.name.toLowerCase().includes(q)) return false
+      return true
     })
-    setProducts(prev => [...prev, created])
-    setAddOpen(false); setAddName(''); setAddUnit('шт'); setAddCategory('')
-    setAddSaving(false)
-    showNotice('Товар добавлен.')
+  }, [menuIikoItems, menuIikoSearch, menuIikoCat])
+
+  const menuIikoAllChecked = menuIikoVisible.length > 0 && menuIikoVisible.every(({ idx }) => menuIikoChecked.has(idx))
+
+  function menuIikoToggle(idx: number) {
+    setMenuIikoChecked(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
+  }
+  function menuIikoSelectAll(checked: boolean) {
+    setMenuIikoChecked(prev => { const n = new Set(prev); menuIikoVisible.forEach(({ idx }) => checked ? n.add(idx) : n.delete(idx)); return n })
+  }
+
+  async function doMenuIikoImport() {
+    setMenuIikoImporting(true)
+    let count = 0
+    for (const idx of menuIikoChecked) {
+      const item = menuIikoItems[idx]
+      if (!item) continue
+      const created = await api.create<MenuItem>('menu-items', {
+        name: item.name, unit: item.unit,
+        category: item.category || 'Без категории',
+        active: true,
+      })
+      setMenuItems(prev => [...prev, created])
+      count++
+    }
+    setMenuIikoImporting(false); setMenuIikoOpen(false)
+    showNotice(`Импортировано ${count} позиций из iiko.`)
   }
 
   // iiko import
@@ -83,7 +171,22 @@ export function InventoryPage() {
   useEffect(() => {
     void api.list<InventoryProduct>('inventory-products').then(r => setProducts(r.items.filter(p => p.active !== false)))
     void api.list<InventoryAssignment>('inventory-assignments').then(r => setAssignments(r.items))
+    void api.list<MenuItem>('menu-items').then(r => setMenuItems(r.items.filter(m => m.active !== false)))
   }, [])
+
+  // Категории меню для фильтрации
+  const menuCats = useMemo(() =>
+    Array.from(new Set(menuItems.map(m => m.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ru'))
+  , [menuItems])
+
+  const nomVisible = useMemo(() => {
+    const q = nomQuery.trim().toLowerCase()
+    return menuItems.filter(m => {
+      if (nomCat !== 'all' && m.category !== nomCat) return false
+      if (q && !m.name.toLowerCase().includes(q) && !m.category.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [menuItems, nomQuery, nomCat])
 
   // Назначить
   async function doAssign() {
@@ -195,7 +298,7 @@ export function InventoryPage() {
         </button>
         <button type="button" className={`inv-tab${tab === 'nomenclature' ? ' is-active' : ''}`} onClick={() => setTab('nomenclature')}>
           Номенклатура
-          {products.length > 0 && <span className="inv-tab__badge">{products.length}</span>}
+          {menuItems.length > 0 && <span className="inv-tab__badge">{menuItems.length}</span>}
         </button>
       </div>
 
@@ -297,45 +400,67 @@ export function InventoryPage() {
         </div>
       )}
 
-      {/* ── Номенклатура ── */}
+      {/* ── Номенклатура (меню / ТТК) ── */}
       {tab === 'nomenclature' && (
         <div className="inv-content">
           <div className="inv-card">
+            {/* Шапка */}
             <div className="inv-card__header">
-              <h3>Номенклатура <span className="inv-card__count">{nomProducts.length}</span></h3>
+              <h3>Меню / ТТК <span className="inv-card__count">{nomVisible.length} из {menuItems.length}</span></h3>
               <div className="inv-card__actions">
-                <button type="button" className="inv-add-btn" onClick={() => setAddOpen(true)}>+ Добавить товар</button>
-                <button type="button" className="inv-iiko-load-btn" onClick={() => void openIikoImport()}>↓ Загрузить из iiko</button>
+                <button type="button" className="inv-add-btn" onClick={() => openEdit()}>+ Добавить</button>
+                <button type="button" className="inv-iiko-load-btn" onClick={() => void openMenuIiko()}>↓ Из iiko</button>
               </div>
             </div>
 
+            {/* Категориальные табы */}
+            <div className="inv-nom-cats">
+              <button type="button" className={`inv-nom-cat${nomCat === 'all' ? ' is-active' : ''}`} onClick={() => setNomCat('all')}>
+                Все <span>{menuItems.length}</span>
+              </button>
+              {menuCats.map(cat => (
+                <button key={cat} type="button" className={`inv-nom-cat${nomCat === cat ? ' is-active' : ''}`} onClick={() => setNomCat(cat)}>
+                  {cat} <span>{menuItems.filter(m => m.category === cat).length}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Поиск */}
             <div className="inv-nom-filters">
               <div className="inv-nom-search">
                 <SearchIcon />
-                <input value={nomQuery} onChange={e => setNomQuery(e.target.value)} placeholder="Поиск по названию..." />
-              </div>
-              <div className="inv-section-btns">
-                <button type="button" className={`inv-section-btn${nomSection === 'all' ? ' is-active' : ''}`} onClick={() => setNomSection('all')}>Все</button>
-                {sections.map(s => (
-                  <button key={s.id} type="button"
-                    className={`inv-section-btn${nomSection === s.id ? ' is-active' : ''}`}
-                    onClick={() => setNomSection(s.id)}>{s.title}</button>
-                ))}
+                <input value={nomQuery} onChange={e => setNomQuery(e.target.value)} placeholder="Поиск по названию или категории..." />
               </div>
             </div>
 
-            {nomProducts.length === 0
-              ? <p className="inv-empty">Позиций не найдено</p>
+            {/* Таблица */}
+            {nomVisible.length === 0
+              ? <p className="inv-empty">{menuItems.length === 0 ? 'Загрузите меню из iiko или добавьте позиции вручную' : 'Ничего не найдено'}</p>
               : <table className="inv-table">
-                  <thead><tr><th>Название</th><th>Ед.</th><th>Категория</th><th>Подразделение</th><th></th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Название</th>
+                      <th>Категория</th>
+                      <th>Ед.</th>
+                      <th>Цена</th>
+                      <th>Описание</th>
+                      <th></th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {nomProducts.map(p => (
-                      <tr key={p.id}>
-                        <td>{p.name}</td>
-                        <td>{p.unit}</td>
-                        <td>{p.category}</td>
-                        <td>{p.section}</td>
-                        <td><button type="button" className="inv-del-btn" onClick={() => void deleteProduct(p.id)}>✕</button></td>
+                    {nomVisible.map(m => (
+                      <tr key={m.id}>
+                        <td><strong>{m.name}</strong></td>
+                        <td><span className="inv-cat-badge">{m.category}</span></td>
+                        <td>{m.unit}</td>
+                        <td>{m.price != null ? `${m.price} ₽` : <span className="inv-cell-dim">—</span>}</td>
+                        <td className="inv-desc-cell">{m.description || <span className="inv-cell-dim">—</span>}</td>
+                        <td>
+                          <div className="inv-row-actions">
+                            <button type="button" className="inv-edit-btn" onClick={() => openEdit(m)}>✎</button>
+                            <button type="button" className="inv-del-btn" onClick={() => void deleteMenuItem(m.id)}>✕</button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -345,46 +470,120 @@ export function InventoryPage() {
         </div>
       )}
 
-      {/* Добавить товар вручную */}
-      {addOpen && (
-        <div className="inv-iiko-backdrop" onMouseDown={() => !addSaving && setAddOpen(false)}>
+      {/* Редактировать / добавить позицию меню */}
+      {editOpen && (
+        <div className="inv-iiko-backdrop" onMouseDown={() => !editSaving && setEditOpen(false)}>
           <div className="inv-add-modal" onMouseDown={e => e.stopPropagation()}>
             <div className="inv-add-modal__header">
-              <strong>Добавить товар</strong>
-              <button type="button" className="inv-iiko-close" onClick={() => setAddOpen(false)}>✕</button>
+              <strong>{editTarget ? 'Редактировать позицию' : 'Добавить позицию'}</strong>
+              <button type="button" className="inv-iiko-close" onClick={() => setEditOpen(false)}>✕</button>
             </div>
             <div className="inv-add-modal__body">
               <label className="inv-field">
                 <span>Название *</span>
-                <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="Название товара" autoFocus />
+                <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Название блюда или товара" autoFocus />
+              </label>
+              <label className="inv-field">
+                <span>Категория</span>
+                <input value={editCategory} onChange={e => setEditCategory(e.target.value)} placeholder="Например: Горячие блюда" list="edit-cats" />
+                <datalist id="edit-cats">
+                  {menuCats.map(c => <option key={c} value={c} />)}
+                </datalist>
               </label>
               <div className="inv-add-row">
                 <label className="inv-field">
                   <span>Единица измерения</span>
-                  <input value={addUnit} onChange={e => setAddUnit(e.target.value)} placeholder="шт" />
+                  <input value={editUnit} onChange={e => setEditUnit(e.target.value)} placeholder="шт" />
                 </label>
                 <label className="inv-field">
-                  <span>Категория</span>
-                  <input value={addCategory} onChange={e => setAddCategory(e.target.value)} placeholder="Например: Алкоголь" />
+                  <span>Цена <em className="inv-field__opt">₽, необязательно</em></span>
+                  <input type="number" min="0" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="0.00" />
                 </label>
               </div>
               <label className="inv-field">
-                <span>Подразделение</span>
-                <div className="inv-section-btns">
-                  {sections.map(s => (
-                    <button key={s.id} type="button"
-                      className={`inv-section-btn${addSection === s.id ? ' is-active' : ''}`}
-                      onClick={() => setAddSection(s.id)}>{s.title}</button>
-                  ))}
-                </div>
+                <span>Описание <em className="inv-field__opt">необязательно</em></span>
+                <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Краткое описание блюда" />
               </label>
             </div>
             <div className="inv-add-modal__footer">
-              <button type="button" className="inv-iiko-cancel" onClick={() => setAddOpen(false)}>Отмена</button>
-              <button type="button" className="inv-iiko-import" disabled={!addName.trim() || addSaving} onClick={() => void doAddProduct()}>
-                {addSaving ? 'Сохраняю...' : 'Добавить'}
+              <button type="button" className="inv-iiko-cancel" onClick={() => setEditOpen(false)}>Отмена</button>
+              <button type="button" className="inv-iiko-import" disabled={!editName.trim() || editSaving} onClick={() => void doSaveEdit()}>
+                {editSaving ? 'Сохраняю...' : editTarget ? 'Сохранить' : 'Добавить'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* iiko импорт для меню (блюда PREPARED) */}
+      {menuIikoOpen && (
+        <div className="inv-iiko-backdrop" onMouseDown={() => !menuIikoImporting && setMenuIikoOpen(false)}>
+          <div className="inv-iiko-modal" onMouseDown={e => e.stopPropagation()}>
+            <div className="inv-iiko-modal__header">
+              <div>
+                <strong>Меню из iiko</strong>
+                {!menuIikoLoading && !menuIikoError && <span>{menuIikoItems.length} блюд · выбрано {menuIikoChecked.size}</span>}
+              </div>
+              {!menuIikoImporting && <button type="button" className="inv-iiko-close" onClick={() => setMenuIikoOpen(false)}>✕</button>}
+            </div>
+
+            {menuIikoLoading && <div className="inv-iiko-state">Загружаю меню из iiko...</div>}
+            {menuIikoError && <div className="inv-iiko-state inv-iiko-state--error">⚠ {menuIikoError}<br /><small>Проверьте настройки в разделе «Интеграции»</small></div>}
+            {menuIikoImporting && <div className="inv-iiko-state">Импортирую {menuIikoChecked.size} позиций...</div>}
+
+            {!menuIikoLoading && !menuIikoError && !menuIikoImporting && (
+              <>
+                <div className="inv-iiko-sec-tabs">
+                  <button type="button" className={`inv-iiko-sec-tab${menuIikoCat === 'all' ? ' is-active' : ''}`} onClick={() => setMenuIikoCat('all')}>
+                    Все <span className="inv-iiko-sec-tab__cnt inv-iiko-sec-tab__cnt--gray">{menuIikoItems.length}</span>
+                  </button>
+                  {menuIikoCats.map(cat => (
+                    <button key={cat} type="button" className={`inv-iiko-sec-tab${menuIikoCat === cat ? ' is-active' : ''}`} onClick={() => setMenuIikoCat(cat)}>{cat}</button>
+                  ))}
+                </div>
+
+                <div className="inv-iiko-controls">
+                  <div className="inv-iiko-search">
+                    <SearchIcon />
+                    <input placeholder="Поиск..." value={menuIikoSearch} onChange={e => setMenuIikoSearch(e.target.value)} autoFocus />
+                  </div>
+                  <label className="inv-iiko-selectall-label">
+                    <input type="checkbox" checked={menuIikoAllChecked} onChange={e => menuIikoSelectAll(e.target.checked)} />
+                    <span>Выбрать все ({menuIikoVisible.length})</span>
+                  </label>
+                </div>
+
+                <div className="inv-iiko-list-head">
+                  <span></span><span>Название</span><span>Ед.</span>
+                </div>
+
+                <div className="inv-iiko-list">
+                  {menuIikoVisible.length === 0 && <div className="inv-iiko-empty">Ничего не найдено</div>}
+                  {menuIikoVisible.map(({ item, idx }) => {
+                    const checked = menuIikoChecked.has(idx)
+                    return (
+                      <label key={idx} className={`inv-iiko-row inv-iiko-row--check${checked ? ' is-checked' : ''}`}>
+                        <input type="checkbox" checked={checked} onChange={() => menuIikoToggle(idx)} />
+                        <div className="inv-iiko-row__info">
+                          <span className="inv-iiko-row__name">{item.name}</span>
+                          {item.category && menuIikoCat === 'all' && <span className="inv-iiko-row__cat">{item.category}</span>}
+                        </div>
+                        <span className="inv-iiko-row__unit">{item.unit}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+
+                <div className="inv-iiko-footer">
+                  <div className="inv-iiko-footer__actions">
+                    <button type="button" className="inv-iiko-cancel" onClick={() => setMenuIikoOpen(false)}>Отмена</button>
+                    <button type="button" className="inv-iiko-import" disabled={menuIikoChecked.size === 0} onClick={() => void doMenuIikoImport()}>
+                      Импортировать {menuIikoChecked.size} позиций
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

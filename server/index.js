@@ -1461,7 +1461,7 @@ async function handleIiko(req, res, state, pathname, auth) {
         groupMap.set(id, { name, parentId })
       } else if (type === 'GOODS' || type === 'PREPARED') {
         const unit = get('mainUnit') || 'шт'
-        productMap.set(id, { name, unit, parentId })
+        productMap.set(id, { name, unit, parentId, type })
       }
     }
 
@@ -1477,9 +1477,13 @@ async function handleIiko(req, res, state, pathname, auth) {
 
     console.log('[iiko/inventory] groups:', Array.from(groupMap.values()).map(g => g.name).slice(0, 20))
 
+    const filter = url.searchParams.get('filter') // 'prepared' | 'goods' | null (both)
+
     let items = []
 
     for (const [, product] of productMap) {
+      if (filter === 'prepared' && product.type !== 'PREPARED') continue
+      if (filter === 'goods' && product.type !== 'GOODS') continue
       items.push({ name: product.name, unit: product.unit, category: resolveGroup(product.parentId) })
     }
 
