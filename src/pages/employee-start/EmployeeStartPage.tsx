@@ -22,7 +22,23 @@ import {
 } from '../../shared/ui/Icon'
 import './EmployeeStartPage.css'
 
-type MobileTab = 'overview' | 'tasks' | 'checklists' | 'hallPlan' | 'ttk' | 'knowledge' | 'schedule'
+type MobileTab = 'overview' | 'tasks' | 'checklists' | 'hallPlan' | 'ttk' | 'knowledge' | 'schedule' | 'orders'
+
+type Order = {
+  id: string
+  restaurantId: string
+  tableId: string | null
+  tableName: string
+  hallId: string | null
+  guestsCount: number
+  comment: string
+  items: OrderCartItem[]
+  total: number
+  status: 'new' | 'in_progress' | 'done' | 'cancelled'
+  createdByName: string
+  createdByPosition: string
+  createdAt: string
+}
 type DetailKind = 'task' | 'checklist' | 'inventory' | 'notification' | 'knowledge' | 'guest' | 'support' | 'ttk' | 'stopList' | 'schedule' | null
 type HallStatus = 'free' | 'reserved' | 'arrived' | 'occupied' | 'disabled'
 type HallMode = 'tables' | 'bookings'
@@ -291,6 +307,8 @@ export function EmployeeStartPage() {
   const [orderCartOpen, setOrderCartOpen] = useState(false)
   const [commentTarget, setCommentTarget] = useState<string | null>(null)
   const [commentText, setCommentText] = useState('')
+  const [orders, setOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
 
   function cartTotal() { return orderCart.reduce((sum, i) => sum + i.price * i.quantity, 0) }
   function cartCount() { return orderCart.reduce((sum, i) => sum + i.quantity, 0) }
@@ -428,9 +446,20 @@ export function EmployeeStartPage() {
     }
   }
 
+  async function loadOrders() {
+    setOrdersLoading(true)
+    try {
+      const result = await api.list<Order>('orders')
+      setOrders(result.items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+    } catch { /* ignore */ } finally {
+      setOrdersLoading(false)
+    }
+  }
+
   useEffect(() => {
     void loadData().catch(() => showNotice('Не удалось загрузить данные смены.'))
     void loadHallPlan().catch(() => undefined)
+    void loadOrders()
   }, [])
 
   function taskDetail(task: Task): DetailState {
@@ -672,6 +701,7 @@ export function EmployeeStartPage() {
       setOrderModal(false)
       setOrderCart([])
       setOrderDraft({ tableId: '', guestsCount: 2, comment: '' })
+      void loadOrders()
     } finally {
       setOrderSaving(false)
     }
@@ -1011,6 +1041,76 @@ export function EmployeeStartPage() {
 
 
 
+  function renderOrders() {
+    const orderStatusLabel: Record<Order['status'], string> = {
+      new: 'Новый',
+      in_progress: 'Готовится',
+      done: 'Выполнен',
+      cancelled: 'Отменён',
+    }
+    const orderStatusColor: Record<Order['status'], string> = {
+      new: 'orange',
+      in_progress: 'blue',
+      done: 'green',
+      cancelled: 'gray',
+    }
+
+    async function updateOrderStatus(orderId: string, status: Order['status']) {
+      try {
+        await api.update('orders', orderId, { status })
+        setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o))
+      } catch {
+        showNotice('Не удалось обновить статус.')
+      }
+    }
+
+    return (
+      <section>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Заказы</h2>
+          <button type="button" style={{ border: 'none', background: 'none', color: '#2563eb', fontWeight: 700, fontSize: 14, cursor: 'pointer' }} onClick={() => void loadOrders()}>Обновить</button>
+        </div>
+        {ordersLoading && <p className="employee-mobile__empty">Загрузка...</p>}
+        {!ordersLoading && orders.length === 0 && <p className="employee-mobile__empty">Заказов пока нет.</p>}
+        <div className="employee-mobile__plain-list">
+          {orders.map((order) => (
+            <div key={order.id} className="employee-mobile__list-card" style={{ display: 'block', padding: 0, overflow: 'hidden' }}>
+              <div className={`employee-mobile__list-card__accent employee-mobile__list-card__accent--${orderStatusColor[order.status]}`} style={{ width: '100%', height: 3 }} />
+              <div style={{ padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <strong style={{ fontSize: 15, fontWeight: 700 }}>{order.tableName}</strong>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'done' ? '#16a34a' : order.status === 'cancelled' ? '#9ca3af' : order.status === 'in_progress' ? '#2563eb' : '#ea580c' }}>{orderStatusLabel[order.status]}</span>
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+                  {order.guestsCount} гостей · {order.total} ₽ · {new Date(order.createdAt).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}
+                  {order.createdByName ? ` · ${order.createdByName}` : ''}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 8 }}>
+                  {order.items.map((item, i) => (
+                    <div key={i} style={{ fontSize: 13, color: '#374151' }}>
+                      {item.name} × {item.quantity}
+                      {item.comment ? <span style={{ color: '#2563eb' }}> — {item.comment}</span> : null}
+                    </div>
+                  ))}
+                </div>
+                {order.comment ? <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>💬 {order.comment}</div> : null}
+                {order.status === 'new' && (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" onClick={() => void updateOrderStatus(order.id, 'in_progress')} style={{ flex: 1, height: 36, border: 'none', borderRadius: 10, background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Готовится</button>
+                    <button type="button" onClick={() => void updateOrderStatus(order.id, 'cancelled')} style={{ flex: 1, height: 36, border: '1px solid #fecaca', borderRadius: 10, background: '#fff5f5', color: '#dc2626', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Отменить</button>
+                  </div>
+                )}
+                {order.status === 'in_progress' && (
+                  <button type="button" onClick={() => void updateOrderStatus(order.id, 'done')} style={{ width: '100%', height: 36, border: 'none', borderRadius: 10, background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Выполнен</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
   const tabTitles: Record<MobileTab, string> = {
     overview: 'Главная',
     tasks: 'Мои задачи',
@@ -1019,6 +1119,7 @@ export function EmployeeStartPage() {
     ttk: 'Номенклатура',
     knowledge: 'База знаний',
     schedule: 'График',
+    orders: 'Заказы',
   }
 
   return (
@@ -1049,14 +1150,15 @@ export function EmployeeStartPage() {
         {activeTab === 'ttk' && renderTtk()}
         {activeTab === 'knowledge' && renderKnowledge()}
         {activeTab === 'schedule' && renderSchedule()}
+        {activeTab === 'orders' && renderOrders()}
       </section>
 
       <nav className="employee-mobile__bottom-nav employee-mobile__bottom-nav--compact" aria-label="Нижнее меню">
         <button type="button" className={activeTab === 'overview' ? 'is-active' : ''} onClick={() => { setActiveTab('overview'); setDetail(null); setNavHistory([]) }}><OverviewIcon /><span>Главная</span></button>
-        <button type="button" className={activeTab === 'ttk' ? 'is-active' : ''} onClick={() => { setActiveTab('ttk'); setDetail(null); setNavHistory([]) }}><BookIcon /><span>Номенклатура</span></button>
-        <button type="button" className="employee-mobile__plus-button" onClick={() => setShowRequestModal(true)}><span><PlusIcon /></span><strong>Заявка</strong></button>
-        <button type="button" className={activeTab === 'knowledge' ? 'is-active' : ''} onClick={() => { setActiveTab('knowledge'); setDetail(null); setNavHistory([]) }}><ChecklistIcon /><span>База знаний</span></button>
-        <button type="button" className={activeTab === 'schedule' ? 'is-active' : ''} onClick={() => { setActiveTab('schedule'); setDetail(null); setNavHistory([]) }}><CalendarIcon /><span>График</span></button>
+        <button type="button" className={activeTab === 'hallPlan' ? 'is-active' : ''} onClick={() => { setActiveTab('hallPlan'); setDetail(null); setNavHistory([]) }}><CalendarIcon /><span>Зал</span></button>
+        <button type="button" className={`employee-mobile__plus-button${activeTab === 'orders' ? ' is-active' : ''}`} onClick={() => { setActiveTab('orders'); setDetail(null); setNavHistory([]); void loadOrders() }}><span><ClipboardIcon /></span><strong>Заказы</strong></button>
+        <button type="button" className={activeTab === 'tasks' ? 'is-active' : ''} onClick={() => { setActiveTab('tasks'); setDetail(null); setNavHistory([]) }}><ChecklistIcon /><span>Задачи</span></button>
+        <button type="button" className={activeTab === 'knowledge' ? 'is-active' : ''} onClick={() => { setActiveTab('knowledge'); setDetail(null); setNavHistory([]) }}><BookIcon /><span>База</span></button>
       </nav>
 
       {selectedTable && !bookingForm ? (

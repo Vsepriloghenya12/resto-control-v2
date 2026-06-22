@@ -202,6 +202,7 @@ const stateArrayKeys = [
   'regularGuests',
   'pushSubscriptions',
   'staffSchedules',
+  'orders',
 ]
 
 function ensureStateShape(state) {
@@ -560,6 +561,8 @@ function canWriteCollection(name, method, itemId, action, role) {
   if (name === 'inventory-assignments' && itemId && ['PATCH', 'PUT'].includes(method)) return true
   if (name === 'bookings' && method === 'POST' && !itemId) return true
   if (name === 'bookings' && itemId && action === 'status' && ['PATCH', 'PUT'].includes(method)) return true
+  if (name === 'orders' && method === 'POST' && !itemId) return true
+  if (name === 'orders' && itemId && ['PATCH', 'PUT'].includes(method)) return true
 
   return false
 }
@@ -584,6 +587,7 @@ function collectionByPath(state, name) {
     ttk: 'ttkItems',
     'support-chats': 'supportChats',
     'support-messages': 'supportMessages',
+    orders: 'orders',
   }
   const key = allowed[name]
   if (!key) return null
@@ -824,7 +828,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
     state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
 
-    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages']
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages', 'orders']
     for (const key of keys) {
       if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
     }
@@ -838,7 +842,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
 }
 
 async function handleCollections(req, res, state, pathname, auth) {
-  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|support-chats|support-messages)(?:\/([^/]+))?(?:\/([^/]+))?$/)
+  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|support-chats|support-messages|orders)(?:\/([^/]+))?(?:\/([^/]+))?$/)
   if (!match) return false
   const [, name, itemId, action] = match
   const collection = collectionByPath(state, name)
