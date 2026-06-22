@@ -124,7 +124,9 @@ export function InventoryPage() {
     setIikoSearch('')
     try {
       const resp = await fetch('/api/iiko/stores', { credentials: 'include' })
-      const data = await resp.json()
+      const text = await resp.text()
+      console.log('[iiko/stores]', resp.status, text.slice(0, 300))
+      const data = JSON.parse(text)
       if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки складов')
       setIikoStores(data.stores as IikoStore[])
     } catch (e) {
