@@ -322,6 +322,63 @@
 .inv-nom-search input { flex: 1; border: none; background: transparent; font: inherit; font-size: 14px; color: #111; outline: none; }
 .inv-nom-search input::placeholder { color: #b0b5bf; }
 
+/* Card actions group */
+.inv-card__actions { display: flex; align-items: center; gap: 10px; }
+
+/* Add button */
+.inv-add-btn {
+  padding: 8px 16px;
+  border: 1.5px solid #111827;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.inv-add-btn:hover { opacity: 0.82; }
+
+/* Optional label hint */
+.inv-field__opt {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin-left: 6px;
+  text-transform: none;
+}
+
+/* Dim cell text */
+.inv-cell-dim { color: #9ca3af; font-style: italic; }
+
+/* Add product modal */
+.inv-add-modal {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+.inv-add-modal__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.inv-add-modal__header strong { font-size: 17px; font-weight: 800; color: #111; }
+.inv-add-modal__body {
+  padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.inv-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.inv-add-modal__footer {
+  display: flex; gap: 10px;
+  padding: 14px 22px 20px;
+  border-top: 1px solid rgba(0,0,0,0.07);
+}
+
 /* iiko load button */
 .inv-iiko-load-btn {
   padding: 8px 16px;

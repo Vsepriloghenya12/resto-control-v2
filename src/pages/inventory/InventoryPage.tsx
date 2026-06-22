@@ -46,6 +46,28 @@ export function InventoryPage() {
   const [nomQuery, setNomQuery] = useState('')
   const [nomSection, setNomSection] = useState<SectionKey | 'all'>('all')
 
+  // Добавить товар вручную
+  const [addOpen, setAddOpen] = useState(false)
+  const [addName, setAddName] = useState('')
+  const [addUnit, setAddUnit] = useState('шт')
+  const [addCategory, setAddCategory] = useState('')
+  const [addSection, setAddSection] = useState<SectionKey>('bar')
+  const [addSaving, setAddSaving] = useState(false)
+
+  async function doAddProduct() {
+    if (!addName.trim()) return
+    setAddSaving(true)
+    const created = await api.create<InventoryProduct>('inventory-products', {
+      name: addName.trim(), unit: addUnit.trim() || 'шт',
+      category: addCategory.trim() || 'Без категории',
+      section: sectionNames[addSection], minBalance: 0, active: true,
+    })
+    setProducts(prev => [...prev, created])
+    setAddOpen(false); setAddName(''); setAddUnit('шт'); setAddCategory('')
+    setAddSaving(false)
+    showNotice('Товар добавлен.')
+  }
+
   // iiko import
   type IikoItem = { name: string; unit: string; category: string }
   const [iikoOpen, setIikoOpen] = useState(false)
@@ -65,7 +87,6 @@ export function InventoryPage() {
 
   // Назначить
   async function doAssign() {
-    if (!assignee.trim()) { showNotice('Укажите ответственного.'); return }
     const sectionProds = products.filter(p => (p.section === sectionNames[assignSection] || p.section === assignSection))
     const created = await api.create<InventoryAssignment>('inventory-assignments', {
       title: assignTitle, template: assignTitle,
@@ -203,8 +224,8 @@ export function InventoryPage() {
               </label>
 
               <label className="inv-field">
-                <span>Ответственный</span>
-                <input value={assignee} onChange={e => setAssignee(e.target.value)} placeholder="Имя сотрудника" />
+                <span>Ответственный <em className="inv-field__opt">необязательно</em></span>
+                <input value={assignee} onChange={e => setAssignee(e.target.value)} placeholder="Конкретный сотрудник или оставьте пустым" />
               </label>
 
               <label className="inv-field">
@@ -229,7 +250,7 @@ export function InventoryPage() {
                         <tr key={a.id}>
                           <td>{a.title || a.template || '—'}</td>
                           <td>{a.section}</td>
-                          <td>{a.assignee || a.assignedPosition || '—'}</td>
+                          <td>{a.assignee || a.assignedPosition || <span className="inv-cell-dim">Всё подразделение</span>}</td>
                           <td>{a.dueDate || a.date || '—'}</td>
                           <td><button type="button" className="inv-done-btn" onClick={() => void completeAssignment(a.id)}>Сдано</button></td>
                         </tr>
@@ -282,7 +303,10 @@ export function InventoryPage() {
           <div className="inv-card">
             <div className="inv-card__header">
               <h3>Номенклатура <span className="inv-card__count">{nomProducts.length}</span></h3>
-              <button type="button" className="inv-iiko-load-btn" onClick={() => void openIikoImport()}>↓ Загрузить из iiko</button>
+              <div className="inv-card__actions">
+                <button type="button" className="inv-add-btn" onClick={() => setAddOpen(true)}>+ Добавить товар</button>
+                <button type="button" className="inv-iiko-load-btn" onClick={() => void openIikoImport()}>↓ Загрузить из iiko</button>
+              </div>
             </div>
 
             <div className="inv-nom-filters">
@@ -317,6 +341,50 @@ export function InventoryPage() {
                   </tbody>
                 </table>
             }
+          </div>
+        </div>
+      )}
+
+      {/* Добавить товар вручную */}
+      {addOpen && (
+        <div className="inv-iiko-backdrop" onMouseDown={() => !addSaving && setAddOpen(false)}>
+          <div className="inv-add-modal" onMouseDown={e => e.stopPropagation()}>
+            <div className="inv-add-modal__header">
+              <strong>Добавить товар</strong>
+              <button type="button" className="inv-iiko-close" onClick={() => setAddOpen(false)}>✕</button>
+            </div>
+            <div className="inv-add-modal__body">
+              <label className="inv-field">
+                <span>Название *</span>
+                <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="Название товара" autoFocus />
+              </label>
+              <div className="inv-add-row">
+                <label className="inv-field">
+                  <span>Единица измерения</span>
+                  <input value={addUnit} onChange={e => setAddUnit(e.target.value)} placeholder="шт" />
+                </label>
+                <label className="inv-field">
+                  <span>Категория</span>
+                  <input value={addCategory} onChange={e => setAddCategory(e.target.value)} placeholder="Например: Алкоголь" />
+                </label>
+              </div>
+              <label className="inv-field">
+                <span>Подразделение</span>
+                <div className="inv-section-btns">
+                  {sections.map(s => (
+                    <button key={s.id} type="button"
+                      className={`inv-section-btn${addSection === s.id ? ' is-active' : ''}`}
+                      onClick={() => setAddSection(s.id)}>{s.title}</button>
+                  ))}
+                </div>
+              </label>
+            </div>
+            <div className="inv-add-modal__footer">
+              <button type="button" className="inv-iiko-cancel" onClick={() => setAddOpen(false)}>Отмена</button>
+              <button type="button" className="inv-iiko-import" disabled={!addName.trim() || addSaving} onClick={() => void doAddProduct()}>
+                {addSaving ? 'Сохраняю...' : 'Добавить'}
+              </button>
+            </div>
           </div>
         </div>
       )}
