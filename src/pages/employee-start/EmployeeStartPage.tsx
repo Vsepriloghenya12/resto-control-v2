@@ -1135,6 +1135,7 @@ export function EmployeeStartPage() {
           <p className="employee-mobile__header-sub">{canGoBack ? (detail?.subtitle || employee.restaurantName) : `${employee.position} · ${employee.restaurantName}`}</p>
         </div>
         <div className="employee-mobile__header-actions">
+          {!canGoBack ? <button type="button" className="employee-mobile__header-request-btn" onClick={() => setShowRequestModal(true)} aria-label="Тех. заявка"><PlusIcon /></button> : null}
           {!canGoBack ? <button type="button" onClick={() => setShowNotifications(true)} aria-label="Уведомления"><BellIcon />{notifications.length ? <b>{notifications.length}</b> : null}</button> : null}
           {!canGoBack ? <button type="button" onClick={() => { if (window.confirm('Выйти из аккаунта?')) logout() }} aria-label="Выйти"><LogoutIcon /></button> : null}
         </div>

@@ -87,6 +87,12 @@
   flex-shrink: 0;
 }
 
+.employee-mobile__header-request-btn {
+  background: #111 !important;
+  color: #fff !important;
+  border-color: #111 !important;
+}
+
 .employee-mobile__header-actions button,
 .employee-mobile__hall-search {
   position: relative;
