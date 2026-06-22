@@ -170,14 +170,18 @@ export function TtkPage() {
     if (!selectedGroupId) return
     const groupItems = items.filter((item) => getItemGroup(item) === selectedGroupId)
     if (!window.confirm(`Удалить группу «${selectedGroup?.name}» и все ${groupItems.length} позиций в ней?`)) return
-    await Promise.all(groupItems.map((item) => api.remove('ttk', item.id)))
-    const nextItems = items.filter((item) => getItemGroup(item) !== selectedGroupId)
-    setItems(nextItems)
-    setExtraGroups((cur) => cur.filter((g) => g.id !== selectedGroupId))
-    const nextGroup = groups.find((g) => g.id !== selectedGroupId)
-    setSelectedGroupId(nextGroup?.id || '')
-    setSelectedItemId(nextItems.find((item) => getItemGroup(item) === nextGroup?.id)?.id || '')
-    showNotice('Группа удалена.')
+    try {
+      await Promise.allSettled(groupItems.map((item) => api.remove('ttk', item.id)))
+      const nextItems = items.filter((item) => getItemGroup(item) !== selectedGroupId)
+      setItems(nextItems)
+      setExtraGroups((cur) => cur.filter((g) => g.id !== selectedGroupId))
+      const nextGroup = groups.find((g) => g.id !== selectedGroupId)
+      setSelectedGroupId(nextGroup?.id || '')
+      setSelectedItemId(nextItems.find((item) => getItemGroup(item) === nextGroup?.id)?.id || '')
+      showNotice('Группа удалена.')
+    } catch (e) {
+      showNotice('Ошибка при удалении: ' + (e instanceof Error ? e.message : 'неизвестная ошибка'))
+    }
   }
 
   async function openIikoSync() {

@@ -589,6 +589,7 @@ function collectionByPath(state, name) {
     'inventory-assignments': 'inventoryAssignments',
     'inventory-products': 'inventoryProducts',
     ttk: 'ttkItems',
+    'menu-items': 'menuItems',
     'support-chats': 'supportChats',
     'support-messages': 'supportMessages',
     orders: 'orders',
@@ -954,7 +955,7 @@ function generateAttestationQuestions(state, restaurantId, type) {
 }
 
 async function handleCollections(req, res, state, pathname, auth) {
-  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|support-chats|support-messages|orders|attestations|attestation-results)(?:\/([^/]+))?(?:\/([^/]+))?$/)
+  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|menu-items|support-chats|support-messages|orders|attestations|attestation-results)(?:\/([^/]+))?(?:\/([^/]+))?$/)
   if (!match) return false
   const [, name, itemId, action] = match
   const collection = collectionByPath(state, name)
