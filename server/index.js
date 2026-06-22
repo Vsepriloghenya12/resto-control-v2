@@ -1388,6 +1388,37 @@ async function handleIiko(req, res, state, pathname, auth) {
     return true
   }
 
+  if (pathname === '/api/iiko/inventory' && req.method === 'GET') {
+    const host = restaurant.iikoHost
+    const login = restaurant.iikoLogin
+    const password = restaurant.iikoPassword
+    if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено.')
+
+    const token = await iikoToken(host, login, password)
+    const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
+
+    // Parse only GOODS and INGREDIENT types (raw materials / inventory items)
+    const items = []
+    const productRe = /<product>([\s\S]*?)<\/product>/g
+    let pm
+    while ((pm = productRe.exec(productsXml)) !== null) {
+      const block = pm[1]
+      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+      const type = get('type')
+      if (type !== 'GOODS' && type !== 'INGREDIENT' && type !== 'MODIFIER') continue
+      const name = get('name')
+      if (!name) continue
+      const unit = get('mainUnit') || 'шт'
+      const category = get('category') || ''
+      items.push({ name, unit, category })
+    }
+
+    // Sort by name
+    items.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+    send(res, 200, { items, total: items.length })
+    return true
+  }
+
   if (pathname === '/api/iiko/nomenclature' && req.method === 'GET') {
     const host = restaurant.iikoHost
     const login = restaurant.iikoLogin

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AlertCircleIcon, BoxIcon, CalendarIcon, ChecklistIcon, ChevronRightIcon, SearchIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 
@@ -46,7 +46,24 @@ export function InventoryPage() {
   const [assignments, setAssignments] = useState<InventoryAssignment[]>([])
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function showNotice(msg: string) {
+    setNotice(msg)
+    if (noticeTimer.current) clearTimeout(noticeTimer.current)
+    noticeTimer.current = setTimeout(() => setNotice(''), 3000)
+  }
   const [productForm, setProductForm] = useState({ name: '', unit: '', category: '' })
+
+  // iiko import state
+  type IikoItem = { name: string; unit: string; category: string }
+  const [iikoOpen, setIikoOpen] = useState(false)
+  const [iikoLoading, setIikoLoading] = useState(false)
+  const [iikoError, setIikoError] = useState('')
+  const [iikoRaw, setIikoRaw] = useState<IikoItem[]>([])
+  const [iikoSearch, setIikoSearch] = useState('')
+  const [iikoRemoved, setIikoRemoved] = useState<Set<number>>(new Set())
+  const [iikoSection, setIikoSection] = useState<SectionKey>('kitchen')
+  const [iikoImporting, setIikoImporting] = useState(false)
   const [assignForm, setAssignForm] = useState({ template: 'Вечерняя инвентаризация', assignee: 'Старший бармен', date: new Date().toISOString().slice(0, 10) })
 
   async function loadInventory() {
@@ -93,6 +110,61 @@ export function InventoryPage() {
     downloadCsv('inventory-submitted.csv', rows)
   }
 
+  async function openIikoImport() {
+    setIikoOpen(true)
+    setIikoLoading(true)
+    setIikoError('')
+    setIikoRaw([])
+    setIikoRemoved(new Set())
+    setIikoSearch('')
+    try {
+      const resp = await fetch('/api/iiko/inventory', { credentials: 'include' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки')
+      setIikoRaw(data.items)
+    } catch (e) {
+      setIikoError(e instanceof Error ? e.message : 'Ошибка')
+    } finally {
+      setIikoLoading(false)
+    }
+  }
+
+  function iikoToggleRemove(idx: number) {
+    setIikoRemoved((prev) => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      return next
+    })
+  }
+
+  async function doIikoImport() {
+    setIikoImporting(true)
+    const toCreate = iikoRaw.filter((_, i) => !iikoRemoved.has(i))
+    let count = 0
+    for (const item of toCreate) {
+      const created = await api.create<InventoryProduct>('inventory-products', {
+        name: item.name,
+        unit: item.unit,
+        category: item.category || 'Из iiko',
+        section: sectionNames[iikoSection],
+        minBalance: 0,
+        active: true,
+      })
+      setProducts((prev) => [...prev, created])
+      count++
+    }
+    setIikoImporting(false)
+    setIikoOpen(false)
+    showNotice(`Импортировано ${count} позиций из iiko.`)
+  }
+
+  const iikoFiltered = useMemo(() => {
+    const q = iikoSearch.trim().toLowerCase()
+    return iikoRaw.map((item, idx) => ({ item, idx })).filter(({ item }) => !q || item.name.toLowerCase().includes(q) || item.category.toLowerCase().includes(q))
+  }, [iikoRaw, iikoSearch])
+
+  const iikoVisibleCount = iikoFiltered.filter(({ idx }) => !iikoRemoved.has(idx)).length
+
   return (
     <section className="inventory-page">
       <aside className="inventory-sections-panel">
@@ -113,9 +185,93 @@ export function InventoryPage() {
       </main>
 
       <aside className="inventory-actions-panel"><div className="inventory-actions-panel__header"><h2>Действия</h2></div><ActionItem mode="addProduct" activeMode={actionMode} title="Добавить товар" text="Создать позицию вручную" icon={<BoxIcon />} onClick={() => setActionMode('addProduct')} /><ActionItem mode="assignInventory" activeMode={actionMode} title="Назначить" text="Отправить сотруднику" icon={<CalendarIcon />} onClick={() => setActionMode('assignInventory')} /><ActionItem mode="submittedRuns" activeMode={actionMode} title="Сданные" text="Скачать историю" icon={<ChevronRightIcon />} onClick={() => { setActionMode('submittedRuns'); setActiveTab('submitted') }} />
+        <button type="button" className="inventory-iiko-btn" onClick={() => void openIikoImport()}>↓ Загрузить из iiko</button>
         {actionMode === 'addProduct' ? <div className="inventory-action-form"><label><span>Название</span><input value={productForm.name} onChange={(e) => setProductForm((v) => ({ ...v, name: e.target.value }))} placeholder="Например, Лимон" /></label><label><span>Единица</span><input value={productForm.unit} onChange={(e) => setProductForm((v) => ({ ...v, unit: e.target.value }))} placeholder="кг, шт, л" /></label><label><span>Категория</span><input value={productForm.category} onChange={(e) => setProductForm((v) => ({ ...v, category: e.target.value }))} placeholder="Овощи, алкоголь..." /></label><button type="button" onClick={() => void addProduct()}>Добавить товар</button></div> : null}
         {actionMode === 'assignInventory' ? <div className="inventory-action-form"><label><span>Бланк</span><input value={assignForm.template} onChange={(e) => setAssignForm((v) => ({ ...v, template: e.target.value }))} /></label><label><span>Кому</span><input value={assignForm.assignee} onChange={(e) => setAssignForm((v) => ({ ...v, assignee: e.target.value }))} /></label><label><span>Дата</span><input type="date" value={assignForm.date} onChange={(e) => setAssignForm((v) => ({ ...v, date: e.target.value }))} /></label><button type="button" onClick={() => void assignInventory()}>Назначить</button></div> : null}
       </aside>
+
+      {/* iiko import modal */}
+      {iikoOpen && (
+        <div className="inv-iiko-backdrop" onMouseDown={() => !iikoImporting && setIikoOpen(false)}>
+          <div className="inv-iiko-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="inv-iiko-modal__header">
+              <div>
+                <strong>Загрузка из iiko</strong>
+                {!iikoLoading && !iikoError && <span>{iikoVisibleCount} позиций</span>}
+              </div>
+              {!iikoImporting && <button type="button" className="inv-iiko-close" onClick={() => setIikoOpen(false)}>✕</button>}
+            </div>
+
+            {iikoLoading && <div className="inv-iiko-state">Подключаюсь к iiko...</div>}
+            {iikoError && <div className="inv-iiko-state inv-iiko-state--error">⚠ {iikoError}<br /><small>Проверьте настройки в разделе «Интеграции»</small></div>}
+            {iikoImporting && <div className="inv-iiko-state">Импортирую позиции...</div>}
+
+            {!iikoLoading && !iikoError && !iikoImporting && (
+              <>
+                <div className="inv-iiko-controls">
+                  <div className="inv-iiko-search">
+                    <SearchIcon />
+                    <input
+                      placeholder="Поиск по названию..."
+                      value={iikoSearch}
+                      onChange={(e) => setIikoSearch(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                  <div className="inv-iiko-section-row">
+                    <span>Раздел:</span>
+                    {sections.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`inv-iiko-sec-btn${iikoSection === s.id ? ' is-active' : ''}`}
+                        onClick={() => setIikoSection(s.id)}
+                      >{s.title}</button>
+                    ))}
+                  </div>
+                  <div className="inv-iiko-hints">
+                    <span>{iikoRaw.length} загружено · {iikoRemoved.size} удалено</span>
+                    {iikoRemoved.size > 0 && <button type="button" onClick={() => setIikoRemoved(new Set())}>Восстановить всё</button>}
+                  </div>
+                </div>
+
+                <div className="inv-iiko-list">
+                  {iikoFiltered.length === 0 && <div className="inv-iiko-empty">Ничего не найдено</div>}
+                  {iikoFiltered.map(({ item, idx }) => (
+                    <div key={idx} className={`inv-iiko-row${iikoRemoved.has(idx) ? ' is-removed' : ''}`}>
+                      <div className="inv-iiko-row__info">
+                        <span className="inv-iiko-row__name">{item.name}</span>
+                        {item.category && <span className="inv-iiko-row__cat">{item.category}</span>}
+                      </div>
+                      <span className="inv-iiko-row__unit">{item.unit}</span>
+                      <button
+                        type="button"
+                        className="inv-iiko-row__del"
+                        title={iikoRemoved.has(idx) ? 'Восстановить' : 'Убрать из импорта'}
+                        onClick={() => iikoToggleRemove(idx)}
+                      >
+                        {iikoRemoved.has(idx) ? '↩' : '✕'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="inv-iiko-footer">
+                  <button type="button" className="inv-iiko-cancel" onClick={() => setIikoOpen(false)}>Отмена</button>
+                  <button
+                    type="button"
+                    className="inv-iiko-import"
+                    disabled={iikoVisibleCount === 0}
+                    onClick={() => void doIikoImport()}
+                  >
+                    Импортировать {iikoVisibleCount} позиций в «{sectionNames[iikoSection]}»
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   )
 }
