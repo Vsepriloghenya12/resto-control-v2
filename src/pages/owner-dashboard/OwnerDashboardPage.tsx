@@ -26,6 +26,8 @@ import { InventoryPage } from '../inventory/InventoryPage'
 import { TtkPage } from '../ttk/TtkPage'
 import { KnowledgeBasePage } from '../knowledge/KnowledgeBasePage'
 import { PaymentPage } from '../payment/PaymentPage'
+import { buildDonutSegments } from './donutGeometry.js'
+import { buildZoneRadar, prepareZoneReadiness } from './zoneReadiness.js'
 import './OwnerDashboardPage.css'
 import '../employees/EmployeesPage.css'
 import '../checklists/ChecklistsPage.css'
@@ -308,9 +310,27 @@ function PaymentAccessBadge({ paidUntil, daysLeft, onClick }: { paidUntil: strin
 }
 
 
-function DonutSegment({ value, offset, color, active, index, onHover }: { value: number; offset: number; color: string; active: boolean; index: number; onHover: (index: number) => void }) {
-  const safeValue = Math.max(0.1, Math.min(100, value))
-
+function DonutSegment({
+  length,
+  offset,
+  color,
+  active,
+  index,
+  label,
+  value,
+  onHover,
+  onOpen,
+}: {
+  length: number
+  offset: number
+  color: string
+  active: boolean
+  index: number
+  label: string
+  value: string
+  onHover: (index: number) => void
+  onOpen: () => void
+}) {
   return (
     <circle
       className={active ? 'owner-donut-widget__segment owner-donut-widget__segment--active' : 'owner-donut-widget__segment'}
@@ -319,45 +339,130 @@ function DonutSegment({ value, offset, color, active, index, onHover }: { value:
       r="96"
       pathLength="100"
       stroke={color}
-      strokeDasharray={`${safeValue} ${100 - safeValue}`}
+      strokeDasharray={`${length} ${Number((100 - length).toFixed(2))}`}
       strokeDashoffset={String(-offset)}
       onMouseEnter={() => onHover(index)}
       onFocus={() => onHover(index)}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onOpen()
+        }
+      }}
+      role="button"
+      aria-label={`${label}: ${value}`}
       tabIndex={0}
     />
   )
 }
 
+function ZoneReadinessChart({ zones, onOpen }: { zones: ZoneReadiness[]; onOpen: () => void }) {
+  const { items, isEmpty } = prepareZoneReadiness(zones)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const radar = buildZoneRadar(items)
+  const center = 110
+  const radius = 82
+  const rings = [1, 0.75, 0.5, 0.25]
+  const axisPoints = radar.points.map((_, index) => {
+    const angle = -Math.PI / 2 + index * Math.PI * 2 / radar.points.length
+    return {
+      x: Number((center + Math.cos(angle) * radius).toFixed(2)),
+      y: Number((center + Math.sin(angle) * radius).toFixed(2)),
+    }
+  })
+  const polygon = radar.points.map((point) => `${point.x},${point.y}`).join(' ')
+
+  return (
+    <section className="owner-zone-readiness" aria-label="Готовность зон">
+      <header className="owner-zone-readiness__header">
+        <div>
+          <h3>Готовность зон</h3>
+          <p>Чек-листы по направлениям</p>
+        </div>
+        <button type="button" onClick={onOpen}>Все</button>
+      </header>
+
+      {isEmpty ? (
+        <button className="owner-zone-readiness__empty" type="button" onClick={onOpen}>
+          Добавьте чек-листы с должностями, чтобы увидеть готовность зон.
+        </button>
+      ) : (
+        <div className="owner-zone-readiness__body">
+          <div className="owner-zone-readiness__radar">
+            <svg viewBox="0 0 220 220" role="img" aria-label={`Средняя готовность зон: ${radar.average}%`}>
+              {rings.map((scale) => (
+                <polygon
+                  className="owner-zone-readiness__grid"
+                  key={scale}
+                  points={axisPoints.map((point) => `${center + (point.x - center) * scale},${center + (point.y - center) * scale}`).join(' ')}
+                />
+              ))}
+              {axisPoints.map((point, index) => (
+                <line className="owner-zone-readiness__axis" key={`zone-axis-${index}`} x1={center} y1={center} x2={point.x} y2={point.y} />
+              ))}
+              <polygon className="owner-zone-readiness__shape" points={polygon} />
+              {radar.points.slice(0, items.length).map((point, index) => (
+                <circle
+                  className={index === activeIndex ? `owner-zone-readiness__point owner-zone-readiness__point--${items[index].tone} owner-zone-readiness__point--active` : `owner-zone-readiness__point owner-zone-readiness__point--${items[index].tone}`}
+                  key={items[index].label}
+                  cx={point.x}
+                  cy={point.y}
+                  r="5"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${items[index].label}: ${items[index].percent}%, ${items[index].completed}`}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  onFocus={() => setActiveIndex(index)}
+                  onClick={onOpen}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onOpen()
+                    }
+                  }}
+                />
+              ))}
+            </svg>
+            <div className="owner-zone-readiness__score">
+              <strong>{radar.average}%</strong>
+              <span>средняя<br />готовность</span>
+            </div>
+          </div>
+
+          <div className="owner-zone-readiness__legend">
+            {items.map((zone, index) => (
+              <button
+                className={index === activeIndex ? 'owner-zone-readiness__item owner-zone-readiness__item--active' : 'owner-zone-readiness__item'}
+                type="button"
+                key={zone.label}
+                onMouseEnter={() => setActiveIndex(index)}
+                onFocus={() => setActiveIndex(index)}
+                onClick={onOpen}
+              >
+                <span className={`owner-zone-readiness__dot owner-zone-readiness__dot--${zone.tone}`} />
+                <span><strong>{zone.label}</strong><small>{zone.completed}</small></span>
+                <b>{zone.percent}%</b>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
 function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof buildDashboardModel>; onOpen: (section: OwnerSection) => void }) {
-  const palette = ['#22c55e', '#3b82f6', '#f97316', '#8b5cf6', '#ef4444']
-  const baseRows = model.operationRows.map((row, index) => ({
+  const palette = ['#2563eb', '#16a34a', '#dc2626', '#f97316']
+  const rows = model.operationRows.map((row, index) => ({
     ...row,
     color: palette[index % palette.length],
-    weight: row.percent,
   }))
-  const positiveRows = baseRows.filter((row) => row.weight > 0)
-  const totalWeight = positiveRows.reduce((sum, row) => sum + row.weight, 0)
-  const gap = positiveRows.length > 1 ? 2.2 : 0
-  const drawableLength = Math.max(0, 100 - gap * positiveRows.length)
-  let preparedLength = 0
-  const rows = positiveRows.length
-    ? positiveRows.map((row, index) => {
-        const isLast = index === positiveRows.length - 1
-        const segmentLength = isLast
-          ? Math.max(0.1, drawableLength - preparedLength)
-          : Math.max(0.1, (row.weight / totalWeight) * drawableLength)
-        preparedLength += segmentLength
-        return {
-          ...row,
-          share: segmentLength,
-          displayPercent: row.percent,
-        }
-      })
-    : [{ ...baseRows[0], label: 'Нет данных', value: '0', color: '#cbd5e1', weight: 1, share: 100, displayPercent: 0, target: 'dashboard' as OwnerSection }]
+  const segments = buildDonutSegments(rows.map((row) => row.percent))
 
   const [activeIndex, setActiveIndex] = useState(0)
-  let offset = 0
   const active = rows[activeIndex] || rows[0]
+  const activeSegment = segments[activeIndex] || segments[0]
 
   return (
     <section className="owner-donut-widget" aria-label="Инфографика рабочих действий">
@@ -378,13 +483,26 @@ function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof bu
           <svg viewBox="0 0 260 260" role="img">
             <circle className="owner-donut-widget__track" cx="130" cy="130" r="96" pathLength="100" />
             {rows.map((row, index) => {
-              const currentOffset = offset
-              offset += row.share + gap
-              return <DonutSegment key={row.label} value={row.share} offset={currentOffset} color={row.color} active={index === activeIndex} index={index} onHover={setActiveIndex} />
+              const segment = segments[index]
+              if (!segment.length) return null
+              return (
+                <DonutSegment
+                  key={row.label}
+                  length={segment.length}
+                  offset={segment.offset}
+                  color={row.color}
+                  active={index === activeIndex}
+                  index={index}
+                  label={row.label}
+                  value={`${segment.sharePercent}%, ${row.value}`}
+                  onHover={setActiveIndex}
+                  onOpen={() => onOpen(row.target)}
+                />
+              )
             })}
           </svg>
           <div className="owner-donut-widget__center">
-            <strong>{active?.displayPercent ?? 0}%</strong>
+            <strong>{activeSegment?.sharePercent ?? 0}%</strong>
             <span>{active?.label || 'Смена'}</span>
           </div>
         </div>
@@ -400,12 +518,14 @@ function OperationalDonutWidget({ model, onOpen }: { model: ReturnType<typeof bu
               onClick={() => onOpen(row.target)}
             >
               <span className="owner-donut-widget__dot" style={{ background: row.color }} />
-              <span className="owner-donut-widget__percent">{row.displayPercent}%</span>
+              <span className="owner-donut-widget__percent">{segments[index]?.sharePercent ?? 0}%</span>
               <span className="owner-donut-widget__name">{row.label}</span>
               <span className="owner-donut-widget__value">{row.value}</span>
             </button>
           ))}
         </div>
+
+        <ZoneReadinessChart zones={model.zones} onOpen={() => onOpen('checklists')} />
       </div>
     </section>
   )

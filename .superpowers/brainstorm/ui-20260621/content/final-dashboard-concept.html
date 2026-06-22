@@ -1,0 +1,82 @@
+<style>
+  .concept-shell{margin-top:24px;overflow:hidden;border:1px solid #d8dee6;border-radius:18px;background:#edf1f5;box-shadow:0 24px 60px rgba(15,23,42,.16)}
+  .concept-screen{min-height:650px;display:grid;grid-template-columns:206px minmax(0,1fr);color:#151a22;font-family:Inter,Arial,sans-serif}
+  .sidebar{display:flex;flex-direction:column;padding:20px 14px;background:#151a22;color:#cbd1d9}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px;border-bottom:1px solid #2b323d}
+  .brandmark{width:38px;height:38px;display:grid;place-items:center;border-radius:7px;background:#ff6b00;color:#fff;font-weight:900}
+  .brand strong{display:block;color:#fff;font-size:15px}.brand span{font-size:9px;color:#87909e}
+  .menu{display:grid;gap:5px;margin-top:16px}.menu-item{display:flex;align-items:center;gap:10px;min-height:37px;padding:0 10px;border-radius:5px;font-size:11px;font-weight:650}.menu-item:before{content:"";width:14px;height:14px;border:1.5px solid currentColor;border-radius:3px}.menu-item.active{background:#fff;color:#151a22}.menu-item.active:after{content:"";width:3px;height:19px;margin-left:auto;border-radius:2px;background:#ff6b00}
+  .side-status{margin-top:auto;padding:12px;border:1px solid #303844;border-radius:6px;background:#1d232d}.side-status small{color:#87909e;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.side-status strong{display:block;margin-top:5px;color:#fff;font-size:11px}.side-status span{display:block;margin-top:5px;color:#7fd4a4;font-size:9px}
+  .main{min-width:0;padding:22px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px}
+  .eyebrow{color:#697386;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.heading{margin-top:4px;font-size:25px;font-weight:850;letter-spacing:-.045em}
+  .top-actions{display:flex;align-items:center;gap:8px}.search{width:190px;height:35px;border:1px solid #d8dee6;border-radius:5px;background:#fff}.iconbtn{width:35px;height:35px;border:1px solid #d8dee6;border-radius:5px;background:#fff}
+  .alert-strip{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:18px;padding:15px 17px;border-left:5px solid #ff6b00;border-radius:4px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.06)}
+  .alert-strip strong{display:block;font-size:17px}.alert-strip p{margin:4px 0 0;color:#697386;font-size:10px}.alert-btn{padding:8px 11px;border:0;border-radius:4px;background:#151a22;color:#fff;font-size:9px;font-weight:800}
+  .metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:10px}.metric{min-height:86px;padding:13px;border:1px solid #dde2e8;border-radius:5px;background:#fff}.metric-label{color:#697386;font-size:8px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}.metric-value{display:flex;align-items:baseline;gap:4px;margin-top:11px;font-size:24px;font-weight:850;letter-spacing:-.04em}.metric-value span{color:#8b95a3;font-size:10px}.metric-note{margin-top:6px;color:#697386;font-size:8px}.metric-note.good{color:#16834b}.metric-note.warn{color:#c94f00}
+  .content-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(250px,.55fr);gap:10px;margin-top:10px}.panel{border:1px solid #dde2e8;border-radius:5px;background:#fff}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid #edf0f3}.panel-head strong{font-size:12px}.panel-head span{color:#697386;font-size:8px}
+  .operations{padding:4px 14px 10px}.op{display:grid;grid-template-columns:24px 1fr 65px 35px;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #edf0f3}.op:last-child{border:0}.op-icon{width:24px;height:24px;border-radius:4px;background:#eef1f4}.op strong{font-size:10px}.op small{display:block;margin-top:2px;color:#7b8491;font-size:8px}.bar{height:5px;overflow:hidden;border-radius:2px;background:#e4e8ed}.bar:after{content:"";display:block;width:84%;height:100%;background:#3aa66c}.bar.warn:after{width:62%;background:#ff8b36}.bar.low:after{width:38%;background:#e05a5a}.pct{text-align:right;font-size:9px;font-weight:800}
+  .right-stack{display:grid;gap:10px}.signal-list{padding:4px 13px 10px}.signal{padding:10px 0;border-bottom:1px solid #edf0f3}.signal:last-child{border:0}.signal strong{display:block;font-size:9px}.signal span{display:block;margin-top:3px;color:#697386;font-size:8px}.signal.critical{border-left:3px solid #e05a5a;padding-left:8px}.signal.warning{border-left:3px solid #ff8b36;padding-left:8px}
+  .team{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:13px}.person{text-align:center}.avatar{width:28px;height:28px;display:grid;place-items:center;margin:auto;border-radius:50%;background:#dfe5eb;color:#4b5563;font-size:8px;font-weight:800}.person span{display:block;margin-top:5px;font-size:7px}.online{width:6px;height:6px;margin:3px auto 0;border-radius:50%;background:#3aa66c}
+  .tokens{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}.token-box{padding:18px;border:1px solid #e2e8f0;border-radius:14px;background:#fff}.token-box h3{margin:0 0 12px}.swatches{display:flex;gap:9px}.swatch{width:42px;height:42px;border-radius:8px;border:1px solid rgba(15,23,42,.08)}.token-box p{margin:10px 0 0;color:#64748b;font-size:12px;line-height:1.5}
+  @media(max-width:900px){.concept-screen{grid-template-columns:64px 1fr}.sidebar{padding:14px 8px}.brand>div:last-child,.menu-item{font-size:0}.menu-item{justify-content:center;padding:0}.menu-item.active:after,.side-status{display:none}.metrics{grid-template-columns:repeat(2,1fr)}.content-grid{grid-template-columns:1fr}.tokens{grid-template-columns:1fr}}
+</style>
+
+<h2>Финальная концепция главной — «Командный центр»</h2>
+<p class="subtitle">Один экран отвечает на три вопроса: всё ли в порядке, что требует реакции и куда перейти для действия.</p>
+
+<div class="concept-shell">
+  <div class="concept-screen">
+    <aside class="sidebar">
+      <div class="brand"><div class="brandmark">R</div><div><strong>Resto Control</strong><span>операционный центр</span></div></div>
+      <nav class="menu">
+        <div class="menu-item active">Главная</div><div class="menu-item">Сотрудники</div><div class="menu-item">Чек-листы</div><div class="menu-item">Задачи</div><div class="menu-item">План зала / Брони</div><div class="menu-item">Инвентаризация</div><div class="menu-item">Номенклатура</div><div class="menu-item">База знаний</div><div class="menu-item">Оплата</div>
+      </nav>
+      <div class="side-status"><small>Система</small><strong>Ресторан работает</strong><span>● Все сервисы доступны</span></div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow">Суббота · 21 июня · Demo Restaurant</div><div class="heading">Состояние ресторана</div></div>
+        <div class="top-actions"><div class="search"></div><div class="iconbtn"></div><div class="iconbtn"></div></div>
+      </header>
+      <section class="alert-strip">
+        <div><strong>3 пункта требуют внимания</strong><p>Просроченная задача, незавершённый чек-лист и техническая заявка</p></div>
+        <button class="alert-btn">Посмотреть сигналы</button>
+      </section>
+      <section class="metrics">
+        <div class="metric"><div class="metric-label">Готовность</div><div class="metric-value">86<span>%</span></div><div class="metric-note good">+4% к утру</div></div>
+        <div class="metric"><div class="metric-label">На смене</div><div class="metric-value">12<span>/ 14</span></div><div class="metric-note">2 сотрудника ожидаются</div></div>
+        <div class="metric"><div class="metric-label">Чек-листы</div><div class="metric-value">6<span>/ 8</span></div><div class="metric-note warn">1 просрочен</div></div>
+        <div class="metric"><div class="metric-label">Задачи</div><div class="metric-value">8<span>/ 10</span></div><div class="metric-note">80% выполнено</div></div>
+        <div class="metric"><div class="metric-label">Брони</div><div class="metric-value">24</div><div class="metric-note">68 гостей сегодня</div></div>
+      </section>
+      <section class="content-grid">
+        <div class="panel">
+          <div class="panel-head"><strong>Операции сегодня</strong><span>Обновлено только что</span></div>
+          <div class="operations">
+            <div class="op"><div class="op-icon"></div><div><strong>Открытие ресторана</strong><small>Основные зоны и оборудование</small></div><div class="bar"></div><div class="pct">100%</div></div>
+            <div class="op"><div class="op-icon"></div><div><strong>Готовность команды</strong><small>Сотрудники, аттестации, смены</small></div><div class="bar"></div><div class="pct">84%</div></div>
+            <div class="op"><div class="op-icon"></div><div><strong>Чек-листы смены</strong><small>6 из 8 активных завершены</small></div><div class="bar warn"></div><div class="pct">75%</div></div>
+            <div class="op"><div class="op-icon"></div><div><strong>Техническое состояние</strong><small>Есть открытая заявка</small></div><div class="bar low"></div><div class="pct">62%</div></div>
+            <div class="op"><div class="op-icon"></div><div><strong>План зала и брони</strong><small>24 активные брони</small></div><div class="bar"></div><div class="pct">88%</div></div>
+          </div>
+        </div>
+        <div class="right-stack">
+          <div class="panel">
+            <div class="panel-head"><strong>Критичные сигналы</strong><span>Все сигналы →</span></div>
+            <div class="signal-list"><div class="signal critical"><strong>Просрочена задача</strong><span>Проверка холодильной камеры · 36 мин</span></div><div class="signal warning"><strong>Чек-лист не завершён</strong><span>Открытие бара · 4 из 6 пунктов</span></div><div class="signal warning"><strong>Техническая заявка</strong><span>Не работает подсветка в зале</span></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><strong>Команда на смене</strong><span>12 человек →</span></div>
+            <div class="team"><div class="person"><div class="avatar">МИ</div><span>Мария</span><div class="online"></div></div><div class="person"><div class="avatar">АС</div><span>Алексей</span><div class="online"></div></div><div class="person"><div class="avatar">ОС</div><span>Ольга</span><div class="online"></div></div><div class="person"><div class="avatar">+9</div><span>Ещё</span><div class="online"></div></div></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="tokens">
+  <div class="token-box"><h3>Палитра</h3><div class="swatches"><div class="swatch" style="background:#151a22"></div><div class="swatch" style="background:#ff6b00"></div><div class="swatch" style="background:#edf1f5"></div><div class="swatch" style="background:#fff"></div><div class="swatch" style="background:#3aa66c"></div><div class="swatch" style="background:#e05a5a"></div></div><p>Графит — навигация и действия. Оранжевый — только приоритет. Зелёный и красный — исключительно статусные сигналы.</p></div>
+  <div class="token-box"><h3>Характер</h3><p><strong>Шрифт:</strong> системный Inter/Arial для скорости и чёткости.<br><strong>Радиусы:</strong> 4–7 px, без «пухлых» карточек.<br><strong>Тени:</strong> минимальные, иерархия строится линиями и контрастом.<br><strong>Движение:</strong> короткое появление показателей и спокойные hover-состояния.</p></div>
+</div>

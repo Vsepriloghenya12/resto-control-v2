@@ -1,0 +1,105 @@
+<style>
+  .diagram-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:24px}
+  .diagram-card{overflow:hidden;border:2px solid transparent;border-radius:16px;background:#fff;box-shadow:0 14px 36px rgba(15,23,42,.09);cursor:pointer;transition:.18s ease}
+  .diagram-card:hover{transform:translateY(-3px);box-shadow:0 20px 42px rgba(15,23,42,.14)}
+  .diagram-card.selected{border-color:#f97316}
+  .preview{height:440px;padding:18px;color:#171b22;background:#f2f4f6}
+  .widget{height:100%;overflow:hidden;border:1px solid #dce1e7;border-radius:7px;background:#fff}
+  .head{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid #edf0f3}.head h4{margin:0;font-size:13px}.head p{margin:3px 0 0;color:#747d88;font-size:8px}.period{padding:6px 9px;border-radius:4px;color:#fff;background:#20242a;font-size:7px;font-weight:800}
+  .body{display:grid;grid-template-columns:190px 1fr;gap:12px;align-items:center;padding:16px 13px}
+  .visual{position:relative;width:175px;height:175px;margin:auto}.visual svg{width:100%;height:100%;overflow:visible;transform:rotate(-90deg)}.visual circle{fill:none;stroke-linecap:round}.center{position:absolute;inset:0;display:grid;place-content:center;text-align:center}.center strong{font-size:30px;line-height:1;letter-spacing:-.05em}.center span{width:98px;margin-top:6px;color:#59626d;font-size:8px;line-height:1.3}
+  .list{display:grid;gap:5px}.item{display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:8px;min-height:39px;padding:0 9px;border:1px solid transparent;border-radius:5px;background:#f7f8fa}.item.active{border-color:#f97316;background:#fff7ed;box-shadow:inset 3px 0 #f97316}.dot{width:8px;height:8px;border-radius:2px}.item strong{display:block;font-size:8px}.item small{display:block;margin-top:2px;color:#7a838e;font-size:7px}.item b{font-size:10px}
+  .green{background:#249766}.blue{background:#4c78c9}.orange{background:#f97316}.red{background:#d95353}
+  .quadrant-ring{position:relative;width:178px;height:178px;margin:auto}.quadrant-ring svg{width:100%;height:100%;transform:rotate(-90deg)}.quad-track{fill:none;stroke:#e8ebef;stroke-width:20;stroke-linecap:butt}.quad{fill:none;stroke-width:20;stroke-linecap:butt}.quad.active{filter:drop-shadow(0 0 3px rgba(249,115,22,.5));stroke-width:24}
+  .mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:172px;margin:auto}.mini{position:relative;height:82px;border:1px solid #e0e4e9;border-radius:6px;background:#fafbfc}.mini svg{position:absolute;left:8px;top:8px;width:66px;height:66px;transform:rotate(-90deg)}.mini circle{fill:none;stroke-width:7}.mini .mini-center{position:absolute;left:8px;top:8px;width:66px;height:66px;display:grid;place-content:center;font-size:13px;font-weight:850}.mini label{position:absolute;left:78px;right:5px;top:28px;font-size:7px;font-weight:800;line-height:1.2}
+  .copy{padding:16px 17px 19px}.copy h3{margin:0 0 6px}.copy p{margin:0;color:#64748b;font-size:12px;line-height:1.45}.tag{display:inline-flex;margin-top:10px;padding:4px 8px;border-radius:999px;color:#9a3412;background:#ffedd5;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+  .reason{margin-top:18px;padding:14px 16px;border-left:4px solid #f97316;border-radius:5px;background:#fff7ed;color:#7c2d12;font-size:12px;line-height:1.5}
+  @media(max-width:980px){.diagram-grid{grid-template-columns:1fr}}
+</style>
+
+<h2>Новая реализация диаграммы</h2>
+<p class="subtitle">Во всех вариантах остаются четыре показателя, активный выбор, значение в центре или внутри графика, hover/focus и переход по клику. Разница — только в способе визуализации.</p>
+
+<div class="diagram-grid">
+  <article class="diagram-card" data-choice="independent-orbits" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="widget">
+        <div class="head"><div><h4>Рабочие действия</h4><p>Состояние ключевых процессов</p></div><span class="period">7 дней</span></div>
+        <div class="body">
+          <div class="visual">
+            <svg viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="75" stroke="#edf0f3" stroke-width="9"/>
+              <circle cx="90" cy="90" r="75" stroke="#249766" stroke-width="9" stroke-dasharray="75 25" pathLength="100"/>
+              <circle cx="90" cy="90" r="62" stroke="#edf0f3" stroke-width="9"/>
+              <circle cx="90" cy="90" r="62" stroke="#4c78c9" stroke-width="9" stroke-dasharray="80 20" pathLength="100"/>
+              <circle cx="90" cy="90" r="49" stroke="#edf0f3" stroke-width="9"/>
+              <circle cx="90" cy="90" r="49" stroke="#f97316" stroke-width="11" stroke-dasharray="45 55" pathLength="100"/>
+              <circle cx="90" cy="90" r="36" stroke="#edf0f3" stroke-width="9"/>
+              <circle cx="90" cy="90" r="36" stroke="#d95353" stroke-width="9" stroke-dasharray="86 14" pathLength="100"/>
+            </svg>
+            <div class="center"><strong>45%</strong><span>Требует внимания</span></div>
+          </div>
+          <div class="list">
+            <div class="item"><span class="dot green"></span><div><strong>Активные чек-листы</strong><small>6 из 8</small></div><b>75%</b></div>
+            <div class="item"><span class="dot blue"></span><div><strong>Выполнено задач</strong><small>8 из 10</small></div><b>80%</b></div>
+            <div class="item active"><span class="dot orange"></span><div><strong>Требует внимания</strong><small>3 события</small></div><b>45%</b></div>
+            <div class="item"><span class="dot red"></span><div><strong>Сотрудники на смене</strong><small>12 из 14</small></div><b>86%</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy"><h3>A. Независимые орбиты</h3><p>Каждый показатель — отдельная шкала 0–100%. Центр и список синхронизированы. Никаких случайных наложений и математической путаницы.</p><span class="tag">Рекомендую</span></div>
+  </article>
+
+  <article class="diagram-card" data-choice="fixed-sectors" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="widget">
+        <div class="head"><div><h4>Рабочие действия</h4><p>Четыре независимых сектора</p></div><span class="period">7 дней</span></div>
+        <div class="body">
+          <div class="quadrant-ring">
+            <svg viewBox="0 0 180 180">
+              <circle class="quad-track" cx="90" cy="90" r="65" pathLength="100"/>
+              <circle class="quad" cx="90" cy="90" r="65" pathLength="100" stroke="#249766" stroke-dasharray="18.75 81.25" stroke-dashoffset="0"/>
+              <circle class="quad" cx="90" cy="90" r="65" pathLength="100" stroke="#4c78c9" stroke-dasharray="20 80" stroke-dashoffset="-25"/>
+              <circle class="quad active" cx="90" cy="90" r="65" pathLength="100" stroke="#f97316" stroke-dasharray="11.25 88.75" stroke-dashoffset="-50"/>
+              <circle class="quad" cx="90" cy="90" r="65" pathLength="100" stroke="#d95353" stroke-dasharray="21.5 78.5" stroke-dashoffset="-75"/>
+            </svg>
+            <div class="center"><strong>45%</strong><span>Требует внимания</span></div>
+          </div>
+          <div class="list">
+            <div class="item"><span class="dot green"></span><div><strong>Активные чек-листы</strong><small>6 из 8</small></div><b>75%</b></div>
+            <div class="item"><span class="dot blue"></span><div><strong>Выполнено задач</strong><small>8 из 10</small></div><b>80%</b></div>
+            <div class="item active"><span class="dot orange"></span><div><strong>Требует внимания</strong><small>3 события</small></div><b>45%</b></div>
+            <div class="item"><span class="dot red"></span><div><strong>Сотрудники на смене</strong><small>12 из 14</small></div><b>86%</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy"><h3>B. Четыре сектора</h3><p>Сохраняет форму одного кольца. Каждому показателю отведена четверть окружности, заполнение внутри неё соответствует проценту.</p></div>
+  </article>
+
+  <article class="diagram-card" data-choice="four-mini-donuts" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="widget">
+        <div class="head"><div><h4>Рабочие действия</h4><p>Показатели без общего центра</p></div><span class="period">7 дней</span></div>
+        <div class="body">
+          <div class="mini-grid">
+            <div class="mini"><svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="26" stroke="#edf0f3"/><circle cx="35" cy="35" r="26" stroke="#249766" stroke-dasharray="75 25" pathLength="100"/></svg><div class="mini-center">75%</div><label>Чек-листы</label></div>
+            <div class="mini"><svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="26" stroke="#edf0f3"/><circle cx="35" cy="35" r="26" stroke="#4c78c9" stroke-dasharray="80 20" pathLength="100"/></svg><div class="mini-center">80%</div><label>Задачи</label></div>
+            <div class="mini" style="border-color:#f97316;background:#fff7ed"><svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="26" stroke="#edf0f3"/><circle cx="35" cy="35" r="26" stroke="#f97316" stroke-dasharray="45 55" pathLength="100"/></svg><div class="mini-center">45%</div><label>Внимание</label></div>
+            <div class="mini"><svg viewBox="0 0 70 70"><circle cx="35" cy="35" r="26" stroke="#edf0f3"/><circle cx="35" cy="35" r="26" stroke="#d95353" stroke-dasharray="86 14" pathLength="100"/></svg><div class="mini-center">86%</div><label>На смене</label></div>
+          </div>
+          <div class="list">
+            <div class="item"><span class="dot green"></span><div><strong>Активные чек-листы</strong><small>6 из 8</small></div><b>75%</b></div>
+            <div class="item"><span class="dot blue"></span><div><strong>Выполнено задач</strong><small>8 из 10</small></div><b>80%</b></div>
+            <div class="item active"><span class="dot orange"></span><div><strong>Требует внимания</strong><small>3 события</small></div><b>45%</b></div>
+            <div class="item"><span class="dot red"></span><div><strong>Сотрудники на смене</strong><small>12 из 14</small></div><b>86%</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy"><h3>C. Четыре мини-диаграммы</h3><p>Самое прямое чтение каждого процента, но теряется единый центральный график и активное значение в центре.</p></div>
+  </article>
+</div>
+
+<div class="reason"><strong>Почему A лучше:</strong> показатели независимы друг от друга, поэтому каждый получает собственную окружность. Активная строка подсвечивает соответствующее кольцо, а центр показывает выбранное значение. Это сохраняет вашу механику и убирает визуальную ошибку текущего donut.</div>

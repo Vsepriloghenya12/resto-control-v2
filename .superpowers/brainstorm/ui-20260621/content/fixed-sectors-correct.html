@@ -1,0 +1,77 @@
+<style>
+  .stage{margin-top:24px;padding:24px;border:1px solid #dce1e7;border-radius:16px;background:#f2f4f6}
+  .widget{max-width:900px;margin:auto;overflow:hidden;border:1px solid #d9dee5;border-radius:8px;background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.08)}
+  .head{display:flex;align-items:center;justify-content:space-between;padding:15px 17px;border-bottom:1px solid #edf0f3}.head h3{margin:0;font-size:15px}.head p{margin:4px 0 0;color:#737c87;font-size:10px}
+  .periods{display:flex;gap:5px}.period{padding:7px 10px;border:1px solid #dce1e7;border-radius:5px;color:#5c6570;background:#fff;font-size:9px;font-weight:800}.period.active{border-color:#20242a;color:#fff;background:#20242a}
+  .body{display:grid;grid-template-columns:390px minmax(0,1fr);gap:22px;align-items:center;padding:24px}
+  .chart-column{display:grid;place-items:center}
+  .chart{position:relative;width:320px;height:320px}
+  .chart svg{display:block;width:100%;height:100%;overflow:visible}
+  .sector-track,.sector-fill{fill:none;stroke-width:31;stroke-linecap:butt}
+  .sector-track{stroke:#e8ebef}
+  .sector-fill{cursor:pointer;transition:stroke-width .16s ease,filter .16s ease,opacity .16s ease}
+  .sector-fill.active{stroke-width:37;filter:drop-shadow(0 4px 4px rgba(249,115,22,.22))}
+  .separator{stroke:#fff;stroke-width:5}
+  .center-disc{position:absolute;inset:78px;display:grid;place-content:center;border:1px solid #e5e8ec;border-radius:50%;background:#fff;text-align:center;box-shadow:0 5px 14px rgba(15,23,42,.05)}
+  .center-disc small{color:#f97316;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+  .center-disc strong{display:block;margin-top:5px;font-size:46px;line-height:1;letter-spacing:-.06em}
+  .center-disc span{width:132px;margin-top:8px;color:#525c68;font-size:11px;font-weight:700;line-height:1.3}
+  .sector-label{position:absolute;display:grid;gap:2px;color:#5d6671;font-size:9px;line-height:1.2}.sector-label strong{color:#20242a;font-size:11px}.sector-label.one{top:-2px;right:12px;text-align:right}.sector-label.two{right:-15px;bottom:31px;text-align:right}.sector-label.three{left:2px;bottom:8px}.sector-label.four{left:-15px;top:32px}
+  .list{display:grid;gap:7px}.item{display:grid;grid-template-columns:12px minmax(0,1fr) 82px 44px;align-items:center;gap:11px;min-height:58px;padding:0 13px;border:1px solid #e1e5ea;border-radius:6px;background:#fafbfc;transition:.16s ease}.item.active{border-color:#f97316;background:#fff7ed;box-shadow:inset 4px 0 #f97316}.dot{width:11px;height:11px;border-radius:3px}.item strong{display:block;font-size:11px}.item small{display:block;margin-top:4px;color:#747d88;font-size:9px}.mini-track{height:6px;overflow:hidden;border-radius:2px;background:#e3e7eb}.mini-fill{height:100%}.value{text-align:right;font-size:12px;font-weight:850}
+  .green{background:#239a68}.blue{background:#4f7fcc}.orange{background:#f97316}.red{background:#d95454}
+  .logic{max-width:900px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px auto 0}.logic div{padding:10px;border:1px solid #e2e8f0;border-radius:7px;background:#fff}.logic strong{display:block;font-size:10px}.logic span{display:block;margin-top:4px;color:#64748b;font-size:9px;line-height:1.35}
+  .approval{max-width:900px;margin:14px auto 0;padding:13px 15px;border-left:4px solid #f97316;border-radius:5px;background:#fff7ed;color:#7c2d12;font-size:12px;line-height:1.5}
+  @media(max-width:800px){.body{grid-template-columns:1fr}.chart{width:280px;height:280px}.center-disc{inset:69px}.logic{grid-template-columns:1fr 1fr}}
+</style>
+
+<h2>Вариант B — исправленная геометрия</h2>
+<p class="subtitle">Одна диаграмма, четыре равных независимых сектора. Процент каждого показателя заполняет только его четверть окружности.</p>
+
+<div class="stage">
+  <section class="widget">
+    <header class="head">
+      <div><h3>Рабочие действия</h3><p>Операционная картина смены</p></div>
+      <div class="periods"><span class="period">Сегодня</span><span class="period active">7 дней</span><span class="period">30 дней</span></div>
+    </header>
+    <div class="body">
+      <div class="chart-column">
+        <div class="chart">
+          <svg viewBox="0 0 320 320" aria-label="Диаграмма рабочих действий">
+            <!-- Four independent 90-degree tracks, separated by 6-degree gaps -->
+            <path class="sector-track" pathLength="100" stroke-dasharray="23.3 76.7" stroke-dashoffset="0" d="M160 39 A121 121 0 1 1 159.9 39"/>
+            <path class="sector-track" pathLength="100" stroke-dasharray="23.3 76.7" stroke-dashoffset="-25" d="M160 39 A121 121 0 1 1 159.9 39"/>
+            <path class="sector-track" pathLength="100" stroke-dasharray="23.3 76.7" stroke-dashoffset="-50" d="M160 39 A121 121 0 1 1 159.9 39"/>
+            <path class="sector-track" pathLength="100" stroke-dasharray="23.3 76.7" stroke-dashoffset="-75" d="M160 39 A121 121 0 1 1 159.9 39"/>
+
+            <!-- Fill = 23.3% of circumference × metric percentage -->
+            <path class="sector-fill" pathLength="100" stroke="#239a68" stroke-dasharray="17.48 82.52" stroke-dashoffset="0" d="M160 39 A121 121 0 1 1 159.9 39"/>
+            <path class="sector-fill" pathLength="100" stroke="#4f7fcc" stroke-dasharray="18.64 81.36" stroke-dashoffset="-25" d="M160 39 A121 121 0 1 1 159.9 39"/>
+            <path class="sector-fill active" pathLength="100" stroke="#f97316" stroke-dasharray="10.49 89.51" stroke-dashoffset="-50" d="M160 39 A121 121 0 1 1 159.9 39"/>
+            <path class="sector-fill" pathLength="100" stroke="#d95454" stroke-dasharray="20.04 79.96" stroke-dashoffset="-75" d="M160 39 A121 121 0 1 1 159.9 39"/>
+          </svg>
+          <div class="center-disc"><small>Активный показатель</small><strong>45%</strong><span>Требует внимания<br>3 события</span></div>
+          <div class="sector-label one"><strong>75%</strong><span>Чек-листы</span></div>
+          <div class="sector-label two"><strong>80%</strong><span>Задачи</span></div>
+          <div class="sector-label three"><strong>45%</strong><span>Внимание</span></div>
+          <div class="sector-label four"><strong>86%</strong><span>На смене</span></div>
+        </div>
+      </div>
+
+      <div class="list">
+        <div class="item"><span class="dot green"></span><div><strong>Активные чек-листы</strong><small>6 из 8</small></div><div class="mini-track"><div class="mini-fill green" style="width:75%"></div></div><span class="value">75%</span></div>
+        <div class="item"><span class="dot blue"></span><div><strong>Выполнено задач</strong><small>8 из 10</small></div><div class="mini-track"><div class="mini-fill blue" style="width:80%"></div></div><span class="value">80%</span></div>
+        <div class="item active"><span class="dot orange"></span><div><strong>Требует внимания</strong><small>3 события</small></div><div class="mini-track"><div class="mini-fill orange" style="width:45%"></div></div><span class="value">45%</span></div>
+        <div class="item"><span class="dot red"></span><div><strong>Сотрудники на смене</strong><small>12 из 14</small></div><div class="mini-track"><div class="mini-fill red" style="width:86%"></div></div><span class="value">86%</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="logic">
+    <div><strong>Четыре равных места</strong><span>Каждому показателю всегда принадлежит ровно четверть кольца.</span></div>
+    <div><strong>Процент честный</strong><span>75% заполняет 75% своей четверти, а не 75% всего круга.</span></div>
+    <div><strong>Активность связана</strong><span>Сектор, центр и строка выделяются одновременно.</span></div>
+    <div><strong>Без наложений</strong><span>Активный сектор расширяется, но не рисует постороннюю дугу сверху.</span></div>
+  </div>
+</div>
+
+<div class="approval">Это уже точная схема для реализации: отдельный трек на каждый сектор, фиксированные промежутки, пропорциональное заполнение и единое активное состояние.</div>

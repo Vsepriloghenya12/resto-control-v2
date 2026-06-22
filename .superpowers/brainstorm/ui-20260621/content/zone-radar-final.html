@@ -1,0 +1,51 @@
+<style>
+  .stage{margin-top:24px;padding:28px;border:1px solid #dce1e7;border-radius:18px;background:#f2f4f6}
+  .widget{max-width:780px;margin:auto;overflow:hidden;border:1px solid #d9dee5;border-radius:10px;background:#fff;box-shadow:0 18px 46px rgba(15,23,42,.11)}
+  .head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #edf0f3}.head h3{margin:0;font-size:16px}.head p{margin:4px 0 0;color:#737c87;font-size:10px}.head button{border:0;color:#c65308;background:transparent;font-size:10px;font-weight:850}
+  .body{display:grid;grid-template-columns:minmax(330px,1.2fr) minmax(220px,.8fr);gap:10px;align-items:center;padding:20px}
+  .radar-wrap{position:relative;min-height:330px;display:grid;place-items:center;background:radial-gradient(circle at 50% 50%,rgba(37,99,235,.045),transparent 58%)}
+  .radar{width:310px;height:310px;overflow:visible}
+  .grid{fill:none;stroke:#dde3e9;stroke-width:1}.axis{stroke:#e4e8ed;stroke-width:1}.shape{fill:rgba(37,99,235,.16);stroke:#2563eb;stroke-width:3;filter:drop-shadow(0 8px 12px rgba(37,99,235,.15))}.point{fill:#fff;stroke:#2563eb;stroke-width:3}.point.warn{stroke:#f97316;fill:#fff7ed}.point.danger{stroke:#dc2626;fill:#fef2f2}
+  .axis-label{font-family:Inter,Arial,sans-serif;font-size:10px;font-weight:800;fill:#27313d}.axis-value{font-family:Inter,Arial,sans-serif;font-size:9px;font-weight:750;fill:#707986}
+  .center-score{position:absolute;display:grid;place-items:center;width:80px;height:80px;border:1px solid #dbe3eb;border-radius:50%;background:rgba(255,255,255,.94);box-shadow:0 8px 18px rgba(15,23,42,.08);text-align:center}.center-score strong{display:block;font-size:23px;line-height:1}.center-score span{display:block;margin-top:4px;color:#6b7480;font-size:8px;font-weight:750}
+  .legend{display:grid;gap:7px}.item{display:grid;grid-template-columns:9px 1fr auto;align-items:center;gap:9px;min-height:48px;padding:0 11px;border:1px solid #e3e7ec;border-radius:6px;background:#fafbfc}.item:hover,.item.active{border-color:#f97316;background:#fff7ed}.dot{width:9px;height:9px;border-radius:50%;background:#2563eb}.dot.warn{background:#f97316}.dot.danger{background:#dc2626}.item strong{display:block;font-size:10px}.item small{display:block;margin-top:3px;color:#747d88;font-size:8px}.item b{font-size:12px;font-variant-numeric:tabular-nums}
+  .caption{max-width:780px;margin:16px auto 0;padding:14px 16px;border-left:4px solid #f97316;border-radius:6px;background:#fff7ed;color:#7c2d12;font-size:12px;line-height:1.55}
+  @media(max-width:760px){.body{grid-template-columns:1fr}.radar-wrap{min-height:300px}.radar{width:280px;height:280px}}
+</style>
+
+<h2>Готовность зон — радарная диаграмма</h2>
+<p class="subtitle">Это уже полноценный визуальный график: форма показывает общий баланс ресторана, а провалы сразу видны по втянутым вершинам.</p>
+
+<div class="stage">
+  <section class="widget">
+    <header class="head"><div><h3>Готовность зон</h3><p>Выполнение чек-листов по направлениям</p></div><button>Открыть чек-листы →</button></header>
+    <div class="body">
+      <div class="radar-wrap">
+        <svg class="radar" viewBox="0 0 320 320" role="img" aria-label="Готовность зон ресторана">
+          <polygon class="grid" points="160,28 285,119 237,267 83,267 35,119"/>
+          <polygon class="grid" points="160,61 254,129 218,241 102,241 66,129"/>
+          <polygon class="grid" points="160,94 223,139 198,214 122,214 97,139"/>
+          <polygon class="grid" points="160,127 191,150 179,188 141,188 129,150"/>
+          <line class="axis" x1="160" y1="160" x2="160" y2="28"/><line class="axis" x1="160" y1="160" x2="285" y2="119"/><line class="axis" x1="160" y1="160" x2="237" y2="267"/><line class="axis" x1="160" y1="160" x2="83" y2="267"/><line class="axis" x1="160" y1="160" x2="35" y2="119"/>
+          <polygon class="shape" points="160,41 260,127 204,221 135,195 56,126"/>
+          <circle class="point" cx="160" cy="41" r="6"/><circle class="point" cx="260" cy="127" r="6"/><circle class="point warn" cx="204" cy="221" r="6"/><circle class="point danger" cx="135" cy="195" r="6"/><circle class="point" cx="56" cy="126" r="6"/>
+          <text class="axis-label" x="160" y="14" text-anchor="middle">Зал</text><text class="axis-value" x="160" y="25" text-anchor="middle">90%</text>
+          <text class="axis-label" x="294" y="113">Кухня</text><text class="axis-value" x="294" y="125">78%</text>
+          <text class="axis-label" x="244" y="283">Бар</text><text class="axis-value" x="244" y="295">57%</text>
+          <text class="axis-label" x="76" y="283" text-anchor="end">Клининг</text><text class="axis-value" x="76" y="295" text-anchor="end">33%</text>
+          <text class="axis-label" x="25" y="113" text-anchor="end">Склад</text><text class="axis-value" x="25" y="125" text-anchor="end">83%</text>
+        </svg>
+        <div class="center-score"><strong>68%</strong><span>средняя<br>готовность</span></div>
+      </div>
+      <div class="legend">
+        <div class="item"><span class="dot"></span><div><strong>Основной зал</strong><small>9 из 10</small></div><b>90%</b></div>
+        <div class="item"><span class="dot"></span><div><strong>Кухня</strong><small>7 из 9</small></div><b>78%</b></div>
+        <div class="item active"><span class="dot warn"></span><div><strong>Бар</strong><small>4 из 7</small></div><b>57%</b></div>
+        <div class="item"><span class="dot danger"></span><div><strong>Клининг</strong><small>2 из 6</small></div><b>33%</b></div>
+        <div class="item"><span class="dot"></span><div><strong>Склад</strong><small>5 из 6</small></div><b>83%</b></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="caption"><strong>Интерактивность:</strong> при наведении на вершину выделяется соответствующая ось и строка справа; при наведении на строку — увеличивается точка на графике. Клик открывает чек-листы выбранной зоны.</div>

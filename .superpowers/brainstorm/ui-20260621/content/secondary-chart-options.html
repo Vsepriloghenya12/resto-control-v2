@@ -1,0 +1,84 @@
+<style>
+  .options-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:24px}
+  .option-card{overflow:hidden;border:2px solid transparent;border-radius:16px;background:#fff;box-shadow:0 14px 36px rgba(15,23,42,.09);cursor:pointer;transition:.18s ease}
+  .option-card:hover{transform:translateY(-3px);box-shadow:0 20px 42px rgba(15,23,42,.14)}
+  .option-card.selected{border-color:#f97316}
+  .preview{height:390px;padding:17px;color:#171b22;background:#f2f4f6}
+  .widget{height:100%;overflow:hidden;border:1px solid #dce1e7;border-radius:7px;background:#fff}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;padding:13px 14px;border-bottom:1px solid #edf0f3}.head h4{margin:0;font-size:13px}.head p{margin:4px 0 0;color:#737c87;font-size:8px}.head span{color:#c65308;font-size:8px;font-weight:800}
+  .zone-list{display:grid;gap:12px;padding:15px}.zone-top{display:flex;align-items:center;justify-content:space-between;font-size:9px}.zone-top strong{font-size:9px}.zone-top span{color:#727b86}.track{height:9px;margin-top:6px;overflow:hidden;border-radius:3px;background:#e8ebef}.fill{height:100%;border-radius:3px;background:#278d62}.fill.warn{background:#f59a3d}.fill.low{background:#d95353}.zone-note{display:flex;justify-content:space-between;margin-top:4px;color:#8a929c;font-size:7px}
+  .stack-total{padding:19px 15px 4px}.stack-total strong{font-size:31px;letter-spacing:-.05em}.stack-total span{margin-left:5px;color:#737c87;font-size:9px}.stack{display:flex;height:28px;margin:13px 15px 8px;overflow:hidden;border-radius:5px;background:#e8ebef}.stack div{display:grid;place-items:center;color:#fff;font-size:8px;font-weight:850}.s1{width:36%;background:#d95353}.s2{width:29%;background:#f97316}.s3{width:21%;background:#4f7fcc}.s4{width:14%;background:#818b98}
+  .legend{display:grid;gap:9px;padding:10px 15px}.legend-row{display:grid;grid-template-columns:9px 1fr auto;gap:8px;align-items:center;font-size:8px}.dot{width:9px;height:9px;border-radius:2px}.legend-row strong{font-size:9px}
+  .team-chart{display:grid;grid-template-columns:145px 1fr;gap:8px;align-items:center;padding:18px 13px}.radar{position:relative;width:135px;height:135px}.radar svg{width:100%;height:100%}.radar-grid{fill:none;stroke:#dfe4e9;stroke-width:1}.radar-shape{fill:rgba(79,127,204,.15);stroke:#4f7fcc;stroke-width:2}.radar-point{fill:#f97316}.team-list{display:grid;gap:10px}.team-row{display:grid;grid-template-columns:1fr auto;gap:7px;font-size:8px}.team-row span{color:#737c87}.team-row strong{font-size:9px}
+  .copy{padding:16px 17px 19px}.copy h3{margin:0 0 6px}.copy p{margin:0;color:#64748b;font-size:12px;line-height:1.45}.tag{display:inline-flex;margin-top:10px;padding:4px 8px;border-radius:999px;color:#9a3412;background:#ffedd5;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+  .recommendation{margin-top:18px;padding:14px 16px;border-left:4px solid #f97316;border-radius:5px;background:#fff7ed;color:#7c2d12;font-size:12px;line-height:1.5}
+  @media(max-width:980px){.options-grid{grid-template-columns:1fr}}
+</style>
+
+<h2>Что добавить рядом с основной диаграммой?</h2>
+<p class="subtitle">Основной donut показывает структуру рабочих действий. Второй график должен раскрывать другую сторону ресторана, а не повторять те же проценты.</p>
+
+<div class="options-grid">
+  <article class="option-card" data-choice="zone-readiness" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="widget">
+        <div class="head"><div><h4>Готовность зон</h4><p>Выполнение чек-листов по направлениям</p></div><span>Чек-листы →</span></div>
+        <div class="zone-list">
+          <div><div class="zone-top"><strong>Основной зал</strong><span>9 из 10</span></div><div class="track"><div class="fill" style="width:90%"></div></div><div class="zone-note"><span>готово к работе</span><strong>90%</strong></div></div>
+          <div><div class="zone-top"><strong>Кухня</strong><span>7 из 9</span></div><div class="track"><div class="fill" style="width:78%"></div></div><div class="zone-note"><span>1 пункт в работе</span><strong>78%</strong></div></div>
+          <div><div class="zone-top"><strong>Бар</strong><span>4 из 7</span></div><div class="track"><div class="fill warn" style="width:57%"></div></div><div class="zone-note"><span>требует внимания</span><strong>57%</strong></div></div>
+          <div><div class="zone-top"><strong>Клининг</strong><span>2 из 6</span></div><div class="track"><div class="fill low" style="width:33%"></div></div><div class="zone-note"><span>не готово</span><strong>33%</strong></div></div>
+          <div><div class="zone-top"><strong>Склад</strong><span>5 из 6</span></div><div class="track"><div class="fill" style="width:83%"></div></div><div class="zone-note"><span>почти готово</span><strong>83%</strong></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="copy"><h3>A. Готовность зон</h3><p>Сразу видно, где именно проблема: зал, кухня, бар или клининг. Данные `model.zones` уже рассчитываются в приложении, но пока нигде не показываются.</p><span class="tag">Рекомендую</span></div>
+  </article>
+
+  <article class="option-card" data-choice="attention-structure" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="widget">
+        <div class="head"><div><h4>Структура внимания</h4><p>Какие события требуют реакции</p></div><span>Все события →</span></div>
+        <div class="stack-total"><strong>14</strong><span>активных событий</span></div>
+        <div class="stack"><div class="s1">5</div><div class="s2">4</div><div class="s3">3</div><div class="s4">2</div></div>
+        <div class="legend">
+          <div class="legend-row"><span class="dot" style="background:#d95353"></span><span>Просроченные задачи</span><strong>5</strong></div>
+          <div class="legend-row"><span class="dot" style="background:#f97316"></span><span>Технические заявки</span><strong>4</strong></div>
+          <div class="legend-row"><span class="dot" style="background:#4f7fcc"></span><span>Новые брони</span><strong>3</strong></div>
+          <div class="legend-row"><span class="dot" style="background:#818b98"></span><span>Инвентаризации</span><strong>2</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="copy"><h3>B. Структура внимания</h3><p>Компактный составной bar показывает, какого типа проблемы преобладают. Полезно, но частично повторяет блок «Требует внимания» ниже.</p></div>
+  </article>
+
+  <article class="option-card" data-choice="team-balance" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="widget">
+        <div class="head"><div><h4>Баланс команды</h4><p>Покрытие смены по зонам</p></div><span>Сотрудники →</span></div>
+        <div class="team-chart">
+          <div class="radar">
+            <svg viewBox="0 0 140 140">
+              <polygon class="radar-grid" points="70,8 129,51 107,121 33,121 11,51"/>
+              <polygon class="radar-grid" points="70,29 109,57 94,103 46,103 31,57"/>
+              <polygon class="radar-grid" points="70,49 90,64 83,87 57,87 50,64"/>
+              <line class="radar-grid" x1="70" y1="70" x2="70" y2="8"/><line class="radar-grid" x1="70" y1="70" x2="129" y2="51"/><line class="radar-grid" x1="70" y1="70" x2="107" y2="121"/><line class="radar-grid" x1="70" y1="70" x2="33" y2="121"/><line class="radar-grid" x1="70" y1="70" x2="11" y2="51"/>
+              <polygon class="radar-shape" points="70,17 116,55 91,99 46,103 24,55"/>
+              <circle class="radar-point" cx="70" cy="17" r="3"/><circle class="radar-point" cx="116" cy="55" r="3"/><circle class="radar-point" cx="91" cy="99" r="3"/><circle class="radar-point" cx="46" cy="103" r="3"/><circle class="radar-point" cx="24" cy="55" r="3"/>
+            </svg>
+          </div>
+          <div class="team-list">
+            <div class="team-row"><span>Зал</span><strong>5 / 5</strong></div>
+            <div class="team-row"><span>Кухня</span><strong>4 / 5</strong></div>
+            <div class="team-row"><span>Бар</span><strong>2 / 3</strong></div>
+            <div class="team-row"><span>Клининг</span><strong>1 / 2</strong></div>
+            <div class="team-row"><span>Менеджмент</span><strong>2 / 2</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy"><h3>C. Баланс команды</h3><p>Красиво показывает перекосы по зонам, но для корректности нужен плановый состав смены. Сейчас backend хранит факт, но не полный норматив покрытия.</p></div>
+  </article>
+</div>
+
+<div class="recommendation"><strong>Мой выбор — A.</strong> Основной donut отвечает «из чего состоит текущая операционная активность», а график готовности зон отвечает «где именно ресторан не готов». Вместе они дают владельцу две разные и полезные точки зрения.</div>

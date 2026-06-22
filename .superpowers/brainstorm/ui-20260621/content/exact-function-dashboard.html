@@ -1,0 +1,79 @@
+<style>
+  .exact-shell{margin-top:24px;overflow:hidden;border:1px solid #d7dde4;border-radius:16px;background:#f2f4f6;box-shadow:0 24px 60px rgba(15,23,42,.16);font-family:Inter,Arial,sans-serif;color:#171b22}
+  .app{min-height:720px;display:grid;grid-template-columns:214px minmax(0,1fr)}
+  .sidebar{display:flex;flex-direction:column;padding:18px 12px;background:#20242a;color:#aeb4bd}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px 17px;border-bottom:1px solid #343941}.mark{width:36px;height:36px;display:grid;place-items:center;border-radius:7px;color:#fff;background:#f97316;font-weight:900}.brand strong{display:block;color:#fff;font-size:14px}.brand small{font-size:8px;color:#858d98}
+  .nav{display:grid;gap:4px;margin-top:14px}.nav-item{display:flex;align-items:center;gap:9px;min-height:38px;padding:0 10px;border-radius:6px;font-size:10px;font-weight:700}.nav-item:before{content:"";width:14px;height:14px;border:1.5px solid currentColor;border-radius:3px}.nav-item.active{color:#171b22;background:#fff}.nav-item.active:after{content:"";width:3px;height:19px;margin-left:auto;border-radius:2px;background:#f97316}
+  .support{display:flex;align-items:center;gap:9px;margin-top:auto;padding:10px;border:1px solid #383e47;border-radius:6px;color:#d6dae0;font-size:10px}.support:before{content:"";width:14px;height:11px;border:1px solid currentColor}.badge{margin-left:auto;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#e25353;color:#fff;font-size:7px}
+  .main{min-width:0;padding:18px}
+  .topbar{display:flex;align-items:center;gap:12px}.title{margin-right:auto}.title h3{margin:0;font-size:21px;letter-spacing:-.04em}.title p{margin:4px 0 0;color:#68717d;font-size:9px}
+  .payment{width:160px;padding:8px 10px;border-left:3px solid #f97316;border-radius:4px;background:#fff}.payment small{display:block;color:#c65308;font-size:7px;font-weight:800;text-transform:uppercase}.payment strong{display:block;margin-top:3px;font-size:8px}.payment span{display:block;margin-top:2px;color:#777f8a;font-size:7px}
+  .search{width:165px;height:35px;border:1px solid #d8dde4;border-radius:5px;background:#fff}.icon{width:35px;height:35px;border:1px solid #d8dde4;border-radius:5px;background:#fff}.profile{width:105px;height:35px;border:1px solid #d8dde4;border-radius:5px;background:#fff}
+  .restaurantbar{display:flex;align-items:center;gap:7px;margin-top:12px;padding:7px;border:1px solid #dce1e7;border-radius:6px;background:#fff}.restaurant{padding:7px 11px;border-radius:4px;color:#555f6b;background:#eef1f4;font-size:8px;font-weight:800}.restaurant.current{color:#fff;background:#20242a}.add{margin-left:auto;padding:7px 10px;border:1px solid #f97316;border-radius:4px;color:#c65308;background:#fff7ed;font-size:8px;font-weight:800}
+  .donut-widget{margin-top:10px;border:1px solid #dce1e7;border-radius:7px;background:#fff}
+  .widget-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #edf0f3}.widget-head h4{margin:0;font-size:13px}.widget-head p{margin:3px 0 0;color:#747d88;font-size:8px}.periods{display:flex;gap:4px}.period{padding:6px 9px;border:1px solid #dce1e7;border-radius:4px;color:#59626d;background:#fff;font-size:7px;font-weight:800}.period.active{border-color:#20242a;color:#fff;background:#20242a}
+  .widget-body{display:grid;grid-template-columns:240px minmax(0,1fr);gap:14px;align-items:center;padding:14px}
+  .chart-wrap{position:relative;width:205px;height:205px;margin:auto}.donut{width:100%;height:100%;border-radius:50%;background:conic-gradient(#38a169 0 27%,#f2f4f6 27% 29%,#4f7fd1 29% 54%,#f2f4f6 54% 56%,#f97316 56% 72%,#f2f4f6 72% 74%,#db5555 74% 98%,#f2f4f6 98% 100%)}.donut:after{content:"";position:absolute;inset:39px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #edf0f3}
+  .center{position:absolute;inset:0;z-index:2;display:grid;place-content:center;text-align:center}.center strong{font-size:31px;line-height:1;letter-spacing:-.05em}.center span{width:105px;margin-top:6px;color:#59626d;font-size:9px;line-height:1.25}.active-marker{position:absolute;inset:4px;border:3px solid transparent;border-top-color:#f97316;border-radius:50%;transform:rotate(26deg)}
+  .rows{display:grid;gap:5px}.data-row{display:grid;grid-template-columns:10px 44px minmax(0,1fr) auto;align-items:center;gap:9px;min-height:42px;padding:0 10px;border:1px solid transparent;border-radius:5px;background:#f8f9fa}.data-row.active{border-color:#f97316;background:#fff7ed;box-shadow:inset 3px 0 #f97316}.dot{width:9px;height:9px;border-radius:3px;background:#38a169}.dot.blue{background:#4f7fd1}.dot.orange{background:#f97316}.dot.red{background:#db5555}.percent{font-size:10px;font-weight:850}.name{font-size:9px;font-weight:750}.value{color:#68717d;font-size:8px;font-weight:750}
+  .metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:9px}.metric{min-height:78px;padding:10px;border:1px solid #dce1e7;border-radius:6px;background:#fff}.metric-top{display:flex;align-items:center;justify-content:space-between}.metric-icon{width:22px;height:22px;border-radius:4px;background:#edf0f3}.metric-alert{width:6px;height:6px;border-radius:50%;background:#f97316}.metric strong{display:block;margin-top:8px;font-size:19px;letter-spacing:-.04em}.metric strong span{color:#8b929c;font-size:9px}.metric p{margin:2px 0 0;color:#4d5662;font-size:8px;font-weight:750}.metric small{display:block;margin-top:4px;color:#7b8490;font-size:7px}
+  .lower{display:grid;grid-template-columns:1.25fr .75fr;gap:9px;margin-top:9px}.panel{border:1px solid #dce1e7;border-radius:6px;background:#fff}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border-bottom:1px solid #edf0f3}.panel-head strong{font-size:11px}.panel-head span{color:#c65308;font-size:8px;font-weight:800}
+  .attention-list,.employee-list{padding:2px 11px 7px}.attention,.employee{display:grid;align-items:center;gap:9px;min-height:43px;border-bottom:1px solid #edf0f3}.attention{grid-template-columns:24px 1fr auto}.employee{grid-template-columns:27px 1fr auto auto}.attention:last-child,.employee:last-child{border:0}.status-icon{width:23px;height:23px;border-radius:4px;background:#fee2e2}.status-icon.warn{background:#ffedd5}.attention strong,.employee strong{display:block;font-size:8px}.attention p,.employee p{margin:3px 0 0;color:#737c87;font-size:7px}.attention time{color:#737c87;font-size:7px}.avatar{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;background:#e5e9ed;color:#4f5863;font-size:7px;font-weight:850}.zone{color:#737c87;font-size:7px}.shift{padding:4px 6px;border-radius:3px;color:#187847;background:#e6f6ed;font-size:6px;font-weight:800}
+  .notes{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:20px}.note{padding:15px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}.note h3{margin:0 0 8px;font-size:14px}.note p{margin:0;color:#64748b;font-size:12px;line-height:1.5}
+  @media(max-width:1000px){.app{grid-template-columns:64px 1fr}.sidebar{padding:12px 7px}.brand>div:last-child,.nav-item{font-size:0}.nav-item{justify-content:center;padding:0}.nav-item.active:after,.support span,.support .badge{display:none}.metrics{grid-template-columns:repeat(3,1fr)}.widget-body{grid-template-columns:1fr}.lower{grid-template-columns:1fr}.notes{grid-template-columns:1fr}}
+</style>
+
+<h2>Главная с сохранением вашего функционала</h2>
+<p class="subtitle">Не новый dashboard «по мотивам», а визуальная переработка существующей страницы: тот же график, те же показатели, списки и переходы.</p>
+
+<div class="exact-shell">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="mark">R</div><div><strong>Resto Control</strong><small>операционный центр</small></div></div>
+      <div class="nav"><div class="nav-item active">Главная</div><div class="nav-item">Сотрудники</div><div class="nav-item">Чек-листы</div><div class="nav-item">Задачи</div><div class="nav-item">План зала / Брони</div><div class="nav-item">Инвентаризация</div><div class="nav-item">Номенклатура</div><div class="nav-item">База знаний</div><div class="nav-item">Оплата</div></div>
+      <div class="support"><span>Поддержка</span><span class="badge">2</span></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="title"><h3>Добрый день, Иван!</h3><p>Demo Restaurant</p></div>
+        <div class="payment"><small>Оплата</small><strong>Оплачено до 26.06.2026</strong><span>Осталось 5 дней</span></div>
+        <div class="search"></div><div class="icon"></div><div class="profile"></div><div class="icon"></div>
+      </header>
+
+      <div class="restaurantbar"><span class="restaurant current">Demo Restaurant</span><span class="restaurant">Resto Bar</span><span class="add">+ Добавить ресторан</span></div>
+
+      <section class="donut-widget">
+        <div class="widget-head"><div><h4>Рабочие действия</h4><p>Операционная картина смены</p></div><div class="periods"><span class="period">Сегодня</span><span class="period active">7 дней</span><span class="period">30 дней</span></div></div>
+        <div class="widget-body">
+          <div class="chart-wrap"><div class="donut"></div><div class="active-marker"></div><div class="center"><strong>75%</strong><span>Активные чек-листы</span></div></div>
+          <div class="rows">
+            <div class="data-row active"><span class="dot"></span><span class="percent">75%</span><span class="name">Активные чек-листы</span><span class="value">6 из 8</span></div>
+            <div class="data-row"><span class="dot blue"></span><span class="percent">80%</span><span class="name">Выполнено задач</span><span class="value">8 из 10</span></div>
+            <div class="data-row"><span class="dot orange"></span><span class="percent">45%</span><span class="name">Требует внимания</span><span class="value">3</span></div>
+            <div class="data-row"><span class="dot red"></span><span class="percent">86%</span><span class="name">Сотрудники на смене</span><span class="value">12 из 14</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics">
+        <div class="metric"><div class="metric-top"><span class="metric-icon"></span></div><strong>14</strong><p>Сотрудников</p><small>12 на смене</small></div>
+        <div class="metric"><div class="metric-top"><span class="metric-icon"></span></div><strong>6<span> / 8</span></strong><p>Чек-листов</p><small>активно</small></div>
+        <div class="metric"><div class="metric-top"><span class="metric-icon"></span></div><strong>8<span> / 10</span></strong><p>Задач</p><small>выполнено</small></div>
+        <div class="metric"><div class="metric-top"><span class="metric-icon"></span></div><strong>24</strong><p>Броней</p><small>активные брони</small></div>
+        <div class="metric"><div class="metric-top"><span class="metric-icon"></span><span class="metric-alert"></span></div><strong>1</strong><p>Тех. заявок</p><small>открыто</small></div>
+        <div class="metric"><div class="metric-top"><span class="metric-icon"></span></div><strong>2</strong><p>Инвентаризации</p><small>в работе</small></div>
+      </section>
+
+      <section class="lower">
+        <article class="panel"><div class="panel-head"><strong>Требует внимания</strong><span>Все (3)</span></div><div class="attention-list"><div class="attention"><span class="status-icon"></span><div><strong>Проверка холодильной камеры</strong><p>Просроченная задача</p></div><time>до 12:30</time></div><div class="attention"><span class="status-icon warn"></span><div><strong>Подсветка в основном зале</strong><p>Техническая заявка открыта</p></div><time>активна</time></div><div class="attention"><span class="status-icon warn"></span><div><strong>Инвентаризация бара</strong><p>Не назначена</p></div><time>бар</time></div></div></article>
+        <article class="panel"><div class="panel-head"><strong>Сотрудники на смене</strong><span>Все</span></div><div class="employee-list"><div class="employee"><span class="avatar">МИ</span><div><strong>Мария Иванова</strong><p>Администратор</p></div><span class="zone">Зал</span><span class="shift">Смена открыта</span></div><div class="employee"><span class="avatar">АС</span><div><strong>Алексей Смирнов</strong><p>Бармен</p></div><span class="zone">Бар</span><span class="shift">Смена открыта</span></div><div class="employee"><span class="avatar">ОС</span><div><strong>Ольга Соколова</strong><p>Клининг</p></div><span class="zone">Клининг</span><span class="shift">Смена открыта</span></div></div></article>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="notes">
+  <div class="note"><h3>Что сохранено</h3><p>Все разделы меню, поддержка, статус оплаты, поиск, уведомления, профиль, выход, рестораны, круговой график и его список, периоды, шесть кликабельных метрик, внимание и сотрудники.</p></div>
+  <div class="note"><h3>Что меняется только визуально</h3><p>Графитовая оболочка, компактные размеры, единая сетка, небольшие радиусы, спокойные границы и оранжевый как акцент активного состояния. Логика и API-контракты не меняются.</p></div>
+</div>
