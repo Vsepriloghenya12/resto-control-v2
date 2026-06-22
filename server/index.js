@@ -1440,47 +1440,47 @@ async function handleIiko(req, res, state, pathname, auth) {
 
     const token = await iikoToken(host, login, password)
 
-    // Build a product map (id → {name, unit, category})
+    // Parse all items: build group map + product map
     const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
+    // groupMap: id → { name, parent }
+    const groupMap = new Map()
+    // productMap: id → { name, unit, parentId }
     const productMap = new Map()
     const productRe = /<productDto>([\s\S]*?)<\/productDto>/g
     let pm
     while ((pm = productRe.exec(productsXml)) !== null) {
       const block = pm[1]
       const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const type = get('productType')
-      if (type !== 'GOODS' && type !== 'PREPARED') continue
       const id = get('id')
       const name = get('name')
-      if (!name) continue
-      const unit = get('mainUnit') || 'шт'
-      const category = get('category') || ''
-      if (id) productMap.set(id, { name, unit, category })
+      const type = get('productType')
+      const parentId = get('parent') || get('parentId') || ''
+      if (!id || !name) continue
+      if (!type) {
+        // It's a group
+        groupMap.set(id, { name, parentId })
+      } else if (type === 'GOODS' || type === 'PREPARED') {
+        const unit = get('mainUnit') || 'шт'
+        productMap.set(id, { name, unit, parentId })
+      }
     }
+
+    // Resolve top-level group name for each product
+    function resolveGroup(parentId, depth = 0) {
+      if (!parentId || depth > 10) return ''
+      const g = groupMap.get(parentId)
+      if (!g) return ''
+      // Walk up until root (no parent or parent not in map)
+      if (g.parentId && groupMap.has(g.parentId)) return resolveGroup(g.parentId, depth + 1)
+      return g.name
+    }
+
+    console.log('[iiko/inventory] groups:', Array.from(groupMap.values()).map(g => g.name).slice(0, 20))
 
     let items = []
 
-    if (storeId) {
-      // Fetch store balance for a specific store
-      const now = new Date()
-      const dateStr = now.toISOString().slice(0, 10)
-      const { body: balanceXml } = await iikoGet(
-        `https://${host}/resto/api/storeBalance?key=${encodeURIComponent(token)}&storeId=${encodeURIComponent(storeId)}&startPeriod=${dateStr}&endPeriod=${dateStr}`
-      )
-      const balRe = /<storeBalanceRow>([\s\S]*?)<\/storeBalanceRow>/g
-      let bm
-      const seen = new Set()
-      while ((bm = balRe.exec(balanceXml)) !== null) {
-        const block = bm[1]
-        const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-        const productId = get('productId')
-        if (!productId || seen.has(productId)) continue
-        seen.add(productId)
-        const product = productMap.get(productId)
-        if (product) items.push(product)
-      }
-    } else {
-      items = Array.from(productMap.values())
+    for (const [, product] of productMap) {
+      items.push({ name: product.name, unit: product.unit, category: resolveGroup(product.parentId) })
     }
 
     items.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
