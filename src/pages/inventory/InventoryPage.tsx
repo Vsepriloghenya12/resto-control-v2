@@ -56,13 +56,15 @@ export function InventoryPage() {
 
   // iiko import state
   type IikoItem = { name: string; unit: string; category: string }
+  type IikoStore = { id: string; name: string }
   const [iikoOpen, setIikoOpen] = useState(false)
   const [iikoLoading, setIikoLoading] = useState(false)
   const [iikoError, setIikoError] = useState('')
+  const [iikoStores, setIikoStores] = useState<IikoStore[]>([])
+  const [iikoActiveStore, setIikoActiveStore] = useState<IikoStore | null>(null)
   const [iikoAllItems, setIikoAllItems] = useState<IikoItem[]>([])
-  // checked: idx → SectionKey (присвоен раздел)
+  // checked: idx → SectionKey
   const [iikoChecked, setIikoChecked] = useState<Map<number, SectionKey>>(new Map())
-  const [iikoActiveCat, setIikoActiveCat] = useState<string>('all')
   const [iikoSearch, setIikoSearch] = useState('')
   const [iikoImporting, setIikoImporting] = useState(false)
   const [assignForm, setAssignForm] = useState({ template: 'Вечерняя инвентаризация', assignee: 'Старший бармен', date: new Date().toISOString().slice(0, 10) })
@@ -116,11 +118,31 @@ export function InventoryPage() {
     setIikoLoading(true)
     setIikoError('')
     setIikoAllItems([])
+    setIikoStores([])
+    setIikoActiveStore(null)
     setIikoChecked(new Map())
     setIikoSearch('')
-    setIikoActiveCat('all')
     try {
-      const resp = await fetch('/api/iiko/inventory', { credentials: 'include' })
+      const resp = await fetch('/api/iiko/stores', { credentials: 'include' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки складов')
+      setIikoStores(data.stores as IikoStore[])
+    } catch (e) {
+      setIikoError(e instanceof Error ? e.message : 'Ошибка')
+    } finally {
+      setIikoLoading(false)
+    }
+  }
+
+  async function loadIikoStore(store: IikoStore) {
+    setIikoActiveStore(store)
+    setIikoAllItems([])
+    setIikoChecked(new Map())
+    setIikoSearch('')
+    setIikoLoading(true)
+    setIikoError('')
+    try {
+      const resp = await fetch(`/api/iiko/inventory?storeId=${encodeURIComponent(store.id)}`, { credentials: 'include' })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки')
       setIikoAllItems(data.items as IikoItem[])
@@ -178,27 +200,14 @@ export function InventoryPage() {
     showNotice(`Импортировано ${count} позиций из iiko.`)
   }
 
-  const iikoCats = useMemo(() => {
-    const cats = Array.from(new Set(iikoAllItems.map((i) => i.category).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ru'))
-    return cats
-  }, [iikoAllItems])
-
   const iikoVisible = useMemo(() => {
     const q = iikoSearch.trim().toLowerCase()
     return iikoAllItems
       .map((item, idx) => ({ item, idx }))
-      .filter(({ item }) => {
-        if (iikoActiveCat !== 'all' && item.category !== iikoActiveCat) return false
-        if (q && !item.name.toLowerCase().includes(q)) return false
-        return true
-      })
-  }, [iikoAllItems, iikoSearch, iikoActiveCat])
+      .filter(({ item }) => !q || item.name.toLowerCase().includes(q))
+  }, [iikoAllItems, iikoSearch])
 
   const iikoCheckedTotal = iikoChecked.size
-  const iikoCatCount = (cat: string) => {
-    const items = cat === 'all' ? iikoAllItems.map((_, i) => i) : iikoAllItems.map((item, i) => ({ item, i })).filter(({ item }) => item.category === cat).map(({ i }) => i)
-    return items.filter((i) => iikoChecked.has(i)).length
-  }
 
   return (
     <section className="inventory-page">
@@ -239,42 +248,41 @@ export function InventoryPage() {
               {!iikoImporting && <button type="button" className="inv-iiko-close" onClick={() => setIikoOpen(false)}>✕</button>}
             </div>
 
-            {iikoLoading && <div className="inv-iiko-state">Подключаюсь к iiko...</div>}
+            {iikoLoading && <div className="inv-iiko-state">{iikoActiveStore ? `Загружаю товары склада «${iikoActiveStore.name}»...` : 'Подключаюсь к iiko...'}</div>}
             {iikoError && <div className="inv-iiko-state inv-iiko-state--error">⚠ {iikoError}<br /><small>Проверьте настройки в разделе «Интеграции»</small></div>}
             {iikoImporting && <div className="inv-iiko-state">Импортирую {iikoCheckedTotal} позиций...</div>}
 
-            {!iikoLoading && !iikoError && !iikoImporting && (
-              <>
-                {/* Категории из iiko как вкладки */}
-                <div className="inv-iiko-sec-tabs">
-                  <button type="button" className={`inv-iiko-sec-tab${iikoActiveCat === 'all' ? ' is-active' : ''}`} onClick={() => setIikoActiveCat('all')}>
-                    Все
-                    {iikoCatCount('all') > 0 && <span className="inv-iiko-sec-tab__cnt">{iikoCatCount('all')}</span>}
+            {/* Шаг 1: выбор склада */}
+            {!iikoLoading && !iikoError && !iikoImporting && !iikoActiveStore && (
+              <div className="inv-iiko-stores">
+                <p className="inv-iiko-stores__hint">Выберите склад iiko для импорта товаров:</p>
+                {iikoStores.length === 0 && <div className="inv-iiko-empty">Склады не найдены</div>}
+                {iikoStores.map((store) => (
+                  <button key={store.id} type="button" className="inv-iiko-store-btn" onClick={() => void loadIikoStore(store)}>
+                    {store.name}
                   </button>
-                  {iikoCats.map((cat) => {
-                    const cnt = iikoCatCount(cat)
-                    return (
-                      <button key={cat} type="button" className={`inv-iiko-sec-tab${iikoActiveCat === cat ? ' is-active' : ''}`} onClick={() => setIikoActiveCat(cat)}>
-                        {cat}
-                        {cnt > 0 && <span className="inv-iiko-sec-tab__cnt">{cnt}</span>}
-                      </button>
-                    )
-                  })}
+                ))}
+              </div>
+            )}
+
+            {/* Шаг 2: список товаров выбранного склада */}
+            {!iikoLoading && !iikoError && !iikoImporting && iikoActiveStore && (
+              <>
+                {/* Заголовок склада + кнопка назад */}
+                <div className="inv-iiko-store-header">
+                  <button type="button" className="inv-iiko-store-back" onClick={() => { setIikoActiveStore(null); setIikoAllItems([]) }}>← Склады</button>
+                  <span className="inv-iiko-store-name">{iikoActiveStore.name}</span>
+                  <span className="inv-iiko-store-count">{iikoAllItems.length} позиций</span>
                 </div>
 
-                {/* Поиск + быстрое назначение всех видимых */}
+                {/* Поиск + кнопки быстрого выбора */}
                 <div className="inv-iiko-controls">
                   <div className="inv-iiko-search">
                     <SearchIcon />
-                    <input
-                      placeholder="Поиск по названию..."
-                      value={iikoSearch}
-                      onChange={(e) => setIikoSearch(e.target.value)}
-                      autoFocus
-                    />
+                    <input placeholder="Поиск..." value={iikoSearch} onChange={(e) => setIikoSearch(e.target.value)} autoFocus />
                   </div>
                   <div className="inv-iiko-bulk">
-                    <span>Все видимые ({iikoVisible.length}) →</span>
+                    <span>Все ({iikoVisible.length}) →</span>
                     {sections.map((s) => (
                       <button key={s.id} type="button" className="inv-iiko-bulk-btn" onClick={() => iikoSelectAllVisible(s.id)}>{s.title}</button>
                     ))}
@@ -284,11 +292,10 @@ export function InventoryPage() {
                   </div>
                 </div>
 
-                {/* Список */}
                 <div className="inv-iiko-list-head">
                   <span>Название</span>
                   <span>Ед.</span>
-                  <span>Склад</span>
+                  <span>Раздел</span>
                 </div>
 
                 <div className="inv-iiko-list">
@@ -300,6 +307,7 @@ export function InventoryPage() {
                       <div key={idx} className={`inv-iiko-row${checkedSec ? ' is-checked' : ''}`}>
                         <div className="inv-iiko-row__info">
                           <span className="inv-iiko-row__name">{item.name}</span>
+                          {item.category && <span className="inv-iiko-row__cat">{item.category}</span>}
                         </div>
                         <span className="inv-iiko-row__unit">{item.unit}</span>
                         <select
@@ -308,7 +316,7 @@ export function InventoryPage() {
                           onChange={(e) => iikoSetSec(idx, e.target.value as SectionKey | '')}
                           style={checkedSec ? { background: secColors[checkedSec], borderColor: secColors[checkedSec], fontWeight: 700 } : {}}
                         >
-                          <option value="">— склад</option>
+                          <option value="">—</option>
                           {sections.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
                         </select>
                       </div>

@@ -1388,17 +1388,41 @@ async function handleIiko(req, res, state, pathname, auth) {
     return true
   }
 
+  if (pathname === '/api/iiko/stores' && req.method === 'GET') {
+    const host = restaurant.iikoHost
+    const login = restaurant.iikoLogin
+    const password = restaurant.iikoPassword
+    if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено.')
+    const token = await iikoToken(host, login, password)
+    const { body: xml } = await iikoGet(`https://${host}/resto/api/corporation/stores?key=${encodeURIComponent(token)}`)
+    const stores = []
+    const storeRe = /<corporateItemDto>([\s\S]*?)<\/corporateItemDto>/g
+    let sm
+    while ((sm = storeRe.exec(xml)) !== null) {
+      const block = sm[1]
+      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+      const id = get('id')
+      const name = get('name')
+      if (id && name) stores.push({ id, name })
+    }
+    send(res, 200, { stores })
+    return true
+  }
+
   if (pathname === '/api/iiko/inventory' && req.method === 'GET') {
     const host = restaurant.iikoHost
     const login = restaurant.iikoLogin
     const password = restaurant.iikoPassword
     if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено.')
 
-    const token = await iikoToken(host, login, password)
-    const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
+    const url = new URL(`http://x${req.url}`)
+    const storeId = url.searchParams.get('storeId')
 
-    // Parse only GOODS and PREPARED types (raw materials / inventory items)
-    const items = []
+    const token = await iikoToken(host, login, password)
+
+    // Build a product map (id → {name, unit, category})
+    const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
+    const productMap = new Map()
     const productRe = /<productDto>([\s\S]*?)<\/productDto>/g
     let pm
     while ((pm = productRe.exec(productsXml)) !== null) {
@@ -1406,14 +1430,39 @@ async function handleIiko(req, res, state, pathname, auth) {
       const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
       const type = get('productType')
       if (type !== 'GOODS' && type !== 'PREPARED') continue
+      const id = get('id')
       const name = get('name')
       if (!name) continue
       const unit = get('mainUnit') || 'шт'
       const category = get('category') || ''
-      items.push({ name, unit, category })
+      if (id) productMap.set(id, { name, unit, category })
     }
 
-    // Sort by name
+    let items = []
+
+    if (storeId) {
+      // Fetch store balance for a specific store
+      const now = new Date()
+      const dateStr = now.toISOString().slice(0, 10)
+      const { body: balanceXml } = await iikoGet(
+        `https://${host}/resto/api/storeBalance?key=${encodeURIComponent(token)}&storeId=${encodeURIComponent(storeId)}&startPeriod=${dateStr}&endPeriod=${dateStr}`
+      )
+      const balRe = /<storeBalanceRow>([\s\S]*?)<\/storeBalanceRow>/g
+      let bm
+      const seen = new Set()
+      while ((bm = balRe.exec(balanceXml)) !== null) {
+        const block = bm[1]
+        const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+        const productId = get('productId')
+        if (!productId || seen.has(productId)) continue
+        seen.add(productId)
+        const product = productMap.get(productId)
+        if (product) items.push(product)
+      }
+    } else {
+      items = Array.from(productMap.values())
+    }
+
     items.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
     send(res, 200, { items, total: items.length })
     return true

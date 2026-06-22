@@ -986,6 +986,75 @@
 }
 
 /* Category filter chips */
+/* Список складов */
+.inv-iiko-stores {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inv-iiko-stores__hint {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.inv-iiko-store-btn {
+  padding: 14px 18px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.12s;
+}
+
+.inv-iiko-store-btn:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* Заголовок выбранного склада */
+.inv-iiko-store-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.inv-iiko-store-back {
+  padding: 4px 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+.inv-iiko-store-back:hover { background: #f3f4f6; }
+
+.inv-iiko-store-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.inv-iiko-store-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
 .inv-iiko-bulk {
   display: flex;
   align-items: center;
