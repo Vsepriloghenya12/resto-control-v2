@@ -61,8 +61,8 @@ export function InventoryPage() {
   const [iikoError, setIikoError] = useState('')
   const [iikoAllItems, setIikoAllItems] = useState<IikoItem[]>([])
   const [iikoActiveCat, setIikoActiveCat] = useState<string>('all')
-  // checked: idx → SectionKey
-  const [iikoChecked, setIikoChecked] = useState<Map<number, SectionKey>>(new Map())
+  const [iikoChecked, setIikoChecked] = useState<Set<number>>(new Set())
+  const [iikoTargetSection, setIikoTargetSection] = useState<SectionKey>('bar')
   const [iikoSearch, setIikoSearch] = useState('')
   const [iikoImporting, setIikoImporting] = useState(false)
   const [assignForm, setAssignForm] = useState({ template: 'Вечерняя инвентаризация', assignee: 'Старший бармен', date: new Date().toISOString().slice(0, 10) })
@@ -116,9 +116,10 @@ export function InventoryPage() {
     setIikoLoading(true)
     setIikoError('')
     setIikoAllItems([])
-    setIikoChecked(new Map())
+    setIikoChecked(new Set())
     setIikoSearch('')
     setIikoActiveCat('all')
+    setIikoTargetSection('bar')
     try {
       const resp = await fetch('/api/iiko/inventory', { credentials: 'include' })
       const data = await resp.json()
@@ -131,27 +132,19 @@ export function InventoryPage() {
     }
   }
 
-  function iikoSetSec(idx: number, sec: SectionKey | '') {
+  function iikoToggle(idx: number) {
     setIikoChecked((prev) => {
-      const next = new Map(prev)
-      if (sec) next.set(idx, sec)
-      else next.delete(idx)
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
       return next
     })
   }
 
-  function iikoSelectAllVisible(sec: SectionKey) {
+  function iikoSelectAllVisible(checked: boolean) {
     setIikoChecked((prev) => {
-      const next = new Map(prev)
-      iikoVisible.forEach(({ idx }) => next.set(idx, sec))
-      return next
-    })
-  }
-
-  function iikoClearVisible() {
-    setIikoChecked((prev) => {
-      const next = new Map(prev)
-      iikoVisible.forEach(({ idx }) => next.delete(idx))
+      const next = new Set(prev)
+      iikoVisible.forEach(({ idx }) => checked ? next.add(idx) : next.delete(idx))
       return next
     })
   }
@@ -159,14 +152,14 @@ export function InventoryPage() {
   async function doIikoImport() {
     setIikoImporting(true)
     let count = 0
-    for (const [idx, sec] of iikoChecked.entries()) {
+    for (const idx of iikoChecked) {
       const item = iikoAllItems[idx]
       if (!item) continue
       const created = await api.create<InventoryProduct>('inventory-products', {
         name: item.name,
         unit: item.unit,
         category: item.category || 'Из iiko',
-        section: sectionNames[sec],
+        section: sectionNames[iikoTargetSection],
         minBalance: 0,
         active: true,
       })
@@ -194,6 +187,7 @@ export function InventoryPage() {
   }, [iikoAllItems, iikoSearch, iikoActiveCat])
 
   const iikoCheckedTotal = iikoChecked.size
+  const iikoAllVisibleChecked = iikoVisible.length > 0 && iikoVisible.every(({ idx }) => iikoChecked.has(idx))
 
   return (
     <section className="inventory-page">
@@ -258,54 +252,56 @@ export function InventoryPage() {
                     <SearchIcon />
                     <input placeholder="Поиск..." value={iikoSearch} onChange={(e) => setIikoSearch(e.target.value)} autoFocus />
                   </div>
-                  <div className="inv-iiko-bulk">
-                    <span>Все видимые ({iikoVisible.length}) →</span>
-                    {sections.map((s) => (
-                      <button key={s.id} type="button" className="inv-iiko-bulk-btn" onClick={() => iikoSelectAllVisible(s.id)}>{s.title}</button>
-                    ))}
-                    {iikoVisible.some(({ idx }) => iikoChecked.has(idx)) && (
-                      <button type="button" className="inv-iiko-bulk-btn inv-iiko-bulk-btn--clear" onClick={iikoClearVisible}>✕</button>
-                    )}
-                  </div>
+                  <label className="inv-iiko-selectall-label">
+                    <input type="checkbox" checked={iikoAllVisibleChecked} onChange={(e) => iikoSelectAllVisible(e.target.checked)} />
+                    <span>Выбрать все ({iikoVisible.length})</span>
+                  </label>
                 </div>
 
                 <div className="inv-iiko-list-head">
+                  <span></span>
                   <span>Название</span>
                   <span>Ед.</span>
-                  <span>Раздел</span>
                 </div>
 
                 <div className="inv-iiko-list">
                   {iikoVisible.length === 0 && <div className="inv-iiko-empty">Ничего не найдено</div>}
                   {iikoVisible.map(({ item, idx }) => {
-                    const checkedSec = iikoChecked.get(idx)
-                    const secColors: Record<SectionKey, string> = { bar: '#dbeafe', kitchen: '#dcfce7', household: '#fef9c3', dishes: '#fce7f3' }
+                    const checked = iikoChecked.has(idx)
                     return (
-                      <div key={idx} className={`inv-iiko-row${checkedSec ? ' is-checked' : ''}`}>
+                      <label key={idx} className={`inv-iiko-row inv-iiko-row--check${checked ? ' is-checked' : ''}`}>
+                        <input type="checkbox" checked={checked} onChange={() => iikoToggle(idx)} />
                         <div className="inv-iiko-row__info">
                           <span className="inv-iiko-row__name">{item.name}</span>
                           {item.category && iikoActiveCat === 'all' && <span className="inv-iiko-row__cat">{item.category}</span>}
                         </div>
                         <span className="inv-iiko-row__unit">{item.unit}</span>
-                        <select
-                          className="inv-iiko-row__sec"
-                          value={checkedSec ?? ''}
-                          onChange={(e) => iikoSetSec(idx, e.target.value as SectionKey | '')}
-                          style={checkedSec ? { background: secColors[checkedSec], borderColor: secColors[checkedSec], fontWeight: 700 } : {}}
-                        >
-                          <option value="">—</option>
-                          {sections.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-                        </select>
-                      </div>
+                      </label>
                     )
                   })}
                 </div>
 
+                {/* Подразделение + кнопка импорта */}
                 <div className="inv-iiko-footer">
-                  <button type="button" className="inv-iiko-cancel" onClick={() => setIikoOpen(false)}>Отмена</button>
-                  <button type="button" className="inv-iiko-import" disabled={iikoCheckedTotal === 0} onClick={() => void doIikoImport()}>
-                    Импортировать {iikoCheckedTotal} позиций
-                  </button>
+                  <div className="inv-iiko-footer__section">
+                    <span>Подразделение:</span>
+                    <div className="inv-iiko-section-btns">
+                      {sections.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className={`inv-iiko-section-btn${iikoTargetSection === s.id ? ' is-active' : ''}`}
+                          onClick={() => setIikoTargetSection(s.id)}
+                        >{s.title}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="inv-iiko-footer__actions">
+                    <button type="button" className="inv-iiko-cancel" onClick={() => setIikoOpen(false)}>Отмена</button>
+                    <button type="button" className="inv-iiko-import" disabled={iikoCheckedTotal === 0} onClick={() => void doIikoImport()}>
+                      Импортировать {iikoCheckedTotal} позиций
+                    </button>
+                  </div>
                 </div>
               </>
             )}
