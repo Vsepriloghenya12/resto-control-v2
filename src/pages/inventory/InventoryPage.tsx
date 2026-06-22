@@ -56,13 +56,12 @@ export function InventoryPage() {
 
   // iiko import state
   type IikoItem = { name: string; unit: string; category: string }
+  type IikoRow = { item: IikoItem; checked: boolean; section: SectionKey }
   const [iikoOpen, setIikoOpen] = useState(false)
   const [iikoLoading, setIikoLoading] = useState(false)
   const [iikoError, setIikoError] = useState('')
-  const [iikoRaw, setIikoRaw] = useState<IikoItem[]>([])
+  const [iikoRows, setIikoRows] = useState<IikoRow[]>([])
   const [iikoSearch, setIikoSearch] = useState('')
-  const [iikoRemoved, setIikoRemoved] = useState<Set<number>>(new Set())
-  const [iikoSection, setIikoSection] = useState<SectionKey>('kitchen')
   const [iikoImporting, setIikoImporting] = useState(false)
   const [assignForm, setAssignForm] = useState({ template: 'Вечерняя инвентаризация', assignee: 'Старший бармен', date: new Date().toISOString().slice(0, 10) })
 
@@ -114,14 +113,13 @@ export function InventoryPage() {
     setIikoOpen(true)
     setIikoLoading(true)
     setIikoError('')
-    setIikoRaw([])
-    setIikoRemoved(new Set())
+    setIikoRows([])
     setIikoSearch('')
     try {
       const resp = await fetch('/api/iiko/inventory', { credentials: 'include' })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки')
-      setIikoRaw(data.items)
+      setIikoRows((data.items as IikoItem[]).map((item) => ({ item, checked: false, section: 'kitchen' })))
     } catch (e) {
       setIikoError(e instanceof Error ? e.message : 'Ошибка')
     } finally {
@@ -129,24 +127,32 @@ export function InventoryPage() {
     }
   }
 
-  function iikoToggleRemove(idx: number) {
-    setIikoRemoved((prev) => {
-      const next = new Set(prev)
-      if (next.has(idx)) next.delete(idx); else next.add(idx)
-      return next
-    })
+  function iikoSetChecked(idx: number, checked: boolean) {
+    setIikoRows((rows) => rows.map((r, i) => i === idx ? { ...r, checked } : r))
+  }
+
+  function iikoSetSection(idx: number, section: SectionKey) {
+    setIikoRows((rows) => rows.map((r, i) => i === idx ? { ...r, section } : r))
+  }
+
+  function iikoSelectAll(checked: boolean) {
+    setIikoRows((rows) => rows.map((r) => {
+      const q = iikoSearch.trim().toLowerCase()
+      const visible = !q || r.item.name.toLowerCase().includes(q) || r.item.category.toLowerCase().includes(q)
+      return visible ? { ...r, checked } : r
+    }))
   }
 
   async function doIikoImport() {
     setIikoImporting(true)
-    const toCreate = iikoRaw.filter((_, i) => !iikoRemoved.has(i))
+    const toCreate = iikoRows.filter((r) => r.checked)
     let count = 0
-    for (const item of toCreate) {
+    for (const row of toCreate) {
       const created = await api.create<InventoryProduct>('inventory-products', {
-        name: item.name,
-        unit: item.unit,
-        category: item.category || 'Из iiko',
-        section: sectionNames[iikoSection],
+        name: row.item.name,
+        unit: row.item.unit,
+        category: row.item.category || 'Из iiko',
+        section: sectionNames[row.section],
         minBalance: 0,
         active: true,
       })
@@ -160,10 +166,11 @@ export function InventoryPage() {
 
   const iikoFiltered = useMemo(() => {
     const q = iikoSearch.trim().toLowerCase()
-    return iikoRaw.map((item, idx) => ({ item, idx })).filter(({ item }) => !q || item.name.toLowerCase().includes(q) || item.category.toLowerCase().includes(q))
-  }, [iikoRaw, iikoSearch])
+    return iikoRows.map((row, idx) => ({ row, idx })).filter(({ row }) => !q || row.item.name.toLowerCase().includes(q) || row.item.category.toLowerCase().includes(q))
+  }, [iikoRows, iikoSearch])
 
-  const iikoVisibleCount = iikoFiltered.filter(({ idx }) => !iikoRemoved.has(idx)).length
+  const iikoCheckedCount = iikoRows.filter((r) => r.checked).length
+  const iikoAllChecked = iikoFiltered.length > 0 && iikoFiltered.every(({ row }) => row.checked)
 
   return (
     <section className="inventory-page">
@@ -197,14 +204,14 @@ export function InventoryPage() {
             <div className="inv-iiko-modal__header">
               <div>
                 <strong>Загрузка из iiko</strong>
-                {!iikoLoading && !iikoError && <span>{iikoVisibleCount} позиций</span>}
+                {!iikoLoading && !iikoError && <span>{iikoRows.length} позиций · выбрано {iikoCheckedCount}</span>}
               </div>
               {!iikoImporting && <button type="button" className="inv-iiko-close" onClick={() => setIikoOpen(false)}>✕</button>}
             </div>
 
             {iikoLoading && <div className="inv-iiko-state">Подключаюсь к iiko...</div>}
             {iikoError && <div className="inv-iiko-state inv-iiko-state--error">⚠ {iikoError}<br /><small>Проверьте настройки в разделе «Интеграции»</small></div>}
-            {iikoImporting && <div className="inv-iiko-state">Импортирую позиции...</div>}
+            {iikoImporting && <div className="inv-iiko-state">Импортирую {iikoCheckedCount} позиций...</div>}
 
             {!iikoLoading && !iikoError && !iikoImporting && (
               <>
@@ -218,40 +225,40 @@ export function InventoryPage() {
                       autoFocus
                     />
                   </div>
-                  <div className="inv-iiko-section-row">
-                    <span>Раздел:</span>
-                    {sections.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={`inv-iiko-sec-btn${iikoSection === s.id ? ' is-active' : ''}`}
-                        onClick={() => setIikoSection(s.id)}
-                      >{s.title}</button>
-                    ))}
+                  <div className="inv-iiko-selectall">
+                    <label className="inv-iiko-checkbox-label">
+                      <input type="checkbox" checked={iikoAllChecked} onChange={(e) => iikoSelectAll(e.target.checked)} />
+                      <span>{iikoAllChecked ? 'Снять все' : 'Выбрать все'} ({iikoFiltered.length})</span>
+                    </label>
                   </div>
-                  <div className="inv-iiko-hints">
-                    <span>{iikoRaw.length} загружено · {iikoRemoved.size} удалено</span>
-                    {iikoRemoved.size > 0 && <button type="button" onClick={() => setIikoRemoved(new Set())}>Восстановить всё</button>}
-                  </div>
+                </div>
+
+                <div className="inv-iiko-list-head">
+                  <span>Название</span>
+                  <span>Ед.</span>
+                  <span>Раздел</span>
                 </div>
 
                 <div className="inv-iiko-list">
                   {iikoFiltered.length === 0 && <div className="inv-iiko-empty">Ничего не найдено</div>}
-                  {iikoFiltered.map(({ item, idx }) => (
-                    <div key={idx} className={`inv-iiko-row${iikoRemoved.has(idx) ? ' is-removed' : ''}`}>
+                  {iikoFiltered.map(({ row, idx }) => (
+                    <div key={idx} className={`inv-iiko-row${row.checked ? ' is-checked' : ''}`}>
+                      <label className="inv-iiko-row__check">
+                        <input type="checkbox" checked={row.checked} onChange={(e) => iikoSetChecked(idx, e.target.checked)} />
+                      </label>
                       <div className="inv-iiko-row__info">
-                        <span className="inv-iiko-row__name">{item.name}</span>
-                        {item.category && <span className="inv-iiko-row__cat">{item.category}</span>}
+                        <span className="inv-iiko-row__name">{row.item.name}</span>
+                        {row.item.category && <span className="inv-iiko-row__cat">{row.item.category}</span>}
                       </div>
-                      <span className="inv-iiko-row__unit">{item.unit}</span>
-                      <button
-                        type="button"
-                        className="inv-iiko-row__del"
-                        title={iikoRemoved.has(idx) ? 'Восстановить' : 'Убрать из импорта'}
-                        onClick={() => iikoToggleRemove(idx)}
+                      <span className="inv-iiko-row__unit">{row.item.unit}</span>
+                      <select
+                        className="inv-iiko-row__sec"
+                        value={row.section}
+                        onChange={(e) => iikoSetSection(idx, e.target.value as SectionKey)}
+                        disabled={!row.checked}
                       >
-                        {iikoRemoved.has(idx) ? '↩' : '✕'}
-                      </button>
+                        {sections.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                      </select>
                     </div>
                   ))}
                 </div>
@@ -261,10 +268,10 @@ export function InventoryPage() {
                   <button
                     type="button"
                     className="inv-iiko-import"
-                    disabled={iikoVisibleCount === 0}
+                    disabled={iikoCheckedCount === 0}
                     onClick={() => void doIikoImport()}
                   >
-                    Импортировать {iikoVisibleCount} позиций в «{sectionNames[iikoSection]}»
+                    Импортировать {iikoCheckedCount} позиций
                   </button>
                 </div>
               </>
