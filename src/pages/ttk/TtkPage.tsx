@@ -217,12 +217,19 @@ export function TtkPage() {
     setIikoError('')
     try {
       await saveIikoSettings()
-      const resp = await fetch('/api/iiko/nomenclature', { credentials: 'include' })
+      const resp = await fetch('/api/iiko/inventory?filter=prepared', { credentials: 'include' })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка')
-      setIikoPreviewItems(data.items)
-      const groups = new Set<string>(data.items.map((i: { group: string }) => i.group))
-      setIikoSelectedGroups(groups)
+      // inventory endpoint returns {name, unit, category} — remap category → group
+      const mapped = (data.items as { name: string; unit: string; category: string }[]).map(i => ({
+        name: i.name,
+        unit: i.unit,
+        price: 0,
+        group: i.category || 'Без категории',
+      }))
+      setIikoPreviewItems(mapped)
+      const groupSet = new Set<string>(mapped.map(i => i.group))
+      setIikoSelectedGroups(groupSet)
       setIikoModalStep('preview')
     } catch (e) {
       setIikoError(e instanceof Error ? e.message : 'Ошибка подключения')
