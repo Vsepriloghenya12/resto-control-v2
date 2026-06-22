@@ -1198,3 +1198,84 @@
 }
 
 .ttk-pair-row__del:hover { background: #fee2e2; }
+
+/* iiko sync */
+.ttk-iiko-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ttk-iiko-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ttk-iiko-form label span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ttk-iiko-form input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  background: #f9fafb;
+  font: inherit;
+  font-size: 14px;
+  color: #111;
+  outline: none;
+}
+
+.ttk-iiko-form input:focus { border-color: #2563eb; background: #fff; }
+
+.ttk-iiko-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.ttk-modal__footer-row {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.ttk-iiko-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.ttk-iiko-group-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #fff;
+  transition: all 0.1s;
+}
+
+.ttk-iiko-group-chip input { display: none; }
+.ttk-iiko-group-chip em { font-style: normal; color: #9ca3af; font-size: 11px; }
+.ttk-iiko-group-chip.is-selected { border-color: #111; background: #111; color: #fff; }
+.ttk-iiko-group-chip.is-selected em { color: #9ca3af; }

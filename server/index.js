@@ -1,4 +1,5 @@
 import http from 'node:http'
+import https from 'node:https'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
@@ -38,7 +39,7 @@ function pickFields(obj, fields) {
 }
 
 const RESTAURANT_SERVICE_OWNER_WRITABLE = ['name', 'status', 'plan', 'subscriptionStatus', 'subscriptionEndsAt', 'trialEndsAt', 'legalType', 'legalName', 'inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'bik', 'account', 'corrAccount', 'contactEmail', 'contactPhone', 'edo']
-const RESTAURANT_OWNER_WRITABLE = ['name', 'plan', 'legalType', 'legalName', 'inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'bik', 'account', 'corrAccount', 'contactEmail', 'contactPhone', 'edo']
+const RESTAURANT_OWNER_WRITABLE = ['name', 'plan', 'legalType', 'legalName', 'inn', 'kpp', 'ogrn', 'legalAddress', 'bankName', 'bik', 'account', 'corrAccount', 'contactEmail', 'contactPhone', 'edo', 'iikoHost', 'iikoLogin', 'iikoPassword', 'qrHost', 'qrLogin', 'qrPassword']
 
 function addDays(date, days) {
   const next = new Date(date)
@@ -1321,6 +1322,140 @@ async function handleMobile(req, res, state, pathname, auth) {
   return false
 }
 
+// ─── iiko proxy ───────────────────────────────────────────────────────────────
+
+function sha1(str) {
+  return crypto.createHash('sha1').update(str).digest('hex')
+}
+
+function iikoGet(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { rejectUnauthorized: false }, (res) => {
+      let data = ''
+      res.on('data', (c) => { data += c })
+      res.on('end', () => resolve({ status: res.statusCode, body: data.trim() }))
+    }).on('error', reject)
+  })
+}
+
+async function iikoToken(host, login, password) {
+  const passHash = sha1(password)
+  const { status, body } = await iikoGet(`https://${host}/resto/api/auth?login=${encodeURIComponent(login)}&pass=${encodeURIComponent(passHash)}`)
+  if (status !== 200 || !body || body.length < 8) throw new Error(`Ошибка авторизации iiko (HTTP ${status}): ${body.slice(0, 100)}`)
+  return body.trim()
+}
+
+async function handleIiko(req, res, state, pathname, auth) {
+  if (!pathname.startsWith('/api/iiko/') && !pathname.startsWith('/api/quickresto/')) return false
+  const payload = requireAuth(auth)
+  const restaurant = payload.restaurant
+
+  if (pathname === '/api/iiko/test' && req.method === 'POST') {
+    const body = await readBody(req)
+    const host = body.host || restaurant.iikoHost
+    const login = body.login || restaurant.iikoLogin
+    const password = body.password || restaurant.iikoPassword
+    if (!host || !login || !password) throw httpError(400, 'Укажите хост, логин и пароль iiko.')
+    const token = await iikoToken(host, login, password)
+    send(res, 200, { ok: true, token: token.slice(0, 8) + '...' })
+    return true
+  }
+
+  if (pathname === '/api/quickresto/test' && req.method === 'POST') {
+    const body = await readBody(req)
+    const host = (body.host || restaurant.qrHost || '').trim()
+    const login = (body.login || restaurant.qrLogin || '').trim()
+    const password = body.password || restaurant.qrPassword || ''
+    if (!host || !login || !password) throw httpError(400, 'Укажите хост, логин и пароль Quick Resto.')
+    // Quick Resto: Basic Auth GET /platform/online/api/nomenclature/
+    const basicAuth = Buffer.from(`${login}:${password}`).toString('base64')
+    const qrHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '')
+    const { status, body: responseBody } = await new Promise((resolve, reject) => {
+      https.get({
+        hostname: qrHost.split(':')[0],
+        port: qrHost.includes(':') ? parseInt(qrHost.split(':')[1]) : 443,
+        path: '/platform/online/api/nomenclature/',
+        headers: { Authorization: `Basic ${basicAuth}`, Accept: 'application/json' },
+        rejectUnauthorized: false,
+      }, (res) => {
+        let data = ''
+        res.on('data', (c) => { data += c })
+        res.on('end', () => resolve({ status: res.statusCode, body: data }))
+      }).on('error', reject)
+    })
+    if (status >= 400) throw new Error(`Quick Resto HTTP ${status}: ${String(responseBody).slice(0, 100)}`)
+    send(res, 200, { ok: true })
+    return true
+  }
+
+  if (pathname === '/api/iiko/nomenclature' && req.method === 'GET') {
+    const host = restaurant.iikoHost
+    const login = restaurant.iikoLogin
+    const password = restaurant.iikoPassword
+    if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено. Укажите хост, логин и пароль в настройках.')
+
+    const token = await iikoToken(host, login, password)
+
+    // Fetch products XML
+    const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
+
+    // Parse products XML: id, name, mainUnit, category, price
+    const items = []
+    const productRe = /<product>([\s\S]*?)<\/product>/g
+    let pm
+    while ((pm = productRe.exec(productsXml)) !== null) {
+      const block = pm[1]
+      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+      const type = get('type')
+      if (type !== 'DISH' && type !== 'GOODS') continue
+      const name = get('name')
+      if (!name) continue
+      const unit = get('mainUnit') || 'шт'
+      const price = parseFloat(get('price') || '0') || 0
+      const category = get('category') || get('productCategoryId') || ''
+      const groupId = get('parent') || get('parentId') || ''
+      items.push({ name, unit, price, category, groupId })
+    }
+
+    // Try to get category names
+    const { body: catsXml } = await iikoGet(`https://${host}/resto/api/productCategories?key=${encodeURIComponent(token)}`)
+    const catMap = {}
+    const catRe = /<productCategory>([\s\S]*?)<\/productCategory>/g
+    let cm
+    while ((cm = catRe.exec(catsXml)) !== null) {
+      const block = cm[1]
+      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+      const cid = get('id')
+      const cname = get('name')
+      if (cid && cname) catMap[cid] = cname
+    }
+
+    // Also try nomenclature groups
+    const { body: groupsXml } = await iikoGet(`https://${host}/resto/api/nomenclature?key=${encodeURIComponent(token)}`).catch(() => ({ body: '' }))
+    const groupMap = {}
+    const groupRe = /<group>([\s\S]*?)<\/group>/g
+    let gm
+    while ((gm = groupRe.exec(groupsXml)) !== null) {
+      const block = gm[1]
+      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+      const gid = get('id')
+      const gname = get('name')
+      if (gid && gname) groupMap[gid] = gname
+    }
+
+    // Resolve group names
+    const resolved = items.map((item) => ({
+      ...item,
+      group: catMap[item.category] || groupMap[item.groupId] || item.category || 'Без категории',
+    }))
+
+    send(res, 200, { items: resolved, total: resolved.length })
+    return true
+  }
+
+  return false
+}
+
 async function handleRequest(req, res) {
   const state = await loadState()
   const url = new URL(req.url, `http://${req.headers.host}`)
@@ -1349,6 +1484,7 @@ async function handleRequest(req, res) {
     if (await handleRestaurant(req, res, state, pathname, auth)) return
     if (await handleDashboard(req, res, state, pathname, auth)) return
     if (await handleMobile(req, res, state, pathname, auth)) return
+    if (await handleIiko(req, res, state, pathname, auth)) return
     if (await handleCollections(req, res, state, pathname, auth)) return
 
     throw httpError(404, 'API endpoint не найден.')

@@ -78,6 +78,16 @@ export function TtkPage() {
   const [newUnit, setNewUnit] = useState('')
   const [newTag, setNewTag] = useState('')
 
+  // iiko sync
+  const [iikoModalStep, setIikoModalStep] = useState<'closed' | 'settings' | 'preview' | 'importing'>('closed')
+  const [iikoHost, setIikoHost] = useState('')
+  const [iikoLogin, setIikoLogin] = useState('')
+  const [iikoPassword, setIikoPassword] = useState('')
+  const [iikoConnecting, setIikoConnecting] = useState(false)
+  const [iikoError, setIikoError] = useState('')
+  const [iikoPreviewItems, setIikoPreviewItems] = useState<{ name: string; unit: string; price: number; group: string }[]>([])
+  const [iikoSelectedGroups, setIikoSelectedGroups] = useState<Set<string>>(new Set())
+
   async function loadItems() {
     const result = await api.list<TtkItem>('ttk')
     setItems(result.items)
@@ -170,6 +180,87 @@ export function TtkPage() {
     showNotice('Группа удалена.')
   }
 
+  async function openIikoSync() {
+    // Load saved settings from restaurant
+    try {
+      const resp = await fetch('/api/restaurant', { credentials: 'include' })
+      if (resp.ok) {
+        const r = await resp.json()
+        if (r.iikoHost) setIikoHost(r.iikoHost)
+        if (r.iikoLogin) setIikoLogin(r.iikoLogin)
+        if (r.iikoPassword) setIikoPassword(r.iikoPassword)
+        // If already configured, go straight to preview
+        if (r.iikoHost && r.iikoLogin && r.iikoPassword) {
+          setIikoModalStep('settings')
+          return
+        }
+      }
+    } catch { /* ignore */ }
+    setIikoModalStep('settings')
+  }
+
+  async function saveIikoSettings() {
+    await fetch('/api/restaurant', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ iikoHost: iikoHost.trim(), iikoLogin: iikoLogin.trim(), iikoPassword }),
+    })
+  }
+
+  async function testAndFetch() {
+    setIikoConnecting(true)
+    setIikoError('')
+    try {
+      await saveIikoSettings()
+      const resp = await fetch('/api/iiko/nomenclature', { credentials: 'include' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.message || 'Ошибка')
+      setIikoPreviewItems(data.items)
+      const groups = new Set<string>(data.items.map((i: { group: string }) => i.group))
+      setIikoSelectedGroups(groups)
+      setIikoModalStep('preview')
+    } catch (e) {
+      setIikoError(e instanceof Error ? e.message : 'Ошибка подключения')
+    } finally {
+      setIikoConnecting(false)
+    }
+  }
+
+  async function importIikoItems() {
+    setIikoModalStep('importing')
+    const toImport = iikoPreviewItems.filter((i) => iikoSelectedGroups.has(i.group))
+    let count = 0
+    for (const item of toImport) {
+      const created = await api.create<TtkItem>('ttk', {
+        name: item.name,
+        group: item.group,
+        unit: item.unit,
+        price: item.price,
+        tag: '',
+        description: '',
+        recipe: [],
+        cookingTime: '',
+        output: '',
+        takeaway: true,
+        online: true,
+        discounts: true,
+        marked: false,
+        requiresScan: false,
+        excise: false,
+      })
+      setItems((cur) => [...cur, created])
+      count++
+    }
+    setIikoModalStep('closed')
+    showNotice(`Импортировано ${count} позиций из iiko.`)
+    if (count > 0 && !selectedGroupId) {
+      setSelectedGroupId(toImport[0].group)
+    }
+  }
+
+  const iikoGroupList = Array.from(new Set(iikoPreviewItems.map((i) => i.group))).sort()
+
   return (
     <section className="ttk-page">
       {notice ? <div className="ttk-notice">{notice}</div> : null}
@@ -178,6 +269,7 @@ export function TtkPage() {
           <h2>Группы</h2>
           <div className="ttk-groups-panel__actions">
             <button className="ttk-ref-btn" type="button" onClick={() => setRefOpen(true)}>Справочники</button>
+            <button className="ttk-ref-btn" type="button" onClick={() => void openIikoSync()}>↓ iiko</button>
             <button className="ttk-ref-btn ttk-ref-btn--primary" type="button" onClick={() => setAddingGroup(true)}>+ Добавить группу</button>
           </div>
         </div>
@@ -325,6 +417,80 @@ export function TtkPage() {
           </div>
         </div>
       ) : null}
+
+      {/* iiko sync modal */}
+      {iikoModalStep !== 'closed' && (
+        <div className="ttk-modal-backdrop" onMouseDown={() => setIikoModalStep('closed')}>
+          <div className="ttk-modal" style={{ maxWidth: 520 }} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="ttk-modal__header">
+              <h3>{iikoModalStep === 'preview' ? `Импорт из iiko — ${iikoPreviewItems.length} позиций` : iikoModalStep === 'importing' ? 'Импортирую...' : 'Подключение к iiko'}</h3>
+              <button type="button" className="ttk-modal__close" onClick={() => setIikoModalStep('closed')}>✕</button>
+            </div>
+            <div className="ttk-modal__body">
+              {iikoModalStep === 'settings' && (
+                <>
+                  <div className="ttk-iiko-form">
+                    <label>
+                      <span>Хост iiko (например: myrest.iiko.it или 192.168.1.1:443)</span>
+                      <input value={iikoHost} onChange={(e) => setIikoHost(e.target.value)} placeholder="myrest.iiko.it" />
+                    </label>
+                    <label>
+                      <span>Логин</span>
+                      <input value={iikoLogin} onChange={(e) => setIikoLogin(e.target.value)} placeholder="admin" />
+                    </label>
+                    <label>
+                      <span>Пароль</span>
+                      <input type="password" value={iikoPassword} onChange={(e) => setIikoPassword(e.target.value)} placeholder="••••••••" />
+                    </label>
+                    {iikoError && <p className="ttk-iiko-error">{iikoError}</p>}
+                  </div>
+                  <div className="ttk-modal__footer-row">
+                    <button className="ttk-primary-button" type="button" disabled={iikoConnecting || !iikoHost || !iikoLogin || !iikoPassword} onClick={() => void testAndFetch()}>
+                      {iikoConnecting ? 'Подключаюсь...' : 'Загрузить номенклатуру'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {iikoModalStep === 'preview' && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>Выберите группы для импорта. Дубликаты по имени не проверяются.</p>
+                  <div className="ttk-iiko-groups">
+                    {iikoGroupList.map((g) => {
+                      const count = iikoPreviewItems.filter((i) => i.group === g).length
+                      const checked = iikoSelectedGroups.has(g)
+                      return (
+                        <label key={g} className={`ttk-iiko-group-chip${checked ? ' is-selected' : ''}`}>
+                          <input type="checkbox" checked={checked} onChange={() => {
+                            setIikoSelectedGroups((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(g)) next.delete(g); else next.add(g)
+                              return next
+                            })
+                          }} />
+                          {g} <em>{count} поз.</em>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className="ttk-modal__footer-row" style={{ marginTop: 16 }}>
+                    <button className="ttk-ref-btn" type="button" onClick={() => setIikoModalStep('settings')}>← Назад</button>
+                    <button className="ttk-primary-button" type="button"
+                      disabled={iikoSelectedGroups.size === 0}
+                      onClick={() => void importIikoItems()}>
+                      Импортировать {iikoPreviewItems.filter((i) => iikoSelectedGroups.has(i.group)).length} позиций
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {iikoModalStep === 'importing' && (
+                <p style={{ padding: '20px 0', textAlign: 'center', color: '#6b7280' }}>Создаю позиции в базе...</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
