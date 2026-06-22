@@ -1394,18 +1394,38 @@ async function handleIiko(req, res, state, pathname, auth) {
     const password = restaurant.iikoPassword
     if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено.')
     const token = await iikoToken(host, login, password)
-    const { body: xml } = await iikoGet(`https://${host}/resto/api/corporation/stores?key=${encodeURIComponent(token)}`)
-    const stores = []
-    const storeRe = /<corporateItemDto>([\s\S]*?)<\/corporateItemDto>/g
-    let sm
-    while ((sm = storeRe.exec(xml)) !== null) {
-      const block = sm[1]
-      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const id = get('id')
-      const name = get('name')
-      if (id && name) stores.push({ id, name })
+
+    // Try corporation/stores first, fall back to stores
+    let xml = ''
+    const r1 = await iikoGet(`https://${host}/resto/api/corporation/stores?key=${encodeURIComponent(token)}`)
+    if (r1.status === 200) {
+      xml = r1.body
+    } else {
+      const r2 = await iikoGet(`https://${host}/resto/api/stores?key=${encodeURIComponent(token)}`)
+      xml = r2.body
     }
-    send(res, 200, { stores })
+
+    const stores = []
+    // Try multiple XML element names
+    for (const tag of ['corporateItemDto', 'store', 'storeDto', 'item']) {
+      const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'g')
+      let sm
+      while ((sm = re.exec(xml)) !== null) {
+        const block = sm[1]
+        const get = (t) => { const m = new RegExp(`<${t}>([^<]*)<\\/${t}>`).exec(block); return m ? m[1].trim() : '' }
+        const id = get('id')
+        const name = get('name')
+        if (id && name) stores.push({ id, name })
+      }
+      if (stores.length > 0) break
+    }
+
+    // If no stores parsed, return raw snippet for debugging
+    if (stores.length === 0) {
+      console.log('[iiko/stores] raw xml snippet:', xml.slice(0, 500))
+    }
+
+    send(res, 200, { stores, _debug: stores.length === 0 ? xml.slice(0, 300) : undefined })
     return true
   }
 
