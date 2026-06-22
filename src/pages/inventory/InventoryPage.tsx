@@ -62,7 +62,7 @@ export function InventoryPage() {
   const [iikoAllItems, setIikoAllItems] = useState<IikoItem[]>([])
   // checked: idx → SectionKey (присвоен раздел)
   const [iikoChecked, setIikoChecked] = useState<Map<number, SectionKey>>(new Map())
-  const [iikoActiveSection, setIikoActiveSection] = useState<SectionKey>('bar')
+  const [iikoActiveSection, setIikoActiveSection] = useState<SectionKey | 'unassigned'>('unassigned')
   const [iikoCatFilter, setIikoCatFilter] = useState<string>('all')
   const [iikoSearch, setIikoSearch] = useState('')
   const [iikoImporting, setIikoImporting] = useState(false)
@@ -133,16 +133,21 @@ export function InventoryPage() {
     }
   }
 
-  function iikoToggle(idx: number, checked: boolean) {
+  function iikoToggle(idx: number, checked: boolean, targetSec?: SectionKey) {
     setIikoChecked((prev) => {
       const next = new Map(prev)
-      if (checked) next.set(idx, iikoActiveSection)
-      else next.delete(idx)
+      if (checked) {
+        const sec: SectionKey = targetSec ?? (iikoActiveSection !== 'unassigned' ? iikoActiveSection : 'bar')
+        next.set(idx, sec)
+      } else {
+        next.delete(idx)
+      }
       return next
     })
   }
 
   function iikoSelectAllVisible(checked: boolean) {
+    if (iikoActiveSection === 'unassigned') return
     setIikoChecked((prev) => {
       const next = new Map(prev)
       iikoVisible.forEach(({ idx }) => {
@@ -184,12 +189,18 @@ export function InventoryPage() {
     const q = iikoSearch.trim().toLowerCase()
     return iikoAllItems
       .map((item, idx) => ({ item, idx }))
-      .filter(({ item }) => {
+      .filter(({ item, idx }) => {
+        const assignedSec = iikoChecked.get(idx)
+        if (iikoActiveSection !== 'unassigned') {
+          if (assignedSec !== iikoActiveSection) return false
+        } else {
+          if (assignedSec !== undefined) return false
+        }
         if (iikoCatFilter !== 'all' && item.category !== iikoCatFilter) return false
         if (q && !item.name.toLowerCase().includes(q)) return false
         return true
       })
-  }, [iikoAllItems, iikoSearch, iikoCatFilter])
+  }, [iikoAllItems, iikoSearch, iikoCatFilter, iikoActiveSection, iikoChecked])
 
   const iikoCheckedTotal = iikoChecked.size
   const iikoSectionCount = (sec: SectionKey) => Array.from(iikoChecked.values()).filter((s) => s === sec).length
@@ -240,8 +251,18 @@ export function InventoryPage() {
 
             {!iikoLoading && !iikoError && !iikoImporting && (
               <>
-                {/* Section tabs — выбор раздела + счётчик */}
+                {/* Section tabs */}
                 <div className="inv-iiko-sec-tabs">
+                  <button
+                    type="button"
+                    className={`inv-iiko-sec-tab${iikoActiveSection === 'unassigned' ? ' is-active' : ''}`}
+                    onClick={() => setIikoActiveSection('unassigned')}
+                  >
+                    Не распределено
+                    <span className="inv-iiko-sec-tab__cnt inv-iiko-sec-tab__cnt--gray">
+                      {iikoAllItems.length - iikoChecked.size}
+                    </span>
+                  </button>
                   {sections.map((s) => {
                     const cnt = iikoSectionCount(s.id)
                     return (
@@ -279,19 +300,21 @@ export function InventoryPage() {
                   ))}
                 </div>
 
-                {/* Выбрать все видимые */}
-                <div className="inv-iiko-selectall">
-                  <label className="inv-iiko-checkbox-label">
-                    <input type="checkbox" checked={iikoAllVisibleChecked} onChange={(e) => iikoSelectAllVisible(e.target.checked)} />
-                    <span>Выбрать все видимые ({iikoVisible.length}) → <strong>{sections.find(s => s.id === iikoActiveSection)?.title}</strong></span>
-                  </label>
-                </div>
+                {/* Выбрать все видимые — только когда раздел выбран */}
+                {iikoActiveSection !== 'unassigned' && (
+                  <div className="inv-iiko-selectall">
+                    <label className="inv-iiko-checkbox-label">
+                      <input type="checkbox" checked={iikoAllVisibleChecked} onChange={(e) => iikoSelectAllVisible(e.target.checked)} />
+                      <span>Выбрать все ({iikoVisible.length}) → <strong>{sections.find(s => s.id === iikoActiveSection)?.title}</strong></span>
+                    </label>
+                  </div>
+                )}
 
                 {/* Список */}
                 <div className="inv-iiko-list-head">
                   <span>Название</span>
                   <span>Ед.</span>
-                  <span>Раздел</span>
+                  <span>{iikoActiveSection === 'unassigned' ? 'Склад' : 'Убрать'}</span>
                 </div>
 
                 <div className="inv-iiko-list">
@@ -309,11 +332,20 @@ export function InventoryPage() {
                           {item.category && <span className="inv-iiko-row__cat">{item.category}</span>}
                         </div>
                         <span className="inv-iiko-row__unit">{item.unit}</span>
-                        {isChecked
-                          ? <span className="inv-iiko-row__sec-badge" style={{ background: checkedSec === 'bar' ? '#dbeafe' : checkedSec === 'kitchen' ? '#dcfce7' : checkedSec === 'household' ? '#fef9c3' : '#fce7f3', color: '#374151' }}>
-                              {sectionNames[checkedSec]}
-                            </span>
-                          : <span className="inv-iiko-row__sec-empty" />}
+                        {iikoActiveSection === 'unassigned'
+                          ? <select
+                              className="inv-iiko-row__sec"
+                              value=""
+                              onChange={(e) => { if (e.target.value) iikoToggle(idx, true, e.target.value as SectionKey) }}
+                            >
+                              <option value="">— склад</option>
+                              {sections.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                            </select>
+                          : isChecked
+                            ? <span className="inv-iiko-row__sec-badge" style={{ background: checkedSec === 'bar' ? '#dbeafe' : checkedSec === 'kitchen' ? '#dcfce7' : checkedSec === 'household' ? '#fef9c3' : '#fce7f3', color: '#374151' }}>
+                                {sectionNames[checkedSec!]}
+                              </span>
+                            : <span className="inv-iiko-row__sec-empty" />}
                       </div>
                     )
                   })}

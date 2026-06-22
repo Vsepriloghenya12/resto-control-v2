@@ -910,6 +910,27 @@
   text-align: right;
 }
 
+.inv-iiko-row__sec {
+  flex-shrink: 0;
+  width: 100px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  outline: none;
+}
+.inv-iiko-row__sec:focus { border-color: #2563eb; }
+
+.inv-iiko-sec-tab__cnt--gray {
+  background: #9ca3af;
+}
+
 .inv-iiko-row__sec-badge {
   flex-shrink: 0;
   padding: 2px 8px;
