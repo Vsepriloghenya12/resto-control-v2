@@ -9,6 +9,7 @@ import {
   BoxIcon,
   CalendarIcon,
   ChecklistIcon,
+  ClipboardIcon,
   ClockIcon,
   HomeIcon,
   LogoutIcon,
@@ -25,6 +26,7 @@ import { HallBookingsPage } from '../hall-bookings/HallBookingsPage'
 import { InventoryPage } from '../inventory/InventoryPage'
 import { TtkPage } from '../ttk/TtkPage'
 import { KnowledgeBasePage } from '../knowledge/KnowledgeBasePage'
+import { AttestationPage } from '../attestation/AttestationPage'
 import { PaymentPage } from '../payment/PaymentPage'
 import { buildDonutSegments } from './donutGeometry.js'
 import { buildZoneRadar, prepareZoneReadiness } from './zoneReadiness.js'
@@ -36,11 +38,12 @@ import '../hall-bookings/HallBookingsPage.css'
 import '../inventory/InventoryPage.css'
 import '../ttk/TtkPage.css'
 import '../knowledge/KnowledgeBasePage.css'
+import '../attestation/AttestationPage.css'
 import '../payment/PaymentPage.css'
 
 type Tone = 'blue' | 'green' | 'orange' | 'red' | 'purple'
 type StatusTone = 'success' | 'warning' | 'danger' | 'neutral'
-type OwnerSection = 'dashboard' | 'employees' | 'checklists' | 'tasks' | 'hallBookings' | 'inventory' | 'ttk' | 'knowledge' | 'payment'
+type OwnerSection = 'dashboard' | 'employees' | 'checklists' | 'tasks' | 'hallBookings' | 'inventory' | 'ttk' | 'knowledge' | 'payment' | 'attestation'
 
 type SummaryMetric = {
   label: string
@@ -112,6 +115,7 @@ const navItems: Array<{ label: string; section: OwnerSection; icon: ReactNode }>
   { label: 'Инвентаризация', section: 'inventory', icon: <BoxIcon /> },
   { label: 'Номенклатура', section: 'ttk', icon: <BookIcon /> },
   { label: 'База знаний', section: 'knowledge', icon: <BookIcon /> },
+  { label: 'Аттестация', section: 'attestation', icon: <ClipboardIcon /> },
   { label: 'Оплата', section: 'payment', icon: <PaymentIcon /> },
 ]
 
@@ -903,6 +907,7 @@ export function OwnerDashboardPage() {
     inventory: { title: 'Инвентаризация', subtitle: 'Бланки, товары, назначения и сданные остатки', searchPlaceholder: 'Поиск по товарам...' },
     ttk: { title: 'Номенклатура', subtitle: 'Карточки блюд и товаров', searchPlaceholder: 'Поиск по позициям...' },
     knowledge: { title: 'База знаний', subtitle: 'Знакомство, обучение и корпоративная жизнь', searchPlaceholder: 'Поиск по материалам...' },
+    attestation: { title: 'Аттестация', subtitle: 'Проверка знаний сотрудников', searchPlaceholder: 'Поиск...' },
     payment: { title: 'Оплата', subtitle: 'Тариф, реквизиты, счета и закрывающие документы', searchPlaceholder: 'Поиск по счетам...' },
   }
 
@@ -1009,7 +1014,7 @@ export function OwnerDashboardPage() {
         {section === 'dashboard' ? <RestaurantHeader restaurants={restaurants.length ? restaurants : (summary?.restaurant ? [summary.restaurant] : session?.restaurant ? [session.restaurant] : [])} currentRestaurantId={(summary?.restaurant || session?.restaurant)?.id} onSwitch={switchRestaurant} onAdd={() => setAddRestaurantOpen(true)} /> : null}
         {summaryError ? <div className="owner-action-notice" role="status">{summaryError}</div> : null}
 
-        {section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent summary={summary} onOpen={openSection} />}
+        {section === 'employees' ? <EmployeesPage /> : section === 'checklists' ? <ChecklistsPage /> : section === 'tasks' ? <TasksPage /> : section === 'hallBookings' ? <HallBookingsPage /> : section === 'inventory' ? <InventoryPage /> : section === 'ttk' ? <TtkPage /> : section === 'knowledge' ? <KnowledgeBasePage /> : section === 'attestation' ? <AttestationPage /> : section === 'payment' ? <PaymentPage /> : <DashboardContent summary={summary} onOpen={openSection} />}
       </section>
       {supportOpen ? <SupportDialog onClose={() => { setSupportOpen(false); void loadUnreadSupport() }} onRead={() => setUnreadSupport((n) => Math.max(0, n - 1))} /> : null}
       {profileOpen ? <ProfileDialog userName={userName} login={session?.user.login} roleLabel={roleLabel} restaurantName={restaurantName} onClose={() => setProfileOpen(false)} /> : null}

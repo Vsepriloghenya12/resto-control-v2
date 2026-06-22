@@ -21,6 +21,13 @@ type KnowledgeSectionId =
 type MaterialStatus = 'published' | 'draft' | 'hidden' | 'planned'
 type MaterialType = 'photo' | 'video' | 'scheme' | 'pdf' | 'instruction' | 'event' | 'guest' | 'team_post'
 
+type KnowledgeQuestion = {
+  id: string
+  text: string
+  options: [string, string, string, string]
+  correctIndex: 0 | 1 | 2 | 3
+}
+
 type KnowledgeMaterial = {
   id: string
   section: KnowledgeSectionId
@@ -37,6 +44,7 @@ type KnowledgeMaterial = {
   guestPreferences?: string
   guestRestrictions?: string
   guestComment?: string
+  questions?: KnowledgeQuestion[]
 }
 
 type Employee = {
@@ -487,6 +495,69 @@ export function KnowledgeBasePage() {
                   <strong>{draft.fileName || 'Файл не выбран'}</strong>
                   <p>Укажите название файла или ссылку на материал, чтобы сотрудник понимал, что открыть или запросить у управляющего.</p>
                   <button type="button" onClick={() => { const name = window.prompt('Название файла или ссылка на материал'); if (name) updateDraft({ fileName: name }) }}>Указать файл / ссылку</button>
+                </div>
+
+                <div className="knowledge-questions-block">
+                  <div className="knowledge-questions-header">
+                    <div>
+                      <strong>Вопросы для аттестации</strong>
+                      <span>Добавьте вопросы с 4 вариантами ответа. Они войдут в аттестацию по базе знаний.</span>
+                    </div>
+                    <button type="button" className="knowledge-add-question-btn" onClick={() => {
+                      const newQ: KnowledgeQuestion = { id: `q_${Date.now()}`, text: '', options: ['', '', '', ''], correctIndex: 0 }
+                      updateDraft({ questions: [...(draft.questions || []), newQ] })
+                    }}>+ Вопрос</button>
+                  </div>
+                  {(draft.questions || []).map((q, qi) => (
+                    <div key={q.id} className="knowledge-question-card">
+                      <div className="knowledge-question-card__header">
+                        <span>Вопрос {qi + 1}</span>
+                        <button type="button" onClick={() => updateDraft({ questions: (draft.questions || []).filter((_, i) => i !== qi) })}>✕</button>
+                      </div>
+                      <textarea
+                        className="knowledge-question-text"
+                        placeholder="Текст вопроса..."
+                        value={q.text}
+                        rows={2}
+                        onChange={(e) => {
+                          const qs = [...(draft.questions || [])]
+                          qs[qi] = { ...q, text: e.target.value }
+                          updateDraft({ questions: qs })
+                        }}
+                      />
+                      <div className="knowledge-question-options">
+                        {q.options.map((opt, oi) => (
+                          <label key={oi} className={`knowledge-question-option${q.correctIndex === oi ? ' is-correct' : ''}`}>
+                            <input
+                              type="radio"
+                              name={`correct_${q.id}`}
+                              checked={q.correctIndex === oi}
+                              onChange={() => {
+                                const qs = [...(draft.questions || [])]
+                                qs[qi] = { ...q, correctIndex: oi as 0 | 1 | 2 | 3 }
+                                updateDraft({ questions: qs })
+                              }}
+                            />
+                            <input
+                              type="text"
+                              placeholder={`Вариант ${oi + 1}${oi === 0 ? ' (отметьте правильный)' : ''}`}
+                              value={opt}
+                              onChange={(e) => {
+                                const qs = [...(draft.questions || [])]
+                                const opts = [...q.options] as [string, string, string, string]
+                                opts[oi] = e.target.value
+                                qs[qi] = { ...q, options: opts }
+                                updateDraft({ questions: qs })
+                              }}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {(draft.questions || []).length === 0 && (
+                    <p className="knowledge-questions-empty">Вопросов пока нет. Нажмите «+ Вопрос» чтобы добавить.</p>
+                  )}
                 </div>
               </div>
 

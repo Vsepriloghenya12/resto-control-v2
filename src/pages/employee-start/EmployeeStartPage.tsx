@@ -22,7 +22,19 @@ import {
 } from '../../shared/ui/Icon'
 import './EmployeeStartPage.css'
 
-type MobileTab = 'overview' | 'tasks' | 'checklists' | 'hallPlan' | 'ttk' | 'knowledge' | 'schedule' | 'orders'
+type MobileTab = 'overview' | 'tasks' | 'checklists' | 'hallPlan' | 'ttk' | 'knowledge' | 'schedule' | 'orders' | 'attestation'
+
+type AttestationQuestion = { id: string; text: string; options: string[]; correctIndex: number }
+type Attestation = {
+  id: string
+  title: string
+  type: 'full' | 'menu' | 'knowledge'
+  status: 'active' | 'completed'
+  employeeIds: string[]
+  deadline: string | null
+  questions: AttestationQuestion[]
+  createdAt: string
+}
 
 type Order = {
   id: string
@@ -309,6 +321,13 @@ export function EmployeeStartPage() {
   const [commentText, setCommentText] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const [attestations, setAttestations] = useState<Attestation[]>([])
+  const [activeAttestation, setActiveAttestation] = useState<Attestation | null>(null)
+  const [attestAnswers, setAttestAnswers] = useState<Record<string, number>>({})
+  const [attestStep, setAttestStep] = useState(0)
+  const [attestDone, setAttestDone] = useState(false)
+  const [attestScore, setAttestScore] = useState(0)
+  const [attestSaving, setAttestSaving] = useState(false)
 
   function cartTotal() { return orderCart.reduce((sum, i) => sum + i.price * i.quantity, 0) }
   function cartCount() { return orderCart.reduce((sum, i) => sum + i.quantity, 0) }
@@ -352,6 +371,7 @@ export function EmployeeStartPage() {
   const canGoBack = navHistory.length > 0
 
   const employee = {
+    id: session?.user.id || '',
     name: session?.user.name || 'Сотрудник',
     position: session?.membership.position || (session?.membership.role === 'manager' ? 'Управляющий' : 'Сотрудник'),
     restaurantName: summary?.restaurant.name || session?.restaurant.name || 'Ресторан',
@@ -446,6 +466,44 @@ export function EmployeeStartPage() {
     }
   }
 
+  async function loadAttestations() {
+    try {
+      const result = await api.list<Attestation>('attestations')
+      const myId = employee.id || ''
+      const active = result.items.filter((a) =>
+        a.status === 'active' && (a.employeeIds.length === 0 || a.employeeIds.includes(myId))
+      )
+      setAttestations(active)
+    } catch { /* ignore */ }
+  }
+
+  async function submitAttestation() {
+    if (!activeAttestation) return
+    setAttestSaving(true)
+    try {
+      const answers = activeAttestation.questions.map((q) => ({
+        questionId: q.id,
+        selectedIndex: attestAnswers[q.id] ?? -1,
+      }))
+      const correct = answers.filter((a, i) => activeAttestation.questions[i]?.correctIndex === a.selectedIndex).length
+      const score = Math.round((correct / activeAttestation.questions.length) * 100)
+      await api.create('attestation-results', {
+        attestationId: activeAttestation.id,
+        employeeId: employee.id || '',
+        employeeName: employee.name,
+        answers,
+        score,
+        completedAt: new Date().toISOString(),
+      })
+      setAttestScore(score)
+      setAttestDone(true)
+    } catch {
+      showNotice('Ошибка при отправке результатов.')
+    } finally {
+      setAttestSaving(false)
+    }
+  }
+
   async function loadOrders() {
     setOrdersLoading(true)
     try {
@@ -460,6 +518,7 @@ export function EmployeeStartPage() {
     void loadData().catch(() => showNotice('Не удалось загрузить данные смены.'))
     void loadHallPlan().catch(() => undefined)
     void loadOrders()
+    void loadAttestations()
   }, [])
 
   function taskDetail(task: Task): DetailState {
@@ -1111,6 +1170,114 @@ export function EmployeeStartPage() {
     )
   }
 
+  function renderAttestation() {
+    const typeLabels: Record<string, string> = { full: 'Полная', menu: 'По меню', knowledge: 'По базе знаний' }
+
+    if (activeAttestation) {
+      const q = activeAttestation.questions[attestStep]
+      const total = activeAttestation.questions.length
+
+      if (attestDone) {
+        const passed = attestScore >= 70
+        return (
+          <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, paddingTop: 32, textAlign: 'center' }}>
+            <div style={{ fontSize: 64 }}>{passed ? '🎉' : '😔'}</div>
+            <strong style={{ fontSize: 22, fontWeight: 800, color: '#111' }}>{passed ? 'Аттестация пройдена!' : 'Не пройдено'}</strong>
+            <p style={{ margin: 0, fontSize: 32, fontWeight: 900, color: passed ? '#16a34a' : '#dc2626' }}>{attestScore}%</p>
+            <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>Правильных ответов: {Math.round(attestScore * total / 100)} из {total}</p>
+            <p style={{ margin: 0, fontSize: 13, color: '#9ca3af' }}>{passed ? 'Результат отправлен управляющему.' : 'Результат сохранён. Попробуйте ещё раз позже.'}</p>
+            <button type="button" style={{ marginTop: 8, height: 48, padding: '0 32px', border: 'none', borderRadius: 14, background: '#111', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+              onClick={() => { setActiveAttestation(null); setAttestAnswers({}); setAttestStep(0); setAttestDone(false); void loadAttestations() }}>
+              К списку аттестаций
+            </button>
+          </section>
+        )
+      }
+
+      return (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+            <button type="button" style={{ border: 'none', background: 'none', color: '#2563eb', fontWeight: 700, fontSize: 14, cursor: 'pointer', padding: 0 }}
+              onClick={() => { setActiveAttestation(null); setAttestAnswers({}); setAttestStep(0) }}>
+              ← Назад
+            </button>
+            <span style={{ flex: 1, fontSize: 13, color: '#9ca3af', textAlign: 'right' }}>{attestStep + 1} / {total}</span>
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 4, borderRadius: 4, background: '#e5e7eb' }}>
+            <div style={{ height: '100%', borderRadius: 4, background: '#111', width: `${((attestStep + 1) / total) * 100}%`, transition: 'width 0.3s' }} />
+          </div>
+
+          <div style={{ background: '#fff', borderRadius: 18, padding: '20px 18px', border: '1px solid rgba(0,0,0,0.08)' }}>
+            <p style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 700, color: '#111', lineHeight: 1.4 }}>{q.text}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {q.options.map((opt, oi) => {
+                const selected = attestAnswers[q.id] === oi
+                return (
+                  <button key={oi} type="button"
+                    style={{ textAlign: 'left', padding: '14px 16px', border: `2px solid ${selected ? '#111' : '#e5e7eb'}`, borderRadius: 14, background: selected ? '#111' : '#fff', color: selected ? '#fff' : '#374151', fontWeight: selected ? 700 : 500, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s' }}
+                    onClick={() => setAttestAnswers((prev) => ({ ...prev, [q.id]: oi }))}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', border: `1.5px solid ${selected ? '#fff' : '#d1d5db'}`, background: selected ? '#fff' : 'transparent', color: selected ? '#111' : '#9ca3af', fontSize: 11, fontWeight: 800, marginRight: 10, flexShrink: 0 }}>
+                      {String.fromCharCode(65 + oi)}
+                    </span>
+                    {opt}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            {attestStep > 0 && (
+              <button type="button" style={{ flex: 1, height: 48, border: '1px solid #e5e7eb', borderRadius: 14, background: '#fff', color: '#374151', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+                onClick={() => setAttestStep((s) => s - 1)}>
+                Назад
+              </button>
+            )}
+            {attestStep < total - 1 ? (
+              <button type="button" style={{ flex: 2, height: 48, border: 'none', borderRadius: 14, background: attestAnswers[q.id] != null ? '#111' : '#e5e7eb', color: attestAnswers[q.id] != null ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 15, cursor: attestAnswers[q.id] != null ? 'pointer' : 'not-allowed' }}
+                disabled={attestAnswers[q.id] == null}
+                onClick={() => setAttestStep((s) => s + 1)}>
+                Далее
+              </button>
+            ) : (
+              <button type="button" style={{ flex: 2, height: 48, border: 'none', borderRadius: 14, background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+                disabled={attestSaving}
+                onClick={() => void submitAttestation()}>
+                {attestSaving ? 'Отправляю...' : 'Завершить аттестацию'}
+              </button>
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    return (
+      <section>
+        <h2 style={{ margin: '0 0 16px', fontSize: 22, fontWeight: 700 }}>Аттестация</h2>
+        {attestations.length === 0 ? (
+          <p className="employee-mobile__empty">Активных аттестаций нет.</p>
+        ) : (
+          <div className="employee-mobile__plain-list">
+            {attestations.map((a) => (
+              <button key={a.id} type="button" className="employee-mobile__list-card"
+                onClick={() => { setActiveAttestation(a); setAttestAnswers({}); setAttestStep(0); setAttestDone(false) }}>
+                <div className="employee-mobile__list-card__accent employee-mobile__list-card__accent--blue" />
+                <div className="employee-mobile__list-card__body">
+                  <strong>{a.title}</strong>
+                  <p>{typeLabels[a.type]} · {a.questions.length} вопросов</p>
+                  {a.deadline && <small>До {new Date(a.deadline).toLocaleDateString('ru')}</small>}
+                </div>
+                <div className="employee-mobile__list-card__chevron"><ChevronRightIcon /></div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    )
+  }
+
   const tabTitles: Record<MobileTab, string> = {
     overview: 'Главная',
     tasks: 'Мои задачи',
@@ -1120,6 +1287,7 @@ export function EmployeeStartPage() {
     knowledge: 'База знаний',
     schedule: 'График',
     orders: 'Заказы',
+    attestation: 'Аттестация',
   }
 
   return (
@@ -1152,6 +1320,7 @@ export function EmployeeStartPage() {
         {activeTab === 'knowledge' && renderKnowledge()}
         {activeTab === 'schedule' && renderSchedule()}
         {activeTab === 'orders' && renderOrders()}
+        {activeTab === 'attestation' && renderAttestation()}
       </section>
 
       <nav className="employee-mobile__bottom-nav employee-mobile__bottom-nav--compact" aria-label="Нижнее меню">
@@ -1159,7 +1328,7 @@ export function EmployeeStartPage() {
         <button type="button" className={activeTab === 'hallPlan' ? 'is-active' : ''} onClick={() => { setActiveTab('hallPlan'); setDetail(null); setNavHistory([]) }}><CalendarIcon /><span>Зал</span></button>
         <button type="button" className={`employee-mobile__plus-button${activeTab === 'orders' ? ' is-active' : ''}`} onClick={() => { setActiveTab('orders'); setDetail(null); setNavHistory([]); void loadOrders() }}><span><ClipboardIcon /></span><strong>Заказы</strong></button>
         <button type="button" className={activeTab === 'tasks' ? 'is-active' : ''} onClick={() => { setActiveTab('tasks'); setDetail(null); setNavHistory([]) }}><ChecklistIcon /><span>Задачи</span></button>
-        <button type="button" className={activeTab === 'knowledge' ? 'is-active' : ''} onClick={() => { setActiveTab('knowledge'); setDetail(null); setNavHistory([]) }}><BookIcon /><span>База</span></button>
+        <button type="button" className={`${activeTab === 'attestation' ? 'is-active' : ''}${attestations.length > 0 ? ' employee-mobile__nav-badge' : ''}`} onClick={() => { setActiveAttestation(null); setAttestAnswers({}); setAttestStep(0); setAttestDone(false); setActiveTab('attestation'); setDetail(null); setNavHistory([]); void loadAttestations() }}><BookIcon /><span>Тест</span>{attestations.length > 0 && <b>{attestations.length}</b>}</button>
       </nav>
 
       {selectedTable && !bookingForm ? (

@@ -203,6 +203,8 @@ const stateArrayKeys = [
   'pushSubscriptions',
   'staffSchedules',
   'orders',
+  'attestations',
+  'attestationResults',
 ]
 
 function ensureStateShape(state) {
@@ -563,6 +565,7 @@ function canWriteCollection(name, method, itemId, action, role) {
   if (name === 'bookings' && itemId && action === 'status' && ['PATCH', 'PUT'].includes(method)) return true
   if (name === 'orders' && method === 'POST' && !itemId) return true
   if (name === 'orders' && itemId && ['PATCH', 'PUT'].includes(method)) return true
+  if (name === 'attestation-results' && method === 'POST' && !itemId) return true
 
   return false
 }
@@ -588,6 +591,8 @@ function collectionByPath(state, name) {
     'support-chats': 'supportChats',
     'support-messages': 'supportMessages',
     orders: 'orders',
+    attestations: 'attestations',
+    'attestation-results': 'attestationResults',
   }
   const key = allowed[name]
   if (!key) return null
@@ -828,7 +833,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
     state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
 
-    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages', 'orders']
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages', 'orders', 'attestations', 'attestationResults']
     for (const key of keys) {
       if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
     }
@@ -841,8 +846,114 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
   return false
 }
 
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function pickDistractors(correct, pool, count = 3) {
+  const others = pool.filter((v) => v !== correct)
+  return shuffle(others).slice(0, count)
+}
+
+function makeOptions(correct, distractors) {
+  const opts = shuffle([correct, ...distractors])
+  return { options: opts, correctIndex: opts.indexOf(correct) }
+}
+
+function generateAttestationQuestions(state, restaurantId, type) {
+  const questions = []
+  const qid = () => `q_${Math.random().toString(36).slice(2, 10)}`
+
+  if (type === 'menu' || type === 'full') {
+    const items = (state.ttkItems || []).filter((i) => i.restaurantId === restaurantId)
+    const groups = [...new Set(items.map((i) => i.group || i.groupId).filter(Boolean))]
+    const prices = [...new Set(items.map((i) => i.price).filter((p) => p > 0))]
+    const times = [...new Set(items.map((i) => i.cookingTime).filter(Boolean))]
+
+    // Price questions
+    items.filter((i) => i.price > 0).forEach((item) => {
+      const distractors = pickDistractors(item.price, prices)
+      if (distractors.length < 3) return
+      const { options, correctIndex } = makeOptions(item.price, distractors)
+      questions.push({ id: qid(), source: 'ttk', sourceId: item.id, text: `Какова цена блюда «${item.name}»?`, options: options.map((p) => `${p} ₽`), correctIndex })
+    })
+
+    // Cooking time questions
+    items.filter((i) => i.cookingTime).forEach((item) => {
+      const distractors = pickDistractors(item.cookingTime, times)
+      if (distractors.length < 3) return
+      const { options, correctIndex } = makeOptions(item.cookingTime, distractors)
+      questions.push({ id: qid(), source: 'ttk', sourceId: item.id, text: `Сколько времени готовится «${item.name}»?`, options, correctIndex })
+    })
+
+    // Gastro pair questions
+    items.filter((i) => Array.isArray(i.gastroPairs) && i.gastroPairs.length > 0).forEach((item) => {
+      const pairIds = i.gastroPairs || item.gastroPairs
+      const pairItem = items.find((x) => pairIds.includes(x.id))
+      if (!pairItem) return
+      const distItems = shuffle(items.filter((x) => !pairIds.includes(x.id) && x.id !== item.id)).slice(0, 3)
+      if (distItems.length < 3) return
+      const opts = shuffle([pairItem, ...distItems])
+      const correctIndex = opts.indexOf(pairItem)
+      questions.push({ id: qid(), source: 'ttk', sourceId: item.id, text: `Что из перечисленного является гастропарой к «${item.name}»?`, options: opts.map((x) => x.name), correctIndex })
+
+      // Negative: which is NOT a gastro pair
+      const notPair = distItems[0]
+      const notOpts = shuffle([notPair, ...shuffle(items.filter((x) => pairIds.includes(x.id))).slice(0, 3)])
+      const notCorrectIndex = notOpts.indexOf(notPair)
+      questions.push({ id: qid(), source: 'ttk', sourceId: item.id, text: `Что из перечисленного НЕ является гастропарой к «${item.name}»?`, options: notOpts.map((x) => x.name), correctIndex: notCorrectIndex })
+    })
+
+    // Category questions
+    groups.forEach((group) => {
+      const inGroup = items.filter((i) => (i.group || i.groupId) === group)
+      const outGroup = items.filter((i) => (i.group || i.groupId) !== group)
+      if (inGroup.length < 1 || outGroup.length < 3) return
+      const correct = shuffle(inGroup)[0]
+      const distractors = shuffle(outGroup).slice(0, 3)
+      const { options, correctIndex } = makeOptions(correct.name, distractors.map((x) => x.name))
+      const groupName = correct.group || group
+      questions.push({ id: qid(), source: 'ttk', sourceId: correct.id, text: `Какое из блюд относится к категории «${groupName}»?`, options, correctIndex })
+
+      if (inGroup.length >= 4) {
+        const impostor = shuffle(outGroup)[0]
+        const realOnes = shuffle(inGroup).slice(0, 3)
+        const opts2 = shuffle([impostor, ...realOnes])
+        const ci2 = opts2.indexOf(impostor)
+        questions.push({ id: qid(), source: 'ttk', sourceId: impostor.id, text: `Какое из блюд НЕ относится к категории «${groupName}»?`, options: opts2.map((x) => x.name), correctIndex: ci2 })
+      }
+    })
+
+    // Extras (описание доп) questions
+    items.filter((i) => i.extras && String(i.extras).trim().length > 10).forEach((item) => {
+      const others = shuffle(items.filter((x) => x.extras && x.id !== item.id)).slice(0, 3)
+      if (others.length < 3) return
+      const opts = shuffle([item, ...others])
+      const ci = opts.indexOf(item)
+      questions.push({ id: qid(), source: 'ttk', sourceId: item.id, text: `К какому блюду относится описание допов: «${String(item.extras).slice(0, 80)}»?`, options: opts.map((x) => x.name), correctIndex: ci })
+    })
+  }
+
+  if (type === 'knowledge' || type === 'full') {
+    const materials = (state.knowledgeMaterials || []).filter((m) => m.restaurantId === restaurantId && Array.isArray(m.questions) && m.questions.length > 0)
+    materials.forEach((material) => {
+      material.questions.forEach((q) => {
+        if (!q.text || !Array.isArray(q.options) || q.options.length < 2 || q.correctIndex == null) return
+        questions.push({ id: qid(), source: 'knowledge', sourceId: material.id, text: q.text, options: q.options, correctIndex: q.correctIndex })
+      })
+    })
+  }
+
+  return shuffle(questions).slice(0, 30)
+}
+
 async function handleCollections(req, res, state, pathname, auth) {
-  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|support-chats|support-messages|orders)(?:\/([^/]+))?(?:\/([^/]+))?$/)
+  const match = pathname.match(/^\/api\/(employees|tasks|checklists|checklist-runs|halls|tables|bookings|payments|technical-requests|knowledge|guests|push-subscriptions|staff-schedules|inventory-assignments|inventory-products|ttk|support-chats|support-messages|orders|attestations|attestation-results)(?:\/([^/]+))?(?:\/([^/]+))?$/)
   if (!match) return false
   const [, name, itemId, action] = match
   const collection = collectionByPath(state, name)
@@ -853,6 +964,29 @@ async function handleCollections(req, res, state, pathname, auth) {
 
   if (!safeMethods.has(req.method) && !canWriteCollection(name, req.method, itemId, action, role)) {
     throw httpError(403, 'Недостаточно прав для изменения этого раздела.')
+  }
+
+  if (name === 'attestations' && req.method === 'POST' && !itemId) {
+    const body = await readBody(req)
+    if (!['full', 'menu', 'knowledge'].includes(body.type)) throw httpError(400, 'Неверный тип аттестации.')
+    const questions = generateAttestationQuestions(state, currentRestaurantId, body.type)
+    if (questions.length === 0) throw httpError(400, 'Недостаточно данных для генерации вопросов. Добавьте блюда в номенклатуру или вопросы в базу знаний.')
+    const item = {
+      id: id('attest'),
+      restaurantId: currentRestaurantId,
+      title: String(body.title || '').trim() || `Аттестация ${new Date().toLocaleDateString('ru')}`,
+      type: body.type,
+      status: 'active',
+      employeeIds: Array.isArray(body.employeeIds) ? body.employeeIds : [],
+      deadline: body.deadline || null,
+      questions,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    }
+    collection.items.push(item)
+    await saveState(state)
+    send(res, 201, item)
+    return true
   }
 
   if (name === 'push-subscriptions' && req.method === 'POST') {
