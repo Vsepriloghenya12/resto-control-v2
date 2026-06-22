@@ -1397,15 +1397,15 @@ async function handleIiko(req, res, state, pathname, auth) {
     const token = await iikoToken(host, login, password)
     const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
 
-    // Parse only GOODS and INGREDIENT types (raw materials / inventory items)
+    // Parse only GOODS and PREPARED types (raw materials / inventory items)
     const items = []
-    const productRe = /<product>([\s\S]*?)<\/product>/g
+    const productRe = /<productDto>([\s\S]*?)<\/productDto>/g
     let pm
     while ((pm = productRe.exec(productsXml)) !== null) {
       const block = pm[1]
       const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const type = get('type')
-      if (type !== 'GOODS' && type !== 'INGREDIENT' && type !== 'MODIFIER') continue
+      const type = get('productType')
+      if (type !== 'GOODS' && type !== 'PREPARED') continue
       const name = get('name')
       if (!name) continue
       const unit = get('mainUnit') || 'шт'
@@ -1432,13 +1432,13 @@ async function handleIiko(req, res, state, pathname, auth) {
 
     // Parse products XML: id, name, mainUnit, category, price
     const items = []
-    const productRe = /<product>([\s\S]*?)<\/product>/g
+    const productRe = /<productDto>([\s\S]*?)<\/productDto>/g
     let pm
     while ((pm = productRe.exec(productsXml)) !== null) {
       const block = pm[1]
       const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const type = get('type')
-      if (type !== 'DISH' && type !== 'GOODS') continue
+      const type = get('productType')
+      if (type !== 'DISH') continue
       const name = get('name')
       if (!name) continue
       const unit = get('mainUnit') || 'шт'
