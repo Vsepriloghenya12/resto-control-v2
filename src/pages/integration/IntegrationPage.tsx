@@ -13,11 +13,13 @@ function IikoLogo() {
 function QuickRestoLogo() {
   return (
     <svg viewBox="0 0 48 48" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="10" fill="#ff6b00" />
-      <text x="24" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900"
-        fontSize="11" fill="#fff" letterSpacing="0.5">QUICK</text>
-      <text x="24" y="35" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900"
-        fontSize="11" fill="#fff" letterSpacing="0.5">RESTO</text>
+      {/* Blue rounded square (back) */}
+      <rect x="14" y="14" width="34" height="34" rx="9" fill="#3b35d4" />
+      {/* Red circle (front-left) */}
+      <circle cx="18" cy="22" r="18" fill="#ff1f3d" />
+      {/* White diagonal stroke */}
+      <rect x="20" y="12" width="6" height="26" rx="3" fill="#fff"
+        transform="rotate(38 23 25)" />
     </svg>
   )
 }
@@ -34,7 +36,7 @@ const SYSTEMS: Array<{ key: System; name: string; color: string; tagline: string
   {
     key: 'quickresto',
     name: 'Quick Resto',
-    color: '#ff6b00',
+    color: '#3b35d4',
     tagline: 'Quick Resto POS',
     logo: <QuickRestoLogo />,
   },
