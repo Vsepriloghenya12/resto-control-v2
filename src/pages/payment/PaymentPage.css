@@ -21,9 +21,9 @@
 .payment-table-card,
 .payment-documents-card,
 .payment-tariffs-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--rc-card);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
 }
 
@@ -46,7 +46,7 @@
 .payment-card-actions span,
 .payment-side-card li span,
 .payment-document span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.45;
@@ -55,7 +55,7 @@
 .payment-summary-card strong {
   display: block;
   margin-top: 7px;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 22px;
   line-height: 1.1;
   letter-spacing: -0.035em;
@@ -91,7 +91,7 @@
   border: 1px solid #bfdbfe;
   border-radius: 9px;
   padding: 0 12px;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
   color: #1d4ed8;
   font-family: inherit;
   font-size: 12px;
@@ -124,11 +124,11 @@
   display: grid;
   align-content: space-between;
   gap: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
   padding: 14px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -141,26 +141,26 @@
 
 .payment-tariff-card--selected {
   border-color: #1d4ed8;
-  background: #f8fbff;
+  background: var(--rc-card-2);
   box-shadow: inset 3px 0 0 #1d4ed8;
 }
 
 .payment-tariff-card strong {
   display: block;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 15px;
   font-weight: 900;
 }
 
 .payment-tariff-card p {
   margin: 5px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 750;
 }
 
 .payment-tariff-price b {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 24px;
   line-height: 1;
   letter-spacing: -0.04em;
@@ -168,7 +168,7 @@
 
 .payment-tariff-price em {
   margin-left: 4px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
   font-style: normal;
@@ -231,7 +231,7 @@
 .payment-card-header h2,
 .payment-side-card h2 {
   margin: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 16px;
   line-height: 1.2;
   letter-spacing: -0.025em;
@@ -244,7 +244,7 @@
 .payment-toggle-group {
   flex: 0 0 auto;
   display: inline-flex;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -253,9 +253,9 @@
   min-width: 58px;
   height: 36px;
   border: 0;
-  border-right: 1px solid #dbe1ea;
-  background: #ffffff;
-  color: #111827;
+  border-right: 1px solid var(--rc-border);
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   font-size: 12px;
   font-weight: 850;
@@ -287,7 +287,7 @@
 }
 
 .payment-form-grid span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 11px;
   font-weight: 850;
 }
@@ -295,11 +295,11 @@
 .payment-form-grid input {
   width: 100%;
   height: 40px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
   padding: 0 12px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-input-bg);
+  color: var(--rc-text);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -359,7 +359,7 @@
 }
 
 .payment-side-card strong {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
 }
 
@@ -375,21 +375,21 @@
 
 .payment-table th,
 .payment-table td {
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--rc-border);
   padding: 13px 12px;
   text-align: left;
   vertical-align: middle;
 }
 
 .payment-table th {
-  color: #475467;
-  background: #fbfcfe;
+  color: var(--rc-muted);
+  background: var(--rc-card-2);
   font-size: 12px;
   font-weight: 850;
 }
 
 .payment-table td {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 650;
 }
@@ -436,10 +436,10 @@
 .payment-row-actions button,
 .payment-document button {
   min-height: 32px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
   padding: 0 10px;
-  background: #ffffff;
+  background: var(--rc-card);
   color: #2563eb;
   font-family: inherit;
   font-size: 12px;
@@ -458,7 +458,7 @@
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
-  border: 1px solid #edf0f4;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
   padding: 12px;
 }
@@ -469,7 +469,7 @@
 }
 
 .payment-document strong {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
 }
 
@@ -479,8 +479,8 @@
   align-items: center;
   border-radius: 999px;
   padding: 0 10px;
-  background: #f2f4f7;
-  color: #475467;
+  background: var(--rc-hover);
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 850;
 }
@@ -495,7 +495,7 @@
   border: 1px solid #bfdbfe;
   border-radius: 9px;
   padding: 0 12px;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
   color: #1d4ed8;
   font-family: inherit;
   font-size: 12px;
@@ -528,11 +528,11 @@
   display: grid;
   align-content: space-between;
   gap: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
   padding: 14px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -545,26 +545,26 @@
 
 .payment-tariff-card--selected {
   border-color: #1d4ed8;
-  background: #f8fbff;
+  background: var(--rc-card-2);
   box-shadow: inset 3px 0 0 #1d4ed8;
 }
 
 .payment-tariff-card strong {
   display: block;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 15px;
   font-weight: 900;
 }
 
 .payment-tariff-card p {
   margin: 5px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 750;
 }
 
 .payment-tariff-price b {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 24px;
   line-height: 1;
   letter-spacing: -0.04em;
@@ -572,7 +572,7 @@
 
 .payment-tariff-price em {
   margin-left: 4px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
   font-style: normal;
@@ -638,7 +638,7 @@
   }
 }
 
-.payment-row-note { color: #667085; font-size: 13px; font-weight: 800; }
+.payment-row-note { color: var(--rc-muted); font-size: 13px; font-weight: 800; }
 .payment-support-modal {
   position: fixed;
   inset: 0;
@@ -655,7 +655,7 @@
   border: 1px solid #e6eaf0;
   border-radius: 20px;
   padding: 20px;
-  background: #fff;
+  background: var(--rc-card);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
 }
 .payment-support-dialog textarea {
@@ -664,6 +664,6 @@
   border: 1px solid #d0d5dd;
   border-radius: 14px;
   padding: 12px;
-  color: #101828;
+  color: var(--rc-text);
   font: inherit;
 }

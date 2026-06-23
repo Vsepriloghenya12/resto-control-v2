@@ -19,9 +19,9 @@
 .knowledge-list-card,
 .knowledge-editor-card,
 .knowledge-info-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--rc-card);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
 }
 
@@ -47,7 +47,7 @@
 .knowledge-list-header h2,
 .knowledge-editor-card__header h2 {
   margin: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 16px;
   line-height: 1.2;
   letter-spacing: -0.025em;
@@ -59,10 +59,10 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   font-size: 20px;
   font-weight: 500;
@@ -82,10 +82,10 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 11px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -119,7 +119,7 @@
 .knowledge-corporate-item strong {
   display: block;
   margin-bottom: 4px;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 850;
 }
@@ -127,7 +127,7 @@
 .knowledge-section p,
 .knowledge-corporate__header p {
   margin: 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   line-height: 1.4;
   font-weight: 650;
@@ -135,15 +135,15 @@
 
 .knowledge-section small,
 .knowledge-corporate-item small {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
 }
 
 .knowledge-corporate {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 11px;
-  background: #ffffff;
+  background: var(--rc-card);
   overflow: hidden;
 }
 
@@ -177,7 +177,7 @@
   border-radius: 8px;
   padding: 0 9px;
   background: transparent;
-  color: #111827;
+  color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -211,7 +211,7 @@
 .knowledge-info-card strong {
   display: block;
   margin-bottom: 6px;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 850;
 }
@@ -234,7 +234,7 @@
 .knowledge-list-header p,
 .knowledge-editor-card__header p {
   margin: 5px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -262,8 +262,8 @@
 .knowledge-outline-button,
 .knowledge-upload-box button,
 .knowledge-media-row button {
-  border: 1px solid #dbe1ea;
-  background: #ffffff;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card);
   color: #2563eb;
 }
 
@@ -280,9 +280,9 @@
   gap: 10px;
   margin: 0 18px 0;
   padding: 0 12px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
-  color: #667085;
+  color: var(--rc-muted);
 }
 
 .knowledge-local-search svg {
@@ -294,7 +294,7 @@
   width: 100%;
   border: 0;
   outline: 0;
-  color: #111827;
+  color: var(--rc-text);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -313,21 +313,21 @@
 
 .knowledge-table th,
 .knowledge-table td {
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--rc-border);
   padding: 14px 16px;
   text-align: left;
   vertical-align: middle;
 }
 
 .knowledge-table th {
-  color: #475467;
-  background: #fbfcfe;
+  color: var(--rc-muted);
+  background: var(--rc-card-2);
   font-size: 12px;
   font-weight: 850;
 }
 
 .knowledge-table td {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 650;
 }
@@ -341,7 +341,7 @@
   border: 0;
   padding: 0;
   background: transparent;
-  color: #111827;
+  color: var(--rc-text);
   font-family: inherit;
   font-size: 13px;
   font-weight: 850;
@@ -363,7 +363,7 @@
 
 .knowledge-type {
   background: #f4f7fb;
-  color: #344054;
+  color: var(--rc-text-2);
 }
 
 .knowledge-status--published {
@@ -373,7 +373,7 @@
 
 .knowledge-status--draft {
   background: #eef2f7;
-  color: #475467;
+  color: var(--rc-muted);
 }
 
 .knowledge-status--hidden {
@@ -391,9 +391,9 @@
   height: 34px;
   display: grid;
   place-items: center;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--rc-card);
   color: #0f2147;
   cursor: pointer;
 }
@@ -409,7 +409,7 @@
 
 .knowledge-editor-card__header {
   padding: 16px 18px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--rc-border);
 }
 
 .knowledge-editor-form {
@@ -424,7 +424,7 @@
 }
 
 .knowledge-editor-form label span {
-  color: #344054;
+  color: var(--rc-text-2);
   font-size: 12px;
   font-weight: 850;
 }
@@ -434,11 +434,11 @@
 .knowledge-editor-form select {
   width: 100%;
   min-height: 40px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
   padding: 0 12px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-input-bg);
+  color: var(--rc-text);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -468,7 +468,7 @@
   place-items: center;
   border-radius: 10px;
   background: #f4f7fb;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 850;
 }
@@ -481,7 +481,7 @@
   border: 1px dashed #b8c4d6;
   border-radius: 11px;
   color: #52637a;
-  background: #fbfcfe;
+  background: var(--rc-card-2);
 }
 
 .knowledge-upload-box svg {
@@ -491,7 +491,7 @@
 }
 
 .knowledge-upload-box strong {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 850;
 }
@@ -512,27 +512,27 @@
   display: grid;
   gap: 5px;
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
-  background: #fbfcfe;
+  background: var(--rc-card-2);
 }
 
 .knowledge-hierarchy-node strong {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 850;
 }
 
 .knowledge-hierarchy-node span,
 .knowledge-hierarchy-node small {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
 
 .knowledge-hierarchy-node p {
   margin: 4px 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   line-height: 1.45;
   font-weight: 700;
@@ -542,7 +542,7 @@
   display: flex;
   gap: 10px;
   padding: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--rc-border);
 }
 
 .knowledge-empty-editor {
@@ -550,7 +550,7 @@
   place-items: center;
   gap: 8px;
   padding: 48px 20px;
-  color: #667085;
+  color: var(--rc-muted);
   text-align: center;
 }
 
@@ -561,7 +561,7 @@
 }
 
 .knowledge-empty-editor strong {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 15px;
 }
 
@@ -617,7 +617,7 @@
 
 .knowledge-empty-row {
   padding: 24px 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-weight: 750;
 }
 
@@ -660,7 +660,7 @@
 
 .knowledge-hierarchy-group h3 {
   margin: 8px 0 0;
-  color: #475467;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.04em;
@@ -678,11 +678,11 @@
   grid-template-columns: 42px minmax(0, 1fr) 18px;
   gap: 12px;
   align-items: start;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--rc-card);
   padding: 12px;
-  color: #111827;
+  color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -690,7 +690,7 @@
 
 .knowledge-hierarchy-employee--active {
   border-color: #2563eb;
-  background: #f8fbff;
+  background: var(--rc-card-2);
   box-shadow: inset 3px 0 0 #2563eb;
 }
 
@@ -713,14 +713,14 @@
 .knowledge-hierarchy-employee__body strong {
   display: block;
   margin: 0 0 3px;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 14px;
   font-weight: 900;
 }
 
 .knowledge-hierarchy-employee__body span {
   display: block;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 750;
   line-height: 1.35;
@@ -737,7 +737,7 @@
 .knowledge-hierarchy-employee__body li {
   position: relative;
   padding-left: 13px;
-  color: #344054;
+  color: var(--rc-text-2);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.35;
@@ -760,7 +760,7 @@
 
 .knowledge-hierarchy-employee__body p {
   margin: 8px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 650;
   line-height: 1.45;
@@ -770,7 +770,7 @@
   align-self: center;
   width: 16px;
   height: 16px;
-  color: #98a2b3;
+  color: var(--rc-muted-2);
 }
 
 .knowledge-hierarchy-editor textarea {
@@ -798,13 +798,13 @@
   display: block;
   font-size: 14px;
   font-weight: 700;
-  color: #111;
+  color: var(--rc-text);
 }
 
 .knowledge-questions-header span {
   display: block;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--rc-muted);
   margin-top: 2px;
 }
 
@@ -824,7 +824,7 @@
 }
 
 .knowledge-questions-empty {
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   font-size: 13px;
   text-align: center;
   padding: 12px 0;
@@ -832,7 +832,7 @@
 }
 
 .knowledge-question-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
   padding: 14px;
   display: flex;
@@ -849,7 +849,7 @@
 .knowledge-question-card__header span {
   font-size: 12px;
   font-weight: 700;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
@@ -871,18 +871,18 @@
 .knowledge-question-text {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
-  background: #f9fafb;
+  background: var(--rc-card-2);
   font: inherit;
   font-size: 14px;
-  color: #111;
+  color: var(--rc-text);
   resize: none;
   outline: none;
   box-sizing: border-box;
 }
 
-.knowledge-question-text:focus { border-color: #2563eb; background: #fff; }
+.knowledge-question-text:focus { border-color: #2563eb; background: var(--rc-card); }
 
 .knowledge-question-options {
   display: flex;
@@ -895,7 +895,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--rc-border);
   border-radius: 8px;
   cursor: pointer;
   transition: border-color 0.15s;
@@ -903,7 +903,7 @@
 
 .knowledge-question-option.is-correct {
   border-color: #16a34a;
-  background: #f0fdf4;
+  background: var(--rc-green-soft);
 }
 
 .knowledge-question-option input[type="radio"] {
@@ -919,7 +919,7 @@
   background: transparent;
   font: inherit;
   font-size: 13px;
-  color: #111;
+  color: var(--rc-text);
   outline: none;
   padding: 0;
 }

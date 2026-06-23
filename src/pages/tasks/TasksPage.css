@@ -19,7 +19,7 @@
   z-index: 9999;
   padding: 10px 22px;
   border-radius: 20px;
-  background: #111827;
+  background: var(--rc-text);
   color: #fff;
   font-size: 14px;
   font-weight: 600;
@@ -57,12 +57,12 @@
   gap: 8px;
   height: 42px;
   padding: 0 14px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--rc-card);
   min-width: 260px;
   flex: 1;
-  color: #667085;
+  color: var(--rc-muted);
 }
 
 .tasks-search svg { width: 16px; height: 16px; flex: 0 0 auto; }
@@ -74,7 +74,7 @@
   background: transparent;
   font: inherit;
   font-size: 14px;
-  color: #111827;
+  color: var(--rc-text);
 }
 
 .tasks-status-tabs {
@@ -85,10 +85,10 @@
 .tasks-status-tabs button {
   height: 42px;
   padding: 0 14px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
-  background: #fff;
-  color: #374151;
+  background: var(--rc-card);
+  color: var(--rc-text-2);
   font: inherit;
   font-size: 13px;
   font-weight: 650;
@@ -102,15 +102,15 @@
 .tasks-status-tabs button span {
   padding: 1px 7px;
   border-radius: 99px;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--rc-hover);
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
 }
 
 .tasks-status-tabs button.active {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
   color: #1d4ed8;
   font-weight: 800;
 }
@@ -129,9 +129,9 @@
 .tasks-empty {
   padding: 40px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   font-size: 15px;
-  border: 1px dashed #e5e7eb;
+  border: 1px dashed var(--rc-border);
   border-radius: 14px;
 }
 
@@ -141,9 +141,9 @@
   align-items: center;
   gap: 16px;
   padding: 14px 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--rc-card);
   cursor: pointer;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
@@ -160,7 +160,7 @@
 .tasks-row__title {
   font-size: 15px;
   font-weight: 700;
-  color: #111827;
+  color: var(--rc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -169,7 +169,7 @@
 .tasks-row__desc {
   margin-top: 3px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--rc-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -185,12 +185,12 @@
 .tasks-row__assignee {
   font-size: 13px;
   font-weight: 650;
-  color: #374151;
+  color: var(--rc-text-2);
 }
 
 .tasks-row__due {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
 }
 
 .tasks-row__photo-badge {
@@ -211,7 +211,7 @@
   font-weight: 800;
 }
 
-.tasks-status--not_started { color: #475467; background: #f2f4f7; }
+.tasks-status--not_started { color: var(--rc-muted); background: var(--rc-hover); }
 .tasks-status--in_progress { color: #1d4ed8; background: #dbeafe; }
 .tasks-status--done        { color: #047857; background: #dff8e7; }
 .tasks-status--overdue     { color: #b42318; background: #fee4e2; }
@@ -226,7 +226,7 @@
   height: 32px;
   border: 1.5px solid #d1fae5;
   border-radius: 8px;
-  background: #f0fdf4;
+  background: var(--rc-green-soft);
   color: #16a34a;
   font-size: 16px;
   font-weight: 800;
@@ -257,7 +257,7 @@
   max-height: 90vh;
   overflow-y: auto;
   border-radius: 16px;
-  background: #fff;
+  background: var(--rc-card);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.18);
 }
 
@@ -266,14 +266,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 18px 20px 14px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--rc-hover);
 }
 
 .tasks-modal__header h3 {
   margin: 0;
   font-size: 17px;
   font-weight: 800;
-  color: #111827;
+  color: var(--rc-text);
 }
 
 .tasks-modal__close {
@@ -281,8 +281,8 @@
   height: 30px;
   border: 0;
   border-radius: 8px;
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--rc-hover);
+  color: var(--rc-text-2);
   font-size: 16px;
   cursor: pointer;
   display: flex;
@@ -290,7 +290,7 @@
   justify-content: center;
 }
 
-.tasks-modal__close:hover { background: #e5e7eb; }
+.tasks-modal__close:hover { background: var(--rc-border); }
 
 .tasks-modal__body {
   display: grid;
@@ -306,7 +306,7 @@
 .tasks-modal__field span {
   font-size: 12px;
   font-weight: 800;
-  color: #374151;
+  color: var(--rc-text-2);
 }
 
 .tasks-modal__field input,
@@ -314,19 +314,19 @@
 .tasks-modal__field textarea {
   height: 38px;
   padding: 0 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
-  background: #f9fafb;
+  background: var(--rc-card-2);
   font: inherit;
   font-size: 14px;
-  color: #111827;
+  color: var(--rc-text);
   outline: none;
   transition: border-color 0.15s;
 }
 
 .tasks-modal__field input:focus,
 .tasks-modal__field select:focus,
-.tasks-modal__field textarea:focus { border-color: #2563eb; background: #fff; }
+.tasks-modal__field textarea:focus { border-color: #2563eb; background: var(--rc-input-bg); }
 
 .tasks-modal__field textarea {
   height: 80px;
@@ -354,7 +354,7 @@
   align-items: center;
   gap: 6px;
   font-size: 14px;
-  color: #111827;
+  color: var(--rc-text);
   cursor: pointer;
 }
 
@@ -383,11 +383,11 @@
 .tasks-modal__toggle span {
   font-size: 13px;
   font-weight: 650;
-  color: #374151;
+  color: var(--rc-text-2);
 }
 
 .tasks-modal__comments {
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--rc-border);
   padding-top: 12px;
   display: flex;
   flex-direction: column;
@@ -396,13 +396,13 @@
 .tasks-modal__comments-label {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--rc-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .tasks-modal__no-comments {
   font-size: 13px;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   margin: 0;
 }
 .tasks-modal__comment-list {
@@ -413,7 +413,7 @@
   overflow-y: auto;
 }
 .tasks-modal__comment {
-  background: #f9fafb;
+  background: var(--rc-card-2);
   border-radius: 8px;
   padding: 8px 10px;
   display: grid;
@@ -421,9 +421,9 @@
   gap: 4px 8px;
   align-items: baseline;
 }
-.tasks-modal__comment strong { font-size: 12px; color: #374151; }
-.tasks-modal__comment span { font-size: 13px; color: #111827; }
-.tasks-modal__comment small { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+.tasks-modal__comment strong { font-size: 12px; color: var(--rc-text-2); }
+.tasks-modal__comment span { font-size: 13px; color: var(--rc-text); }
+.tasks-modal__comment small { font-size: 11px; color: var(--rc-muted-2); white-space: nowrap; }
 .tasks-modal__comment-form {
   display: flex;
   gap: 6px;

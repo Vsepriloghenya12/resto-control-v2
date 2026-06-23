@@ -1,16 +1,69 @@
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #22242a;
-  background: #f6f7f9;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+
   --rc-orange: #ff7900;
   --rc-orange-soft: #ff8b00;
-  --rc-text: #22242a;
-  --rc-muted: #8c909b;
-  --rc-border: #dfe2e7;
+
+  /* Light theme */
+  --rc-bg: #f6f7f9;
+  --rc-bg-page: #f7f8fb;
   --rc-card: #ffffff;
+  --rc-card-2: #f9fafb;
+  --rc-sidebar: #ffffff;
+  --rc-text: #111827;
+  --rc-text-2: #374151;
+  --rc-muted: #6b7280;
+  --rc-muted-2: #9ca3af;
+  --rc-border: #e5e7eb;
+  --rc-border-2: #f0f2f5;
+  --rc-input-bg: #ffffff;
+  --rc-hover: #f3f4f6;
+  --rc-active-nav: linear-gradient(135deg, #0f2147 0%, #1e3a6d 100%);
+  --rc-active-nav-shadow: rgba(15, 33, 71, 0.16);
+  --rc-shadow: rgba(15, 23, 42, 0.06);
+  --rc-shadow-md: rgba(15, 23, 42, 0.1);
+  --rc-blue: #2563eb;
+  --rc-blue-soft: #eff6ff;
+  --rc-green: #22c55e;
+  --rc-green-soft: #f0fdf4;
+  --rc-red: #ef4444;
+  --rc-red-soft: #fef2f2;
+  --rc-yellow: #f59e0b;
+  --rc-yellow-soft: #fffbeb;
+
+  color: var(--rc-text);
+  background: var(--rc-bg);
+}
+
+[data-theme="dark"] {
+  --rc-bg: #0f1117;
+  --rc-bg-page: #131620;
+  --rc-card: #1c2032;
+  --rc-card-2: #232840;
+  --rc-sidebar: #161928;
+  --rc-text: #f0f2f8;
+  --rc-text-2: #c8cedf;
+  --rc-muted: #8b92a8;
+  --rc-muted-2: #5c6480;
+  --rc-border: #2a3050;
+  --rc-border-2: #1e2438;
+  --rc-input-bg: #1c2032;
+  --rc-hover: #232840;
+  --rc-active-nav: linear-gradient(135deg, #ff7900 0%, #ff5500 100%);
+  --rc-active-nav-shadow: rgba(255, 121, 0, 0.25);
+  --rc-shadow: rgba(0, 0, 0, 0.3);
+  --rc-shadow-md: rgba(0, 0, 0, 0.45);
+  --rc-blue: #60a5fa;
+  --rc-blue-soft: #1e2d4a;
+  --rc-green: #4ade80;
+  --rc-green-soft: #14281e;
+  --rc-red: #f87171;
+  --rc-red-soft: #2d1414;
+  --rc-yellow: #fbbf24;
+  --rc-yellow-soft: #2d2108;
 }
 
 * {
@@ -26,8 +79,13 @@ body,
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.96), rgba(246, 247, 249, 0.96) 46%, #f2f4f7 100%);
+  background: var(--rc-bg);
+  color: var(--rc-text);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+[data-theme="light"] body {
+  background: radial-gradient(circle at top, rgba(255,255,255,0.96), rgba(246,247,249,0.96) 46%, #f2f4f7 100%);
 }
 
 button,
@@ -44,7 +102,7 @@ button {
   display: grid;
   place-items: center;
   background: #f6f7f9;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 16px;
   font-weight: 800;
 }

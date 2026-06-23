@@ -9,7 +9,7 @@
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   background: #f6f8fb;
-  color: #111827;
+  color: var(--rc-text);
 }
 
 .service-owner-sidebar {
@@ -17,8 +17,8 @@
   flex-direction: column;
   gap: 26px;
   padding: 24px 18px;
-  border-right: 1px solid #e5e7eb;
-  background: #ffffff;
+  border-right: 1px solid var(--rc-border);
+  background: var(--rc-card);
 }
 
 .service-owner-brand {
@@ -59,7 +59,7 @@
 .service-owner-brand span span {
   display: block;
   margin-top: 6px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 750;
 }
@@ -79,7 +79,7 @@
   border-radius: 12px;
   padding: 0 12px;
   background: transparent;
-  color: #475467;
+  color: var(--rc-muted);
   font-family: inherit;
   font-size: 14px;
   font-weight: 850;
@@ -147,7 +147,7 @@
 
 .service-owner-title-block p {
   margin: 7px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 14px;
   font-weight: 750;
 }
@@ -165,10 +165,10 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #ffffff;
-  color: #667085;
+  background: var(--rc-card);
+  color: var(--rc-muted);
 }
 
 .service-owner-search svg {
@@ -180,7 +180,7 @@
   width: 100%;
   border: 0;
   outline: 0;
-  color: #111827;
+  color: var(--rc-text);
   font: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -190,9 +190,9 @@
 .service-owner-logout,
 .service-owner-profile {
   height: 48px;
-  border: 1px solid #dbe1ea;
-  background: #ffffff;
-  color: #111827;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   cursor: pointer;
 }
@@ -264,7 +264,7 @@
 
 .service-owner-profile small {
   margin-top: 3px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -282,9 +282,9 @@
 
 .service-owner-metric,
 .service-owner-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--rc-card);
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
 }
 
@@ -316,7 +316,7 @@
 .service-owner-metric p,
 .service-owner-metric small {
   margin: 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-weight: 750;
 }
 
@@ -351,7 +351,7 @@
 
 .service-owner-card__header h2 {
   margin: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 18px;
   line-height: 1.2;
   letter-spacing: -0.025em;
@@ -359,7 +359,7 @@
 
 .service-owner-card__header p {
   margin: 6px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -386,8 +386,8 @@
 .service-owner-row-actions button,
 .service-owner-invoice button,
 .service-owner-support-item button {
-  border: 1px solid #dbe1ea;
-  background: #ffffff;
+  border: 1px solid var(--rc-border);
+  background: var(--rc-card);
   color: #0f2147;
 }
 
@@ -407,10 +407,10 @@
 .service-owner-restaurant,
 .service-owner-invoice,
 .service-owner-support-item {
-  border: 1px solid #edf0f4;
+  border: 1px solid var(--rc-border);
   border-radius: 14px;
   padding: 14px;
-  background: #ffffff;
+  background: var(--rc-card);
 }
 
 .service-owner-restaurant__summary,
@@ -445,7 +445,7 @@
 .service-owner-latest-invoice strong,
 .service-owner-support-item strong {
   display: block;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 14px;
   font-weight: 900;
 }
@@ -456,7 +456,7 @@
 .service-owner-support-item small {
   display: block;
   margin-top: 5px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -489,7 +489,7 @@
 .service-owner-badge--overdue { color: #b42318; background: #fee4e2; }
 .service-owner-badge--payment_pending,
 .service-owner-badge--awaiting_payment,
-.service-owner-badge--issued { color: #344054; background: #f2f4f7; }
+.service-owner-badge--issued { color: var(--rc-text-2); background: var(--rc-hover); }
 
 .service-owner-restaurant__details {
   display: grid;
@@ -504,25 +504,25 @@
   align-content: center;
   gap: 5px;
   padding: 10px 12px;
-  border: 1px solid #edf0f4;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #fbfcfe;
+  background: var(--rc-card-2);
 }
 
 .service-owner-restaurant__details span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 11px;
   font-weight: 800;
 }
 
 .service-owner-restaurant__details strong {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 900;
 }
 
 .service-owner-restaurant__details small {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -535,14 +535,14 @@
   gap: 12px;
   margin-top: 12px;
   padding: 12px;
-  border: 1px solid #edf0f4;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--rc-card);
 }
 
 .service-owner-latest-invoice em,
 .service-owner-empty-line {
-  color: #98a2b3;
+  color: var(--rc-muted-2);
   font-size: 12px;
   font-weight: 800;
 }
@@ -582,7 +582,7 @@
 }
 
 .service-owner-form-grid label span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 11px;
   font-weight: 850;
 }
@@ -591,11 +591,11 @@
 .service-owner-form-grid select {
   width: 100%;
   height: 40px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
   padding: 0 12px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-card);
+  color: var(--rc-text);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -610,11 +610,11 @@
 .service-owner-plan {
   display: grid;
   gap: 4px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
   padding: 12px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--rc-card);
+  color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -622,13 +622,13 @@
 
 .service-owner-plan strong,
 .service-owner-plan b {
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 900;
 }
 
 .service-owner-plan span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 750;
 }
@@ -656,8 +656,8 @@
   align-items: center;
   padding: 0 10px;
   border-radius: 999px;
-  color: #667085;
-  background: #f8fafc;
+  color: var(--rc-muted);
+  background: var(--rc-card-2);
   font-size: 12px;
   font-weight: 750;
 }
@@ -669,7 +669,7 @@
 
 .service-owner-support-item p {
   margin: 5px 0;
-  color: #475467;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -719,7 +719,7 @@
 .service-owner-brand > span:not(.service-owner-brand__mark) {
   display: block;
   margin-top: 6px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -736,7 +736,7 @@
 
 .service-owner-metric--button {
   width: 100%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   text-align: left;
   cursor: pointer;
 }
@@ -745,7 +745,7 @@
 .service-owner-restaurant--clickable:hover,
 .service-owner-restaurant--selected {
   border-color: #bfdbfe;
-  background: #f8fbff;
+  background: var(--rc-card-2);
 }
 
 .service-owner-restaurants-layout {
@@ -763,10 +763,10 @@
 .service-owner-restaurant--clickable {
   width: 100%;
   display: block;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 16px;
   padding: 14px;
-  background: #ffffff;
+  background: var(--rc-card);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -797,7 +797,7 @@
 
 .service-owner-details-panel__header p {
   margin: 4px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 750;
 }
@@ -819,7 +819,7 @@
   padding: 12px;
   border: 1px solid #eef2f7;
   border-radius: 14px;
-  background: #f8fafc;
+  background: var(--rc-card-2);
 }
 
 .service-owner-details-grid span,
@@ -829,7 +829,7 @@
 
 .service-owner-details-grid span {
   margin-bottom: 4px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -856,8 +856,8 @@
   padding: 18px;
   border: 1px dashed #cbd5e1;
   border-radius: 16px;
-  background: #f8fafc;
-  color: #475467;
+  background: var(--rc-card-2);
+  color: var(--rc-muted);
 }
 
 .service-owner-empty-state strong {
@@ -866,7 +866,7 @@
 }
 
 .service-owner-empty-state span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 750;
 }
@@ -884,9 +884,9 @@
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--rc-card);
   box-shadow: 0 22px 45px rgba(15, 23, 42, 0.16);
 }
 
@@ -897,7 +897,7 @@
 
 .service-owner-popover p {
   margin: 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 750;
 }
@@ -911,7 +911,7 @@
   border: 0;
   border-radius: 12px;
   padding: 10px;
-  background: #f8fafc;
+  background: var(--rc-card-2);
   color: inherit;
   font: inherit;
   text-align: left;
@@ -934,7 +934,7 @@
 
 .service-owner-popover__item small {
   margin-top: 3px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 750;
 }
@@ -957,7 +957,7 @@
 }
 
 .service-owner-profile-popover small {
-  color: #475467;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
 }
@@ -984,7 +984,7 @@
 
 .service-owner-row-note,
 .service-owner-muted-note {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 800;
 }
@@ -1019,17 +1019,17 @@
   grid-template-columns: 280px 1fr;
   height: calc(100vh - 100px);
   min-height: 500px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--rc-card);
   overflow: hidden;
 }
 
 .service-owner-chat__sidebar {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-right: 1px solid var(--rc-border);
+  background: var(--rc-card-2);
   overflow: hidden;
 }
 
@@ -1038,10 +1038,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 14px 12px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--rc-border);
   font-size: 14px;
   font-weight: 850;
-  color: #111827;
+  color: var(--rc-text);
 }
 
 .service-owner-chat__badge {
@@ -1081,7 +1081,7 @@
   cursor: pointer;
 }
 
-.service-owner-chat__item:hover { background: #f3f4f6; }
+.service-owner-chat__item:hover { background: var(--rc-hover); }
 .service-owner-chat__item.is-active { border-color: #bfdbfe; background: #eff6ff; }
 
 .service-owner-chat__item-top {
@@ -1093,7 +1093,7 @@
 .service-owner-chat__item-title {
   flex: 1;
   min-width: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 750;
   overflow: hidden;
@@ -1110,14 +1110,14 @@
 }
 
 .service-owner-chat__item-rest {
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   font-size: 12px;
 }
 
 .service-owner-chat__empty {
   margin: 0;
   padding: 20px 10px;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   font-size: 13px;
   text-align: center;
   line-height: 1.5;
@@ -1133,7 +1133,7 @@
   display: flex;
   align-items: center;
   padding: 14px 18px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--rc-border);
   gap: 10px;
 }
 
@@ -1141,11 +1141,11 @@
   display: block;
   font-size: 14px;
   font-weight: 850;
-  color: #111827;
+  color: var(--rc-text);
 }
 
 .service-owner-chat__main-header small {
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   font-size: 12px;
 }
 
@@ -1174,15 +1174,15 @@
 .service-owner-chat__msg-who {
   font-size: 11px;
   font-weight: 800;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
 }
 
 .service-owner-chat__msg p {
   margin: 0;
   padding: 9px 13px;
   border-radius: 12px;
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--rc-hover);
+  color: var(--rc-text);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -1203,14 +1203,14 @@
   display: flex;
   gap: 8px;
   padding: 10px 14px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--rc-border);
   align-items: flex-end;
 }
 
 .service-owner-chat__compose textarea {
   flex: 1;
   min-height: 60px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
   padding: 10px 12px;
   font: inherit;
@@ -1249,7 +1249,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
 }
 
 .service-owner-chat__placeholder svg {

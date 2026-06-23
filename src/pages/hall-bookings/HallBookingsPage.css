@@ -25,8 +25,8 @@
 
 .hall-date-filter--btn {
   cursor: pointer;
-  background: #fff;
-  border: 1px solid #dbe1ea;
+  background: var(--rc-card);
+  border: 1px solid var(--rc-border);
   gap: 8px;
   padding: 0 12px;
   display: flex;
@@ -35,14 +35,14 @@
   border-radius: 10px;
   font: inherit;
   font-size: 14px;
-  color: #374151;
+  color: var(--rc-text-2);
   width: 150px;
   white-space: nowrap;
 }
 
-.hall-date-filter--btn:hover { border-color: #9ca3af; }
+.hall-date-filter--btn:hover { border-color: var(--rc-muted-2); }
 
-.hall-date-filter--btn svg { width: 17px; height: 17px; color: #667085; flex-shrink: 0; }
+.hall-date-filter--btn svg { width: 17px; height: 17px; color: var(--rc-muted); flex-shrink: 0; }
 
 .hall-add-hall-btn {
   height: 42px;
@@ -76,7 +76,7 @@
 }
 
 .hall-modal {
-  background: #fff;
+  background: var(--rc-card);
   border-radius: 16px;
   width: 340px;
   max-width: 95vw;
@@ -89,19 +89,19 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px 12px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--rc-hover);
 }
 
-.hall-modal__header h3 { margin: 0; font-size: 15px; font-weight: 800; color: #111827; }
+.hall-modal__header h3 { margin: 0; font-size: 15px; font-weight: 800; color: var(--rc-text); }
 
 .hall-modal__close {
   width: 28px; height: 28px;
-  border: none; background: #f3f4f6; border-radius: 8px;
-  cursor: pointer; font-size: 13px; color: #6b7280;
+  border: none; background: var(--rc-hover); border-radius: 8px;
+  cursor: pointer; font-size: 13px; color: var(--rc-muted);
   display: flex; align-items: center; justify-content: center;
 }
 
-.hall-modal__close:hover { background: #e5e7eb; color: #111827; }
+.hall-modal__close:hover { background: var(--rc-border); color: var(--rc-text); }
 
 .hall-modal__body {
   padding: 20px;
@@ -118,12 +118,12 @@
 .hall-date-modal__tabs button {
   flex: 1;
   height: 36px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
-  background: #f9fafb;
+  background: var(--rc-card-2);
   font: inherit;
   font-size: 13px;
-  color: #374151;
+  color: var(--rc-text-2);
   cursor: pointer;
 }
 
@@ -145,17 +145,17 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .05em;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
 }
 
 .hall-date-modal__field input {
   height: 38px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
   padding: 0 12px;
   font: inherit;
   font-size: 14px;
-  color: #111827;
+  color: var(--rc-text);
   outline: none;
 }
 
@@ -171,23 +171,23 @@
 .hall-date-modal__shortcuts button {
   flex: 1;
   height: 32px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
-  background: #f9fafb;
+  background: var(--rc-card-2);
   font: inherit;
   font-size: 12px;
-  color: #374151;
+  color: var(--rc-text-2);
   cursor: pointer;
 }
 
-.hall-date-modal__shortcuts button:hover { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
+.hall-date-modal__shortcuts button:hover { background: var(--rc-blue-soft); border-color: #bfdbfe; color: #2563eb; }
 
 .hall-tabs {
   display: inline-flex;
   overflow: hidden;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 11px;
-  background: #ffffff;
+  background: var(--rc-card);
   flex: 0 0 auto;
 }
 
@@ -196,7 +196,7 @@
   min-width: 140px;
   border: 0;
   background: transparent;
-  color: #111827;
+  color: var(--rc-text);
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -224,10 +224,10 @@
   height: 42px;
   display: flex;
   align-items: center;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
-  background: #ffffff;
-  color: #667085;
+  background: var(--rc-card);
+  color: var(--rc-muted);
 }
 
 .hall-date-filter {
@@ -254,7 +254,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: #111827;
+  color: var(--rc-text);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -275,7 +275,7 @@
 .hall-reset-button {
   justify-content: center;
   width: 126px;
-  color: #111827;
+  color: var(--rc-text);
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -295,9 +295,9 @@
 .hall-tables-panel,
 .hall-side-panel,
 .hall-help-note {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--rc-card);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.035);
 }
 
@@ -327,7 +327,7 @@
 .hall-bookings-list__header h3,
 .hall-settings-tables__header h3 {
   margin: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 17px;
   line-height: 1.15;
   letter-spacing: -0.025em;
@@ -338,11 +338,11 @@
 .hall-bookings-list__header button,
 .hall-settings-tables__header button {
   min-height: 36px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
   padding: 0 12px;
   color: #2563eb;
-  background: #ffffff;
+  background: var(--rc-card);
   font-family: inherit;
   font-size: 12px;
   font-weight: 800;
@@ -366,10 +366,10 @@
   width: 90px;
   height: 90px;
   padding: 10px 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
-  color: #111827;
-  background: #ffffff;
+  color: var(--rc-text);
+  background: var(--rc-card);
   font-family: inherit;
   cursor: pointer;
   flex-shrink: 0;
@@ -384,7 +384,7 @@
 
 .hall-card--active {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
   box-shadow: 0 2px 10px rgba(37,99,235,.12);
 }
 
@@ -396,7 +396,7 @@
   font-size: 13px;
   font-weight: 800;
   line-height: 1.2;
-  color: #111827;
+  color: var(--rc-text);
   word-break: break-word;
 }
 
@@ -406,7 +406,7 @@
 
 .hall-card p {
   margin: 0;
-  color: #6b7280;
+  color: var(--rc-muted);
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
@@ -428,7 +428,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   font-size: 10px;
   cursor: pointer;
   opacity: 0;
@@ -465,13 +465,13 @@
 
 .hall-tables-panel__header {
   padding: 16px 16px 12px;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--rc-border);
 }
 
 .hall-tables-panel__header p,
 .hall-side-panel__header p {
   margin: 4px 0 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 650;
 }
@@ -487,7 +487,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #111827;
+  color: var(--rc-text);
 }
 
 .hall-secondary-button svg {
@@ -507,33 +507,33 @@
 
 .hall-table th,
 .hall-table td {
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--rc-border);
   padding: 13px 14px;
   text-align: left;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 650;
   white-space: nowrap;
 }
 
 .hall-table th {
-  color: #475467;
-  background: #fbfcfe;
+  color: var(--rc-muted);
+  background: var(--rc-card-2);
   font-size: 12px;
   font-weight: 850;
 }
 
 .hall-table-row--active td {
-  background: #f8fbff;
+  background: var(--rc-card-2);
 }
 
 .hall-table td button {
   min-height: 30px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
   padding: 0 10px;
   color: #2563eb;
-  background: #ffffff;
+  background: var(--rc-card);
   font-family: inherit;
   font-size: 12px;
   font-weight: 800;
@@ -557,9 +557,9 @@
 .hall-status--reserved { color: #1d4ed8; background: #dbeafe; }
 .hall-status--arrived { color: #c2410c; background: #ffedd5; }
 .hall-status--occupied { color: #b42318; background: #fee4e2; }
-.hall-status--disabled { color: #475467; background: #f2f4f7; }
+.hall-status--disabled { color: var(--rc-muted); background: var(--rc-hover); }
 
-.hall-booking-status--new { color: #475467; background: #f2f4f7; }
+.hall-booking-status--new { color: var(--rc-muted); background: var(--rc-hover); }
 .hall-booking-status--confirmed { color: #1d4ed8; background: #dbeafe; }
 .hall-booking-status--arrived { color: #c2410c; background: #ffedd5; }
 .hall-booking-status--seated { color: #047857; background: #dff8e7; }
@@ -592,10 +592,10 @@
   gap: 10px;
   align-items: center;
   border: 0;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--rc-border);
   padding: 0;
   background: transparent;
-  color: #111827;
+  color: var(--rc-text);
   text-align: left;
   font-family: inherit;
   cursor: pointer;
@@ -606,7 +606,7 @@
 }
 
 .hall-booking-row span {
-  color: #475467;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -618,7 +618,7 @@
 
 .hall-side-panel__header {
   padding-bottom: 12px;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--rc-border);
 }
 
 .hall-side-panel__header > div:first-child {
@@ -631,10 +631,10 @@
   height: 38px;
   display: grid;
   place-items: center;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
-  color: #475467;
-  background: #ffffff;
+  color: var(--rc-muted);
+  background: var(--rc-card);
   cursor: pointer;
 }
 
@@ -652,10 +652,10 @@
 
 .hall-info-grid div,
 .hall-summary-pair div {
-  border: 1px solid #edf0f4;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
   padding: 11px;
-  background: #fbfcfe;
+  background: var(--rc-card-2);
 }
 
 .hall-info-grid span,
@@ -663,7 +663,7 @@
 .hall-form-grid label > span,
 .hall-switch-row span {
   display: block;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 11px;
   font-weight: 800;
 }
@@ -672,7 +672,7 @@
 .hall-summary-pair strong {
   display: block;
   margin-top: 6px;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
 }
 
@@ -691,12 +691,12 @@
 .hall-booking-card h3,
 .hall-empty-booking h3 {
   margin: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 15px;
 }
 
 .hall-booking-card__top span {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -714,14 +714,14 @@
 }
 
 .hall-booking-card dt {
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 800;
 }
 
 .hall-booking-card dd {
   margin: 0;
-  color: #111827;
+  color: var(--rc-text);
   font-size: 13px;
   font-weight: 700;
 }
@@ -751,19 +751,19 @@
 .hall-seated-button {
   border: 1px solid #16a34a;
   color: #047857;
-  background: #ffffff;
+  background: var(--rc-card);
 }
 
 .hall-cancel-button {
   border: 1px solid #fca5a5;
   color: #dc2626;
-  background: #ffffff;
+  background: var(--rc-card);
 }
 
 .hall-muted-button {
-  border: 1px solid #dbe1ea;
-  color: #111827;
-  background: #ffffff;
+  border: 1px solid var(--rc-border);
+  color: var(--rc-text);
+  background: var(--rc-card);
 }
 
 .hall-save-button {
@@ -774,7 +774,7 @@
 
 .hall-empty-booking p {
   margin: 8px 0 14px;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   line-height: 1.45;
   font-weight: 650;
@@ -802,10 +802,10 @@
 .hall-settings-table-row input,
 .hall-settings-table-row select {
   height: 40px;
-  border: 1px solid #dbe1ea;
+  border: 1px solid var(--rc-border);
   border-radius: 9px;
   padding: 0 10px;
-  background: #ffffff;
+  background: var(--rc-input-bg);
 }
 
 .hall-summary-pair {
@@ -819,10 +819,10 @@
   display: flex !important;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid #edf0f4;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
   padding: 0 12px;
-  background: #fbfcfe;
+  background: var(--rc-card-2);
 }
 
 .hall-switch-row input {
@@ -853,7 +853,7 @@
   gap: 10px;
   padding: 12px 14px;
   color: #1d4ed8;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
 }
 
 .hall-help-note svg {
@@ -864,7 +864,7 @@
 
 .hall-help-note p {
   margin: 0;
-  color: #475467;
+  color: var(--rc-muted);
   font-size: 12px;
   font-weight: 650;
 }
@@ -924,7 +924,7 @@
 
 .hall-empty-text {
   margin: 14px 0;
-  color: #667085;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 650;
 }
@@ -950,8 +950,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .05em;
-  color: #9ca3af;
-  border-bottom: 1px solid #f3f4f6;
+  color: var(--rc-muted-2);
+  border-bottom: 1px solid var(--rc-hover);
 }
 
 .hall-tables-draft__row {
@@ -962,12 +962,12 @@
 
 .hall-tables-draft__row input {
   height: 36px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 8px;
   padding: 0 10px;
   font: inherit;
   font-size: 14px;
-  color: #111827;
+  color: var(--rc-text);
   outline: none;
 }
 
@@ -976,16 +976,16 @@
 .hall-modal__back-btn {
   height: 42px;
   padding: 0 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--rc-border);
   border-radius: 10px;
-  background: #f9fafb;
-  color: #374151;
+  background: var(--rc-card-2);
+  color: var(--rc-text-2);
   font: inherit;
   font-size: 14px;
   cursor: pointer;
 }
 
-.hall-modal__back-btn:hover { background: #f3f4f6; }
+.hall-modal__back-btn:hover { background: var(--rc-hover); }
 
 .hall-booking-modal__row {
   display: grid;
@@ -996,7 +996,7 @@
 .hall-booking-modal__tables-label {
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: var(--rc-text-2);
   margin-bottom: 6px;
   margin-top: 4px;
 }
@@ -1013,12 +1013,12 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--rc-border);
   border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
-  color: #374151;
-  background: #f9fafb;
+  color: var(--rc-text-2);
+  background: var(--rc-card-2);
   transition: border-color 0.15s, background 0.15s;
   user-select: none;
 }
@@ -1027,14 +1027,14 @@
 
 .hall-booking-modal__table-option--checked {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
   color: #1d4ed8;
   font-weight: 600;
 }
 
 .hall-booking-modal__table-seats {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--rc-muted-2);
   margin-left: 2px;
 }
 
@@ -1049,7 +1049,7 @@
   padding: 10px;
   border: 1.5px dashed #93c5fd;
   border-radius: 10px;
-  background: #eff6ff;
+  background: var(--rc-blue-soft);
   color: #2563eb;
   font: inherit;
   font-size: 14px;

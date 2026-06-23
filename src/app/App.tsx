@@ -4,7 +4,9 @@ import { AuthPage } from '../pages/auth/AuthPage'
 import { OwnerDashboardPage } from '../pages/owner-dashboard/OwnerDashboardPage'
 import { EmployeeStartPage } from '../pages/employee-start/EmployeeStartPage'
 import { ServiceOwnerPage } from '../pages/service-owner/ServiceOwnerPage'
+import { useTheme } from '../shared/hooks/useTheme'
 import '../pages/service-owner/ServiceOwnerPage.css'
+import '../shared/styles/dark-theme.css'
 
 function useMobileViewport() {
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 820px)').matches)
@@ -20,7 +22,7 @@ function useMobileViewport() {
   return isMobile
 }
 
-function AppContent() {
+function AppContent({ onThemeToggle, theme }: { onThemeToggle: () => void; theme: string }) {
   const { session, isLoading } = useSession()
   const isMobile = useMobileViewport()
 
@@ -37,20 +39,21 @@ function AppContent() {
   }
 
   if (session.membership.role === 'manager') {
-    return isMobile ? <EmployeeStartPage /> : <OwnerDashboardPage />
+    return isMobile ? <EmployeeStartPage /> : <OwnerDashboardPage onThemeToggle={onThemeToggle} theme={theme} />
   }
 
   if (session.membership.role === 'owner') {
-    return <OwnerDashboardPage />
+    return <OwnerDashboardPage onThemeToggle={onThemeToggle} theme={theme} />
   }
 
   return <EmployeeStartPage />
 }
 
 export function App() {
+  const { toggle, theme } = useTheme()
   return (
     <SessionProvider>
-      <AppContent />
+      <AppContent onThemeToggle={toggle} theme={theme} />
     </SessionProvider>
   )
 }

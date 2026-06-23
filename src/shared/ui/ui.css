@@ -26,7 +26,7 @@
 }
 
 .rc-button--ghost {
-  color: #22242a;
+  color: var(--rc-text);
   background: transparent;
 }
 
@@ -41,7 +41,7 @@
 }
 
 .rc-field__label {
-  color: #24252b;
+  color: var(--rc-text);
   font-size: 16px;
   font-weight: 700;
   line-height: 1.25;
@@ -54,7 +54,7 @@
   min-height: 56px;
   border: 1px solid #d6d9df;
   border-radius: 8px;
-  background: #fff;
+  background: var(--rc-card);
   color: #8d919c;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -90,7 +90,7 @@
 }
 
 .rc-input-wrap__right--btn:hover {
-  color: #374151;
+  color: var(--rc-text-2);
 }
 
 .rc-input-wrap svg {
@@ -104,7 +104,7 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: #22242a;
+  color: var(--rc-text);
   font: inherit;
   font-size: 16px;
   font-weight: 500;
