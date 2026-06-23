@@ -421,34 +421,30 @@ export function TtkPage() {
                   <p style={{ margin: '0 0 8px', fontSize: 11, color: '#9ca3af' }}>
                     Групп: {iikoGroupList.length} | Первые 3: {iikoGroupList.slice(0, 3).map(g => `"${g}"`).join(', ')}
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
+                  <div>
                     {iikoGroupList.map((g) => {
                       const groupItems = iikoPreviewItems.map((it, i) => ({ it, i })).filter(({ it }) => it.group === g)
                       const expanded = iikoExpandedGroups.has(g)
                       const checkedCount = groupItems.filter(({ i }) => iikoCheckedItems.has(i)).length
                       const allChecked = groupItems.length > 0 && checkedCount === groupItems.length
                       return (
-                        <div key={g} style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                        <div key={g} style={{ borderBottom: '1px solid #f0f2f5' }}>
                           <div onClick={() => toggleIikoExpand(g)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', cursor: 'pointer', background: '#f9fafb', userSelect: 'none' }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', cursor: 'pointer', userSelect: 'none' }}>
                             <input type="checkbox" checked={allChecked} onChange={() => toggleIikoGroup(g)}
                               onClick={e => e.stopPropagation()} />
                             <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#111827' }}>{g || 'Без категории'}</span>
                             <span style={{ fontSize: 12, color: '#6b7280' }}>{checkedCount > 0 ? `${checkedCount}/` : ''}{groupItems.length} поз.</span>
-                            <span style={{ fontSize: 10, color: '#9ca3af' }}>{expanded ? '▲' : '▼'}</span>
+                            <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 6 }}>{expanded ? '▲' : '▼'}</span>
                           </div>
-                          {expanded && (
-                            <div style={{ borderTop: '1px solid #f0f2f5' }}>
-                              {groupItems.map(({ it, i }) => (
-                                <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', cursor: 'pointer', background: iikoCheckedItems.has(i) ? '#eff6ff' : '#fff', borderBottom: '1px solid #f9fafb' }}>
-                                  <input type="checkbox" checked={iikoCheckedItems.has(i)} onChange={() => toggleIikoItem(i)} />
-                                  <span style={{ flex: 1, fontSize: 13, color: '#111827' }}>{it.name}</span>
-                                  <span style={{ fontSize: 12, color: '#6b7280', minWidth: 50, textAlign: 'right' }}>{it.price ? `${it.price} ₽` : '—'}</span>
-                                  <span style={{ fontSize: 12, color: '#9ca3af', minWidth: 30, textAlign: 'right' }}>{it.unit}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
+                          {expanded && groupItems.map(({ it, i }) => (
+                            <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0 7px 24px', cursor: 'pointer', background: iikoCheckedItems.has(i) ? '#eff6ff' : 'transparent', borderRadius: 6 }}>
+                              <input type="checkbox" checked={iikoCheckedItems.has(i)} onChange={() => toggleIikoItem(i)} />
+                              <span style={{ flex: 1, fontSize: 13, color: '#374151' }}>{it.name}</span>
+                              <span style={{ fontSize: 12, color: '#6b7280' }}>{it.price ? `${it.price} ₽` : ''}</span>
+                              <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 6 }}>{it.unit}</span>
+                            </label>
+                          ))}
                         </div>
                       )
                     })}
