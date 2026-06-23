@@ -172,7 +172,9 @@ export function TtkPage() {
     const groupItems = items.filter((item) => getItemGroup(item) === selectedGroupId)
     if (!window.confirm(`Удалить группу «${selectedGroup?.name}» и все ${groupItems.length} позиций в ней?`)) return
     try {
-      await Promise.allSettled(groupItems.map((item) => api.remove('ttk', item.id)))
+      for (const item of groupItems) {
+        await api.remove('ttk', item.id)
+      }
       const nextItems = items.filter((item) => getItemGroup(item) !== selectedGroupId)
       setItems(nextItems)
       setExtraGroups((cur) => cur.filter((g) => g.id !== selectedGroupId))
