@@ -1168,7 +1168,15 @@ async function handleCollections(req, res, state, pathname, auth) {
         table.updatedAt = nowIso()
       }
     } else {
-      Object.assign(item, body, { updatedAt: nowIso() })
+      const { password, ...rest } = body
+      Object.assign(item, rest, { updatedAt: nowIso() })
+      if (name === 'employees' && password && String(password).trim().length >= 4) {
+        const user = state.users.find((u) => u.id === item.userId)
+        if (user) {
+          user.passwordHash = hashPassword(String(password).trim())
+          user.updatedAt = nowIso()
+        }
+      }
     }
     await saveState(state)
     send(res, 200, item)

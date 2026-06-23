@@ -531,6 +531,7 @@ export function EmployeesPage() {
           shiftCloseMethod: form.shiftCloseMethod,
           attestationPercent: Number(form.attestationPercent || 0),
           status: 'active',
+          ...(form.password.trim() ? { password: form.password.trim() } : {}),
         })
         setEmployees((items) => items.map((item) => item.id === selectedId ? updated : item))
         setIsEditing(false)
@@ -1352,6 +1353,13 @@ export function EmployeesPage() {
               <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
               <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
               <label><span>Закрытие смены</span><select value={form.shiftCloseMethod} onChange={(e) => setForm((v) => ({ ...v, shiftCloseMethod: e.target.value as ShiftCloseMethod }))}><option value="checklist">По чек-листу закрытия</option><option value="button">По кнопке «Закрыть смену»</option><option value="schedule">По графику (автоматически)</option></select></label>
+              <label>
+                <span>Новый пароль <small style={{ fontWeight: 400, color: 'var(--rc-muted)' }}>(оставьте пустым чтобы не менять)</small></span>
+                <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input style={{ flex: 1, paddingRight: '40px' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Введите новый пароль" type={showEmployeePassword ? 'text' : 'password'} />
+                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                </span>
+              </label>
 {error ? <p className="employees-error">{error}</p> : null}
             </div>
             <div className="employees-modal__footer employees-modal__footer--edit">
