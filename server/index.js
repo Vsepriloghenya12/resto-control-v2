@@ -1526,6 +1526,9 @@ async function handleIiko(req, res, state, pathname, auth) {
     }
 
     console.log('[iiko/inventory] groups:', Array.from(groupMap.values()).map(g => g.name).slice(0, 20))
+    const typeCounts = {}
+    for (const [, p] of productMap) { typeCounts[p.type] = (typeCounts[p.type] || 0) + 1 }
+    console.log('[iiko/inventory] product types:', typeCounts)
 
     const filter = url.searchParams.get('filter') // 'prepared' | 'goods' | null (both)
 
