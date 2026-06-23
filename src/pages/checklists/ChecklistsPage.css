@@ -32,7 +32,7 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  border-bottom: 1px solid #eef1f5;
+  border-bottom: 1px solid var(--rc-border);
 }
 
 .checklists-create-button,
@@ -176,7 +176,7 @@
 
 .checklists-list-panel__footer {
   padding: 12px;
-  border-top: 1px solid #eef1f5;
+  border-top: 1px solid var(--rc-border);
   color: var(--rc-muted);
   font-size: 12px;
   font-weight: 700;
@@ -571,7 +571,7 @@
 
 .checklists-card--active {
   border-color: #1f3b6d;
-  background: #eef4ff;
+  background: var(--rc-blue-soft);
   box-shadow: inset 3px 0 0 #1f3b6d, 0 8px 18px rgba(15, 33, 71, 0.08);
 }
 
@@ -715,11 +715,11 @@
 }
 
 .checklists-card:hover {
-  background: #f7faff !important;
+  background: var(--rc-card-2) !important;
 }
 
 .checklists-card--active {
-  background: #f2f7ff !important;
+  background: var(--rc-blue-soft) !important;
   box-shadow: inset 0 0 0 1px #c7d7fe, inset 4px 0 0 #183b72 !important;
 }
 

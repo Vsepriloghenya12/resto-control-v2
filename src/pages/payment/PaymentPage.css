@@ -352,7 +352,7 @@
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: #eef4ff;
+  background: var(--rc-blue-soft);
   color: #0f2147;
   font-size: 12px;
   font-weight: 900;

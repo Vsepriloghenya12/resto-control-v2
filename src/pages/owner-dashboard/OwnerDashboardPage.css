@@ -39,7 +39,7 @@
   border: 1px solid #fed7aa;
   border-radius: 14px;
   color: var(--rc-text);
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
 }
 
 .owner-brand__mark svg {
@@ -309,7 +309,7 @@
 
 .owner-search__result:last-child { border-bottom: none; }
 
-.owner-search__result:hover { background: #f0f7ff; }
+.owner-search__result:hover { background: var(--rc-blue-soft); }
 
 .owner-search__result-label {
   font-size: 13px;
@@ -454,7 +454,7 @@
   background:
     radial-gradient(circle at center, #ffffff 0 57%, transparent 58%),
     conic-gradient(#2f6fe4 0 67%, #edf0f5 67% 100%);
-  box-shadow: inset 0 0 0 14px #f4f6fb;
+  box-shadow: inset 0 0 0 14px var(--rc-card);
 }
 
 .owner-readiness-ring > div {
@@ -468,7 +468,7 @@
 }
 
 .owner-readiness-ring strong {
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 44px;
   line-height: 1;
   letter-spacing: -0.05em;
@@ -522,17 +522,17 @@
 
 .owner-operation-row__icon--good {
   color: #16a34a;
-  background: #dcfce7;
+  background: var(--rc-green-soft);
 }
 
 .owner-operation-row__icon--medium {
   color: #f97316;
-  background: #ffedd5;
+  background: var(--rc-yellow-soft);
 }
 
 .owner-operation-row__icon--low {
   color: #ef4444;
-  background: #fee2e2;
+  background: var(--rc-red-soft);
 }
 
 .owner-operation-row__content {
@@ -563,7 +563,7 @@
   overflow: hidden;
   border-radius: 999px;
   margin-top: 9px;
-  background: #edf0f4;
+  background: var(--rc-card-2);
 }
 
 .owner-operation-row__bar,
@@ -651,7 +651,7 @@
   height: 7px;
   overflow: hidden;
   border-radius: 999px;
-  background: #edf0f4;
+  background: var(--rc-card-2);
 }
 
 .owner-progress--compact {
@@ -706,7 +706,7 @@
 
 .owner-metric-card__icon--orange {
   color: #f97316;
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
 }
 
 .owner-metric-card__icon--red {
@@ -716,7 +716,7 @@
 
 .owner-metric-card__icon--purple {
   color: #7c3aed;
-  background: #f5f3ff;
+  background: var(--rc-card-2);
 }
 
 .owner-metric-card strong {
@@ -813,7 +813,7 @@
 
 .owner-attention__icon--warning {
   color: #f97316;
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
 }
 
 .owner-attention__icon--neutral {
@@ -864,7 +864,7 @@
   place-items: center;
   border-radius: 999px;
   color: #0f2147;
-  background: #eef4ff;
+  background: var(--rc-blue-soft);
   font-size: 12px;
   font-weight: 800;
 }
@@ -894,7 +894,7 @@
 
 .owner-badge--warning {
   color: #c2410c;
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
 }
 
 .owner-badge--danger {
@@ -1104,7 +1104,7 @@
   border: 1px solid #fed7aa;
   border-radius: 999px;
   padding: 8px 14px;
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
   box-shadow: 0 8px 18px rgba(180, 83, 9, 0.08);
 }
 
@@ -1115,7 +1115,7 @@
   border-radius: 999px;
   padding: 0 9px;
   color: #b45309;
-  background: #ffedd5;
+  background: var(--rc-yellow-soft);
   font-size: 11px;
   font-weight: 900;
 }
@@ -1532,12 +1532,12 @@ button.owner-employee {
   min-height: 42px;
   display: flex;
   align-items: center;
-  border: 1px solid #bfd0ea;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
   padding: 10px 14px;
   margin: 0 0 14px;
   color: #0f2147;
-  background: #eef4ff;
+  background: var(--rc-blue-soft);
   font-size: 13px;
   font-weight: 750;
   box-shadow: 0 10px 22px rgba(15, 33, 71, 0.07);
@@ -1583,7 +1583,7 @@ button.owner-employee {
 
 .owner-attention:hover,
 .owner-employee:hover {
-  background: #f7faff !important;
+  background: var(--rc-card-2) !important;
 }
 
 .owner-notifications-wrap {
@@ -1608,7 +1608,7 @@ button.owner-employee {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid #eef1f5;
+  border-bottom: 1px solid var(--rc-border);
 }
 
 .owner-notifications-popover__header strong {
@@ -1627,7 +1627,7 @@ button.owner-employee {
   display: grid;
   gap: 5px;
   border: 0;
-  border-bottom: 1px solid #f1f3f7;
+  border-bottom: 1px solid var(--rc-border-2);
   padding: 13px 16px;
   background: var(--rc-card);
   text-align: left;
@@ -1636,7 +1636,7 @@ button.owner-employee {
 }
 
 .owner-notifications-popover button:hover {
-  background: #f7faff;
+  background: var(--rc-card-2);
 }
 
 .owner-notifications-popover button:last-child {
@@ -1855,7 +1855,7 @@ button.owner-employee {
 
 .owner-attention,
 .owner-employee {
-  border-bottom-color: #f2f4f7;
+  border-bottom-color: var(--rc-border-2);
   background: transparent;
 }
 
@@ -1925,7 +1925,7 @@ button.owner-employee {
 
 .owner-add-restaurant:hover {
   border-color: #b7c7ff;
-  background: #f7f9ff;
+  background: var(--rc-card-2);
 }
 
 .owner-add-restaurant-dialog label {
@@ -1988,7 +1988,7 @@ button.owner-employee {
 
 .owner-donut-widget__header h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 22px;
   line-height: 28px;
   font-weight: 800;
@@ -1997,7 +1997,7 @@ button.owner-employee {
 
 .owner-donut-widget__header p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--rc-muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -2010,10 +2010,10 @@ button.owner-employee {
 
 .owner-donut-widget__tabs button {
   height: 38px;
-  border: 1px solid #dbe3ef;
+  border: 1px solid var(--rc-border);
   border-radius: 11px;
   padding: 0 14px;
-  color: #475569;
+  color: var(--rc-muted);
   background: var(--rc-card);
   font-family: inherit;
   font-size: 13px;
@@ -2101,7 +2101,7 @@ button.owner-employee {
 
 .owner-donut-widget__center strong {
   display: block;
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 40px;
   line-height: 42px;
   font-weight: 850;
@@ -2112,7 +2112,7 @@ button.owner-employee {
   display: block;
   max-width: 116px;
   margin-top: 6px;
-  color: #0f172a;
+  color: var(--rc-text);
   background: transparent;
   box-shadow: none;
   font-size: 13px;
@@ -2171,7 +2171,7 @@ button.owner-employee {
 .owner-donut-widget__name {
   min-width: 0;
   overflow: hidden;
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 15px;
   line-height: 19px;
   font-weight: 800;
@@ -2180,7 +2180,7 @@ button.owner-employee {
 }
 
 .owner-donut-widget__value {
-  color: #64748b;
+  color: var(--rc-muted);
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
@@ -2189,7 +2189,7 @@ button.owner-employee {
 .owner-zone-readiness {
   align-self: stretch;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--rc-border);
   border-radius: 12px;
   background: var(--rc-card);
 }
@@ -2201,12 +2201,12 @@ button.owner-employee {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid var(--rc-border);
 }
 
 .owner-zone-readiness__header h3 {
   margin: 0;
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 15px;
   line-height: 19px;
   font-weight: 850;
@@ -2214,7 +2214,7 @@ button.owner-employee {
 
 .owner-zone-readiness__header p {
   margin: 3px 0 0;
-  color: #64748b;
+  color: var(--rc-muted);
   font-size: 11px;
   font-weight: 700;
 }
@@ -2267,7 +2267,7 @@ button.owner-employee {
 .owner-zone-readiness__gauge:focus-visible {
   border-color: #f97316;
   outline: none;
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
   transform: translateY(-3px);
 }
 
@@ -2287,7 +2287,7 @@ button.owner-employee {
   width: 92px;
   height: 92px;
   grid-area: 1 / 1;
-  border: 1px solid #e1e7ed;
+  border: 1px solid var(--rc-border);
   border-radius: 50%;
   background: var(--rc-card);
 }
@@ -2304,7 +2304,7 @@ button.owner-employee {
 }
 
 .owner-zone-readiness__gauge-ring strong {
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 25px;
   line-height: 26px;
   font-weight: 900;
@@ -2313,7 +2313,7 @@ button.owner-employee {
 
 .owner-zone-readiness__gauge-ring small {
   margin-top: 5px;
-  color: #64748b;
+  color: var(--rc-muted);
   font-size: 9px;
   font-weight: 750;
 }
@@ -2329,7 +2329,7 @@ button.owner-employee {
 .owner-zone-readiness__gauge > b {
   max-width: 150px;
   overflow: hidden;
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 11px;
   font-weight: 850;
   white-space: nowrap;
@@ -2353,7 +2353,7 @@ button.owner-employee {
 .owner-zone-readiness__grid,
 .owner-zone-readiness__axis {
   fill: none;
-  stroke: #dfe5eb;
+  stroke: var(--rc-border);
   stroke-width: 1;
 }
 
@@ -2398,7 +2398,7 @@ button.owner-employee {
   height: 74px;
   display: grid;
   place-content: center;
-  border: 1px solid #dce3ea;
+  border: 1px solid var(--rc-border);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
@@ -2407,7 +2407,7 @@ button.owner-employee {
 }
 
 .owner-zone-readiness__score strong {
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 21px;
   line-height: 22px;
   font-weight: 900;
@@ -2416,7 +2416,7 @@ button.owner-employee {
 
 .owner-zone-readiness__score span {
   margin-top: 3px;
-  color: #64748b;
+  color: var(--rc-muted);
   font-size: 8px;
   line-height: 10px;
   font-weight: 750;
@@ -2434,11 +2434,11 @@ button.owner-employee {
   grid-template-columns: 9px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  border: 1px solid #e3e8ed;
+  border: 1px solid var(--rc-border);
   border-radius: 6px;
   padding: 0 9px;
   color: inherit;
-  background: #fafbfc;
+  background: var(--rc-card-2);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -2450,7 +2450,7 @@ button.owner-employee {
 .owner-zone-readiness__item:focus-visible {
   border-color: #f97316;
   outline: none;
-  background: #fff7ed;
+  background: var(--rc-yellow-soft);
   transform: translateX(-2px);
 }
 
@@ -2476,7 +2476,7 @@ button.owner-employee {
 
 .owner-zone-readiness__item strong {
   overflow: hidden;
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 10px;
   line-height: 13px;
   font-weight: 800;
@@ -2486,13 +2486,13 @@ button.owner-employee {
 
 .owner-zone-readiness__item small {
   margin-top: 2px;
-  color: #64748b;
+  color: var(--rc-muted);
   font-size: 8px;
   font-weight: 700;
 }
 
 .owner-zone-readiness__item b {
-  color: #0f172a;
+  color: var(--rc-text);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
@@ -2503,10 +2503,10 @@ button.owner-employee {
   display: grid;
   place-items: center;
   margin: 14px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--rc-border);
   border-radius: 8px;
   padding: 18px;
-  color: #64748b;
+  color: var(--rc-muted);
   background: var(--rc-card-2);
   font-family: inherit;
   font-size: 12px;

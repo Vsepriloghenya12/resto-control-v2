@@ -26,7 +26,7 @@
 [data-theme="dark"] .owner-search-box input   { background: var(--rc-card); border-color: var(--rc-border); color: var(--rc-text); }
 [data-theme="dark"] .owner-profile            { color: var(--rc-text); }
 [data-theme="dark"] .owner-profile:hover      { background: var(--rc-hover); }
-[data-theme="dark"] .owner-profile > span     { background: var(--rc-card-2); }
+[data-theme="dark"] .owner-profile > span     { background: var(--rc-card-2); color: var(--rc-text-2) !important; }
 [data-theme="dark"] .owner-logout             { color: var(--rc-muted); }
 [data-theme="dark"] .owner-logout:hover       { background: var(--rc-hover); color: var(--rc-text); }
 
@@ -34,7 +34,9 @@
 [data-theme="dark"] .owner-card,
 [data-theme="dark"] .owner-section-card,
 [data-theme="dark"] .owner-zones-card,
-[data-theme="dark"] .owner-restaurant-card    { background: var(--rc-card); border-color: var(--rc-border); }
+[data-theme="dark"] .owner-restaurant-card,
+[data-theme="dark"] .owner-metric-card,
+[data-theme="dark"] .owner-overview-card      { background: var(--rc-card); border-color: var(--rc-border); }
 [data-theme="dark"] .owner-sidebar-status     { background: var(--rc-card); border-color: var(--rc-border); }
 [data-theme="dark"] .owner-popover            { background: var(--rc-card); border-color: var(--rc-border); box-shadow: 0 8px 32px var(--rc-shadow-md); }
 [data-theme="dark"] .owner-popover__item:hover { background: var(--rc-hover); }
@@ -84,6 +86,8 @@
 /* Schedule */
 [data-theme="dark"] .employees-schedule-card,
 [data-theme="dark"] .employees-schedule-card--redesign { background: var(--rc-card); border-color: var(--rc-border); }
+[data-theme="dark"] .employees-schedule-redesign__hero { background: var(--rc-card) !important; }
+[data-theme="dark"] .employees-schedule-redesign__eyebrow { background: var(--rc-yellow-soft) !important; color: var(--rc-yellow) !important; }
 [data-theme="dark"] .employees-schedule-table th,
 [data-theme="dark"] .employees-schedule-table td          { border-color: var(--rc-border-2); }
 [data-theme="dark"] .employees-schedule-table thead th    { background: var(--rc-card-2) !important; color: var(--rc-muted) !important; }
@@ -213,6 +217,26 @@
 [data-theme="dark"] .kb-sidebar           { background: var(--rc-card) !important; border-color: var(--rc-border) !important; }
 [data-theme="dark"] .kb-card input,
 [data-theme="dark"] .kb-card textarea     { background: var(--rc-input-bg) !important; border-color: var(--rc-border) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .knowledge-page       { background: var(--rc-bg-page); color: var(--rc-text); }
+[data-theme="dark"] .knowledge-sections-card,
+[data-theme="dark"] .knowledge-list-card,
+[data-theme="dark"] .knowledge-editor-card,
+[data-theme="dark"] .knowledge-info-card,
+[data-theme="dark"] .knowledge-hierarchy-card { background: var(--rc-card) !important; border-color: var(--rc-border) !important; }
+[data-theme="dark"] .knowledge-section    { color: var(--rc-text-2) !important; }
+[data-theme="dark"] .knowledge-section--active { background: var(--rc-blue-soft) !important; border-color: var(--rc-blue) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .knowledge-corporate-item--active { background: var(--rc-blue-soft) !important; }
+[data-theme="dark"] .knowledge-table th   { background: var(--rc-card-2) !important; color: var(--rc-muted) !important; border-color: var(--rc-border) !important; }
+[data-theme="dark"] .knowledge-table td   { border-color: var(--rc-border-2) !important; }
+[data-theme="dark"] .knowledge-local-search input { background: var(--rc-card-2) !important; border-color: var(--rc-border) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .knowledge-upload-box { border-color: var(--rc-border) !important; background: var(--rc-card-2) !important; }
+[data-theme="dark"] .knowledge-editor-form input,
+[data-theme="dark"] .knowledge-editor-form textarea,
+[data-theme="dark"] .knowledge-editor-form select { background: var(--rc-input-bg) !important; border-color: var(--rc-border) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .knowledge-question-card { background: var(--rc-card-2) !important; border-color: var(--rc-border) !important; }
+[data-theme="dark"] .knowledge-question-text { background: var(--rc-input-bg) !important; border-color: var(--rc-border) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .knowledge-hierarchy-employee { background: var(--rc-card-2) !important; border-color: var(--rc-border) !important; }
+[data-theme="dark"] .knowledge-hierarchy-employee--active { border-color: var(--rc-orange) !important; }
 
 /* ─── Attestation ───────────────────────────────────────────────────────── */
 [data-theme="dark"] .attest-page          { background: var(--rc-bg-page); }
@@ -229,12 +253,27 @@
 [data-theme="dark"] .attest-employee-chip { background: var(--rc-card-2) !important; border-color: var(--rc-border) !important; color: var(--rc-text-2) !important; }
 [data-theme="dark"] .attest-employee-chip.is-selected { background: var(--rc-text) !important; color: var(--rc-bg) !important; border-color: var(--rc-text) !important; }
 
+/* ─── Dashboard zone readiness radar ────────────────────────────────────── */
+[data-theme="dark"] .owner-zone-readiness__score { background: var(--rc-card) !important; }
+[data-theme="dark"] .owner-zones-card h2,
+[data-theme="dark"] .owner-zones-card__header    { color: var(--rc-text) !important; }
+[data-theme="dark"] .owner-zone-readiness__item  { background: var(--rc-card-2) !important; border-color: var(--rc-border) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .owner-zone-readiness__item:hover { background: var(--rc-hover) !important; }
+[data-theme="dark"] .owner-zone-readiness__item--active { border-color: var(--rc-orange) !important; background: var(--rc-card-2) !important; }
+
 /* ─── Integration ───────────────────────────────────────────────────────── */
 [data-theme="dark"] .integration-page     { background: var(--rc-bg-page); }
 [data-theme="dark"] [class*="integration-card"],
 [data-theme="dark"] [class*="iiko-card"]  { background: var(--rc-card) !important; border-color: var(--rc-border) !important; }
 [data-theme="dark"] .integration-page input,
 [data-theme="dark"] .integration-page select { background: var(--rc-input-bg) !important; border-color: var(--rc-border) !important; color: var(--rc-text) !important; }
+[data-theme="dark"] .int-panel            { background: var(--rc-bg-page) !important; }
+[data-theme="dark"] .int-card             { background: var(--rc-card) !important; border-color: var(--rc-border) !important; }
+[data-theme="dark"] .int-tabs             { border-color: var(--rc-border) !important; }
+[data-theme="dark"] .int-tab              { color: var(--rc-muted) !important; }
+[data-theme="dark"] .int-tab--active      { color: var(--rc-text) !important; }
+[data-theme="dark"] .int-btn--secondary   { background: var(--rc-card-2) !important; border-color: var(--rc-border) !important; color: var(--rc-text-2) !important; }
+[data-theme="dark"] .int-btn--secondary:hover { background: var(--rc-hover) !important; }
 
 /* ─── Payment ───────────────────────────────────────────────────────────── */
 [data-theme="dark"] .payment-page         { background: var(--rc-bg-page); }
@@ -263,6 +302,13 @@
 
 /* ─── Inventory submit btn — in dark mode use orange accent ─────────────── */
 [data-theme="dark"] .inv-submit-btn { background: var(--rc-active-nav) !important; }
+
+/* ─── Scrollbars ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] ::-webkit-scrollbar { width: 8px; height: 8px; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--rc-bg); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--rc-border); border-radius: 4px; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--rc-muted-2); }
+[data-theme="dark"] * { scrollbar-color: var(--rc-border) var(--rc-bg); }
 
 /* ─── Generic fallback — catch anything missed ──────────────────────────── */
 /* All inputs/selects/textareas in dark mode */

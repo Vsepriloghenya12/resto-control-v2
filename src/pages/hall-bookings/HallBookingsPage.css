@@ -334,6 +334,7 @@
 }
 
 .hall-list-panel__header button,
+.hall-tables-panel__header button,
 .hall-secondary-button,
 .hall-bookings-list__header button,
 .hall-settings-tables__header button {
@@ -905,7 +906,7 @@
   border-radius: 12px;
   padding: 12px 14px;
   color: #183b72;
-  background: #f2f7ff;
+  background: var(--rc-blue-soft);
   font-size: 13px;
   font-weight: 750;
 }
@@ -915,7 +916,7 @@
 }
 
 .hall-table--clickable tbody tr:hover td {
-  background: #f7faff;
+  background: var(--rc-card-2);
 }
 
 .hall-list-panel__header {

@@ -658,8 +658,8 @@
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.inv-blank-btn:hover { border-color: #6366f1; background: #f5f3ff; }
-.inv-blank-btn.is-active { border-color: #4f46e5; background: #eef2ff; }
+.inv-blank-btn:hover { border-color: #6366f1; background: var(--rc-hover); }
+.inv-blank-btn.is-active { border-color: #6366f1; background: var(--rc-blue-soft); }
 .inv-blank-btn__name { font-size: 15px; font-weight: 700; color: var(--rc-text); }
-.inv-blank-btn.is-active .inv-blank-btn__name { color: #4f46e5; }
+.inv-blank-btn.is-active .inv-blank-btn__name { color: var(--rc-blue); }
 .inv-blank-btn__cnt { font-size: 12px; color: var(--rc-muted); font-weight: 500; }
