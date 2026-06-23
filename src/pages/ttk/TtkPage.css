@@ -1371,6 +1371,35 @@
 .ttk-iiko-group-chip.is-selected { border-color: #111; background: #111; color: #fff; }
 .ttk-iiko-group-chip.is-selected em { color: #9ca3af; }
 
+/* ── iiko import: раскрывающиеся категории ── */
+.ttk-iiko-cats { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+
+.ttk-iiko-cat { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+
+.ttk-iiko-cat__header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer; user-select: none;
+  background: #f9fafb;
+}
+.ttk-iiko-cat__header:hover { background: #f3f4f6; }
+.ttk-iiko-cat__name { flex: 1; font-size: 13px; font-weight: 600; color: #111827; }
+.ttk-iiko-cat__cnt { font-size: 12px; color: #6b7280; }
+.ttk-iiko-cat__arrow { font-size: 10px; color: #9ca3af; }
+
+.ttk-iiko-cat__items { border-top: 1px solid #f0f2f5; }
+
+.ttk-iiko-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; cursor: pointer;
+  border-bottom: 1px solid #f9fafb;
+  transition: background 0.1s;
+}
+.ttk-iiko-item:last-child { border-bottom: none; }
+.ttk-iiko-item:hover { background: #f9fafb; }
+.ttk-iiko-item.is-checked { background: #eff6ff; }
+.ttk-iiko-item__name { flex: 1; font-size: 13px; color: #111827; }
+.ttk-iiko-item__price { font-size: 12px; color: #6b7280; min-width: 50px; text-align: right; }
+.ttk-iiko-item__unit { font-size: 12px; color: #9ca3af; min-width: 30px; text-align: right; }
 
 .ttk-edit-modal {
   background: #fff;

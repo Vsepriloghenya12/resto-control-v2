@@ -229,8 +229,8 @@ export function TtkPage() {
         group: i.category || 'Без категории',
       }))
       setIikoPreviewItems(mapped)
-      const groupSet = new Set<string>(mapped.map(i => i.group))
-      setIikoSelectedGroups(groupSet)
+      setIikoCheckedItems(new Set())
+      setIikoExpandedGroups(new Set())
       setIikoModalStep('preview')
     } catch (e) {
       setIikoError(e instanceof Error ? e.message : 'Ошибка подключения')
@@ -241,7 +241,7 @@ export function TtkPage() {
 
   async function importIikoItems() {
     setIikoModalStep('importing')
-    const toImport = iikoPreviewItems.filter((i) => iikoSelectedGroups.has(i.group))
+    const toImport = iikoPreviewItems.filter((_, idx) => iikoCheckedItems.has(idx))
     let count = 0
     for (const item of toImport) {
       const created = await api.create<TtkItem>('ttk', {
@@ -261,6 +261,26 @@ export function TtkPage() {
   }
 
   const iikoGroupList = Array.from(new Set(iikoPreviewItems.map((i) => i.group))).sort()
+
+  // Выбор отдельных позиций (индексы в iikoPreviewItems)
+  const [iikoCheckedItems, setIikoCheckedItems] = useState<Set<number>>(new Set())
+  const [iikoExpandedGroups, setIikoExpandedGroups] = useState<Set<string>>(new Set())
+
+  function toggleIikoItem(idx: number) {
+    setIikoCheckedItems(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
+  }
+  function toggleIikoGroup(g: string) {
+    const idxs = iikoPreviewItems.map((it, i) => it.group === g ? i : -1).filter(i => i >= 0)
+    const allChecked = idxs.every(i => iikoCheckedItems.has(i))
+    setIikoCheckedItems(prev => {
+      const n = new Set(prev)
+      idxs.forEach(i => allChecked ? n.delete(i) : n.add(i))
+      return n
+    })
+  }
+  function toggleIikoExpand(g: string) {
+    setIikoExpandedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n })
+  }
 
   return (
     <section className="ttk-page">
@@ -393,31 +413,46 @@ export function TtkPage() {
 
               {iikoModalStep === 'preview' && (
                 <>
-                  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>Выберите группы для импорта. Дубликаты по имени не проверяются.</p>
-                  <div className="ttk-iiko-groups">
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>
+                    Разверните категорию и выберите нужные позиции. Выбрано: <strong>{iikoCheckedItems.size}</strong>
+                  </p>
+                  <div className="ttk-iiko-cats">
                     {iikoGroupList.map((g) => {
-                      const count = iikoPreviewItems.filter((i) => i.group === g).length
-                      const checked = iikoSelectedGroups.has(g)
+                      const groupItems = iikoPreviewItems.map((it, i) => ({ it, i })).filter(({ it }) => it.group === g)
+                      const expanded = iikoExpandedGroups.has(g)
+                      const checkedCount = groupItems.filter(({ i }) => iikoCheckedItems.has(i)).length
+                      const allChecked = groupItems.length > 0 && checkedCount === groupItems.length
                       return (
-                        <label key={g} className={`ttk-iiko-group-chip${checked ? ' is-selected' : ''}`}>
-                          <input type="checkbox" checked={checked} onChange={() => {
-                            setIikoSelectedGroups((prev) => {
-                              const next = new Set(prev)
-                              if (next.has(g)) next.delete(g); else next.add(g)
-                              return next
-                            })
-                          }} />
-                          {g} <em>{count} поз.</em>
-                        </label>
+                        <div key={g} className="ttk-iiko-cat">
+                          <div className="ttk-iiko-cat__header" onClick={() => toggleIikoExpand(g)}>
+                            <input type="checkbox" checked={allChecked} onChange={() => toggleIikoGroup(g)}
+                              onClick={e => e.stopPropagation()} />
+                            <span className="ttk-iiko-cat__name">{g}</span>
+                            <span className="ttk-iiko-cat__cnt">{checkedCount > 0 ? `${checkedCount}/` : ''}{groupItems.length} поз.</span>
+                            <span className="ttk-iiko-cat__arrow">{expanded ? '▲' : '▼'}</span>
+                          </div>
+                          {expanded && (
+                            <div className="ttk-iiko-cat__items">
+                              {groupItems.map(({ it, i }) => (
+                                <label key={i} className={`ttk-iiko-item${iikoCheckedItems.has(i) ? ' is-checked' : ''}`}>
+                                  <input type="checkbox" checked={iikoCheckedItems.has(i)} onChange={() => toggleIikoItem(i)} />
+                                  <span className="ttk-iiko-item__name">{it.name}</span>
+                                  <span className="ttk-iiko-item__price">{it.price ? `${it.price} ₽` : '—'}</span>
+                                  <span className="ttk-iiko-item__unit">{it.unit}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       )
                     })}
                   </div>
                   <div className="ttk-modal__footer-row" style={{ marginTop: 16 }}>
                     <button className="ttk-ref-btn" type="button" onClick={() => setIikoModalStep('settings')}>← Назад</button>
                     <button className="ttk-primary-button" type="button"
-                      disabled={iikoSelectedGroups.size === 0}
+                      disabled={iikoCheckedItems.size === 0}
                       onClick={() => void importIikoItems()}>
-                      Импортировать {iikoPreviewItems.filter((i) => iikoSelectedGroups.has(i.group)).length} позиций
+                      Импортировать {iikoCheckedItems.size} позиций
                     </button>
                   </div>
                 </>
