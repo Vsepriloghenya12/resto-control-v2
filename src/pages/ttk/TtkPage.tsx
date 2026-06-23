@@ -322,18 +322,20 @@ export function TtkPage() {
 
         <aside className="ttk-editor-panel">
           {selectedItem ? <div className="ttk-editor-scroll"><section className="ttk-card-hero">
-            <div className="ttk-card-hero__cover" onClick={() => photoInputRef.current?.click()}>
-              {selectedItem.photoUrl
-                ? <img className="ttk-card-hero__cover-img" src={selectedItem.photoUrl} alt={selectedItem.name} />
-                : <div className="ttk-card-hero__cover-empty"><span>🍽</span><span>Нажмите чтобы добавить фото</span></div>}
-              <div className="ttk-card-hero__cover-overlay">
-                {selectedItem.photoUrl ? 'Изменить фото' : '+ Добавить фото'}
+            <div className="ttk-card-hero__photo-col">
+              <div className="ttk-card-hero__cover" onClick={() => photoInputRef.current?.click()}>
+                {selectedItem.photoUrl
+                  ? <img className="ttk-card-hero__cover-img" src={selectedItem.photoUrl} alt={selectedItem.name} />
+                  : <div className="ttk-card-hero__cover-empty"><span>🍽</span><span>Добавить фото</span></div>}
+                <div className="ttk-card-hero__cover-overlay">
+                  {selectedItem.photoUrl ? 'Изменить' : '+ Фото'}
+                </div>
+                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
               </div>
-              <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+              {selectedItem.photoUrl ? (
+                <button type="button" className="ttk-card-hero__photo-remove" onClick={() => updateSelected({ photoUrl: '' })}>✕ Удалить фото</button>
+              ) : null}
             </div>
-            {selectedItem.photoUrl ? (
-              <button type="button" className="ttk-card-hero__photo-remove" onClick={() => updateSelected({ photoUrl: '' })}>✕ Удалить фото</button>
-            ) : null}
             <div className="ttk-card-hero__info"><span>{selectedGroup?.name}</span><h2>{selectedItem.name}</h2><p>{selectedItem.description || 'Описание позиции пока не заполнено.'}</p></div></section>
             <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Основное</h3></div><div className="ttk-form-grid"><label><span>Наименование</span><input value={selectedItem.name} onChange={(e) => updateSelected({ name: e.target.value })} /></label><label><span>Единица измерения</span><select value={selectedItem.unit} onChange={(e) => updateSelected({ unit: e.target.value })}><option value="">—</option>{refUnits.map((u) => <option key={u}>{u}</option>)}</select></label><label><span>Цена</span><input value={selectedItem.price} type="number" onChange={(e) => updateSelected({ price: Number(e.target.value || 0) })} /></label><label><span>Тэг</span><select value={selectedItem.tag || ''} onChange={(e) => updateSelected({ tag: e.target.value })}><option value="">—</option>{refTags.map((t) => <option key={t}>{t}</option>)}</select></label><label className="ttk-field-wide"><span>Описание</span><textarea value={selectedItem.description || ''} onChange={(e) => updateSelected({ description: e.target.value })} /></label></div></section>
             <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Технология</h3></div><div className="ttk-recipe-list">{(selectedItem.recipe || []).map((line, index) => <div className="ttk-recipe-line" key={`${line.ingredient}-${index}`}><span>{index + 1}</span><input value={line.ingredient} readOnly /><input value={line.amount || line.quantity || ''} readOnly /></div>)}{!selectedItem.recipe?.length ? <p className="ttk-empty-small">Раскладка ещё не заполнена.</p> : null}<div className="ttk-form-grid ttk-form-grid--two"><label><span>Время приготовления</span><input value={String(selectedItem.cookingTime || '')} onChange={(e) => updateSelected({ cookingTime: e.target.value })} /></label><label><span>Выход готового блюда</span><input value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} /></label></div></div></section>

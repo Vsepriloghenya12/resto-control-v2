@@ -1043,15 +1043,23 @@
 /* Photo upload in card hero */
 .ttk-card-hero {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 4px;
+}
+
+.ttk-card-hero__photo-col {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 160px;
 }
 
 .ttk-card-hero__cover {
   position: relative;
-  width: 100%;
-  height: 200px;
+  width: 160px;
+  height: 160px;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
@@ -1106,8 +1114,8 @@
 }
 
 .ttk-card-hero__photo-remove {
-  align-self: flex-end;
-  margin-top: 4px;
+  display: block;
+  margin-top: 6px;
   font: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -1116,12 +1124,16 @@
   border: none;
   cursor: pointer;
   padding: 0;
+  text-align: center;
+  width: 160px;
 }
 
 .ttk-card-hero__photo-remove:hover { text-decoration: underline; }
 
 .ttk-card-hero__info {
-  padding: 14px 0 8px;
+  flex: 1;
+  padding: 4px 0 8px;
+  min-width: 0;
 }
 
 .ttk-card-hero__info span {
