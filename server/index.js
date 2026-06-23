@@ -1627,6 +1627,37 @@ async function handleIiko(req, res, state, pathname, auth) {
     return true
   }
 
+  if (pathname === '/api/iiko/employees' && req.method === 'GET') {
+    const host = restaurant.iikoHost
+    const login = restaurant.iikoLogin
+    const password = restaurant.iikoPassword
+    if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено.')
+
+    const token = await iikoToken(host, login, password)
+    const { body: xml } = await iikoGet(`https://${host}/resto/api/employees?key=${encodeURIComponent(token)}`)
+
+    const employees = []
+    const empRe = /<employee>([\s\S]*?)<\/employee>/g
+    let em
+    while ((em = empRe.exec(xml)) !== null) {
+      const block = em[1]
+      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
+      const id = get('id')
+      const name = get('name') || get('firstName')
+      if (!name || !id) continue
+      const role = get('mainRole') || get('role') || ''
+      const phone = get('phone') || get('login') || ''
+      const dismissed = get('dismissed')
+      if (dismissed === 'true') continue
+      employees.push({ iikoId: id, name, role, phone })
+    }
+
+    employees.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+    console.log('[iiko/employees] found:', employees.length)
+    send(res, 200, { items: employees, total: employees.length })
+    return true
+  }
+
   return false
 }
 

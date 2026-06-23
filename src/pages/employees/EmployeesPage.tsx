@@ -286,6 +286,78 @@ export function EmployeesPage() {
   )
   const [empRates, setEmpRates] = useState<Record<string, { hourly: number; bonus: number }>>({})
 
+  // iiko import
+  type IikoEmployee = { iikoId: string; name: string; role: string; phone: string }
+  const [iikoImportOpen, setIikoImportOpen] = useState(false)
+  const [iikoImportLoading, setIikoImportLoading] = useState(false)
+  const [iikoImportError, setIikoImportError] = useState('')
+  const [iikoImportItems, setIikoImportItems] = useState<IikoEmployee[]>([])
+  const [iikoImportChecked, setIikoImportChecked] = useState<Set<number>>(new Set())
+  const [iikoImportPositions, setIikoImportPositions] = useState<Record<number, string>>({})
+  const [iikoImporting, setIikoImporting] = useState(false)
+
+  async function loadIikoEmployees() {
+    setIikoImportLoading(true)
+    setIikoImportError('')
+    setIikoImportItems([])
+    setIikoImportChecked(new Set())
+    setIikoImportPositions({})
+    try {
+      const resp = await fetch('/api/iiko/employees', { credentials: 'include' })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.message || 'Ошибка')
+      const items: IikoEmployee[] = data.items || []
+      // pre-check all, pre-fill positions
+      setIikoImportItems(items)
+      setIikoImportChecked(new Set(items.map((_, i) => i)))
+      setIikoImportPositions(Object.fromEntries(items.map((it, i) => [i, guessPosition(it.role)])))
+    } catch (e) {
+      setIikoImportError(e instanceof Error ? e.message : 'Не удалось загрузить сотрудников')
+    } finally {
+      setIikoImportLoading(false)
+    }
+  }
+
+  function guessPosition(role: string): string {
+    const r = role.toLowerCase()
+    for (const p of positions.filter(p => p !== 'Все')) {
+      if (r.includes(p.toLowerCase())) return p
+    }
+    return ''
+  }
+
+  async function doIikoImport() {
+    setIikoImporting(true)
+    let count = 0
+    try {
+      for (const [idxStr] of Object.entries(iikoImportPositions)) {
+        const idx = Number(idxStr)
+        if (!iikoImportChecked.has(idx)) continue
+        const item = iikoImportItems[idx]
+        const pos = iikoImportPositions[idx] || 'Официант'
+        // skip if same name already exists
+        if (employees.some(e => e.name === item.name)) continue
+        const created = await api.create<Employee>('employees', {
+          name: item.name,
+          login: item.phone || item.name,
+          position: pos,
+          password: 'iiko123',
+          status: 'active',
+          shiftStatus: 'closed',
+          attestationPercent: 0,
+        })
+        setEmployees(prev => [...prev, created])
+        count++
+      }
+      setIikoImportOpen(false)
+    } catch (e) {
+      setIikoImportError(e instanceof Error ? e.message : 'Ошибка при импорте')
+    } finally {
+      setIikoImporting(false)
+      if (count > 0) setError('')
+    }
+  }
+
 
   async function loadEmployees() {
     setIsLoading(true)
@@ -1047,6 +1119,7 @@ export function EmployeesPage() {
             </label>
             <button className="employees-reset-button" type="button" onClick={() => { setSearch(''); setPosition('Все'); setStatus('Все') }}>Сбросить</button>
             <button className="employees-primary-button" type="button" onClick={startCreate}>+ Сотрудник</button>
+            <button className="employees-reset-button" type="button" onClick={() => { setIikoImportOpen(true); void loadIikoEmployees() }}>Импорт из iiko</button>
           </div>
 
           <div className="employees-table-wrap">
@@ -1106,6 +1179,69 @@ export function EmployeesPage() {
           </div>
         </div>
       ) : null}
+
+      {iikoImportOpen && (
+        <div className="employees-modal-backdrop" role="presentation" onMouseDown={() => setIikoImportOpen(false)}>
+          <div className="employees-modal" role="dialog" aria-modal="true" style={{ maxWidth: 560 }} onMouseDown={(e) => e.stopPropagation()}>
+            <div className="employees-modal__header">
+              <h3>Импорт сотрудников из iiko</h3>
+              <button type="button" className="employees-modal__close" onClick={() => setIikoImportOpen(false)}>×</button>
+            </div>
+            <div className="employees-modal__body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {iikoImportLoading && <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px 0' }}>Загружаю сотрудников из iiko...</p>}
+              {iikoImportError && <p style={{ color: '#ef4444' }}>{iikoImportError}</p>}
+              {!iikoImportLoading && iikoImportItems.length === 0 && !iikoImportError && <p style={{ color: '#6b7280' }}>Сотрудники не найдены</p>}
+              {iikoImportItems.length > 0 && (
+                <>
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>
+                    Выберите сотрудников для импорта. Уже существующие (с тем же именем) будут пропущены. Временный пароль: <strong>iiko123</strong>
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid #f0f2f5', marginBottom: 4 }}>
+                      <input type="checkbox"
+                        checked={iikoImportItems.every((_, i) => iikoImportChecked.has(i))}
+                        onChange={(e) => setIikoImportChecked(e.target.checked ? new Set(iikoImportItems.map((_, i) => i)) : new Set())}
+                      />
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Выбрать всех ({iikoImportChecked.size} / {iikoImportItems.length})</span>
+                    </div>
+                    {iikoImportItems.map((it, i) => {
+                      const exists = employees.some(e => e.name === it.name)
+                      return (
+                        <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderRadius: 6, background: exists ? '#f9fafb' : iikoImportChecked.has(i) ? '#eff6ff' : 'transparent', cursor: exists ? 'default' : 'pointer', opacity: exists ? 0.5 : 1 }}>
+                          <input type="checkbox" disabled={exists} checked={iikoImportChecked.has(i)} onChange={() => {
+                            setIikoImportChecked(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+                          }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{it.name}{exists ? <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>уже есть</span> : null}</div>
+                            <div style={{ fontSize: 11, color: '#6b7280' }}>{it.role}{it.phone ? ` · ${it.phone}` : ''}</div>
+                          </div>
+                          <select
+                            disabled={exists || !iikoImportChecked.has(i)}
+                            value={iikoImportPositions[i] || ''}
+                            onChange={(e) => setIikoImportPositions(prev => ({ ...prev, [i]: e.target.value }))}
+                            style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer' }}
+                          >
+                            <option value="" disabled>Должность</option>
+                            {positions.filter(p => p !== 'Все').map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+            {iikoImportItems.length > 0 && !iikoImportLoading && (
+              <div className="employees-modal__footer">
+                <button className="employees-create-button" type="button" disabled={iikoImporting || iikoImportChecked.size === 0} onClick={() => void doIikoImport()}>
+                  {iikoImporting ? 'Импортирую...' : `Импортировать ${iikoImportChecked.size} сотрудников`}
+                </button>
+                <button className="employees-cancel-button" type="button" onClick={() => setIikoImportOpen(false)}>Отмена</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {isEditing && selectedEmployee ? (
         <div className="employees-modal-backdrop" role="presentation" onMouseDown={closeEditModal}>
