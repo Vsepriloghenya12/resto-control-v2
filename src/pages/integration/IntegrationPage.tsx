@@ -12,7 +12,7 @@ function IikoLogo() {
 
 function QuickRestoLogo() {
   return (
-    <svg viewBox="0 0 512 512" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="-40 -40 592 592" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
       <rect x="160" y="160" width="330" height="330" rx="78" fill="#3b35d4" />
       <circle cx="190" cy="190" r="200" fill="#ff1f3d" />
       <rect x="261" y="210" width="52" height="210" rx="26" fill="#fff"
