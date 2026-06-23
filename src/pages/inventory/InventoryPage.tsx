@@ -314,7 +314,7 @@ export function InventoryPage() {
           {submitted.length > 0 && <span className="inv-tab__badge">{submitted.length}</span>}
         </button>
         <button type="button" className={`inv-tab${tab === 'nomenclature' ? ' is-active' : ''}`} onClick={() => setTab('nomenclature')}>
-          Номенклатура
+          Список позиций
           {products.length > 0 && <span className="inv-tab__badge">{products.length}</span>}
         </button>
       </div>
