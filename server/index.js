@@ -1511,7 +1511,8 @@ async function handleIiko(req, res, state, pathname, auth) {
         groupMap.set(id, { name, parentId })
       } else if (type === 'GOODS' || type === 'PREPARED' || type === 'DISH') {
         const unit = get('mainUnit') || 'шт'
-        productMap.set(id, { name, unit, parentId, type })
+        const price = parseFloat(get('price') || get('sellPrice') || '0') || 0
+        productMap.set(id, { name, unit, parentId, type, price })
       }
     }
 
@@ -1537,7 +1538,7 @@ async function handleIiko(req, res, state, pathname, auth) {
     for (const [, product] of productMap) {
       if (filter === 'prepared' && product.type !== 'DISH') continue
       if (filter === 'goods' && product.type !== 'GOODS') continue
-      items.push({ name: product.name, unit: product.unit, category: resolveGroup(product.parentId) })
+      items.push({ name: product.name, unit: product.unit, price: product.price || 0, category: resolveGroup(product.parentId) })
     }
 
     items.sort((a, b) => a.name.localeCompare(b.name, 'ru'))

@@ -1370,3 +1370,20 @@
 .ttk-iiko-group-chip em { font-style: normal; color: #9ca3af; font-size: 11px; }
 .ttk-iiko-group-chip.is-selected { border-color: #111; background: #111; color: #fff; }
 .ttk-iiko-group-chip.is-selected em { color: #9ca3af; }
+
+
+.ttk-edit-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 900px;
+  max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ttk-edit-modal__body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 20px 24px;
+}
