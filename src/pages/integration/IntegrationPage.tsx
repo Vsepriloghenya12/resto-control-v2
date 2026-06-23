@@ -16,7 +16,7 @@ function QuickRestoLogo() {
       <rect x="160" y="160" width="330" height="330" rx="78" fill="#3b35d4" />
       <circle cx="190" cy="190" r="200" fill="#ff1f3d" />
       <rect x="261" y="210" width="52" height="210" rx="26" fill="#fff"
-        transform="rotate(40 287 315)" />
+        transform="rotate(-45 287 315)" />
     </svg>
   )
 }
