@@ -354,7 +354,10 @@ export function TtkPage() {
                         <label><span>Выход готового блюда</span>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <input style={{ flex: 1 }} value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} placeholder="300" />
-                            <input style={{ width: 64 }} value={selectedItem.outputUnit || ''} onChange={(e) => updateSelected({ outputUnit: e.target.value })} placeholder="г" />
+                            <select style={{ width: 72 }} value={selectedItem.outputUnit || ''} onChange={(e) => updateSelected({ outputUnit: e.target.value })}>
+                              <option value="">—</option>
+                              {refUnits.map((u) => <option key={u}>{u}</option>)}
+                            </select>
                           </div>
                         </label>
                       </div>
