@@ -12,14 +12,11 @@ function IikoLogo() {
 
 function QuickRestoLogo() {
   return (
-    <svg viewBox="0 0 48 48" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-      {/* Blue rounded square (back) */}
-      <rect x="14" y="14" width="34" height="34" rx="9" fill="#3b35d4" />
-      {/* Red circle (front-left) */}
-      <circle cx="18" cy="22" r="18" fill="#ff1f3d" />
-      {/* White diagonal stroke */}
-      <rect x="20" y="12" width="6" height="26" rx="3" fill="#fff"
-        transform="rotate(38 23 25)" />
+    <svg viewBox="0 0 512 512" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <rect x="155" y="155" width="357" height="357" rx="78" fill="#3b35d4" />
+      <circle cx="188" cy="208" r="215" fill="#ff1f3d" />
+      <rect x="232" y="170" width="54" height="230" rx="27" fill="#fff"
+        transform="rotate(16 259 285)" />
     </svg>
   )
 }
