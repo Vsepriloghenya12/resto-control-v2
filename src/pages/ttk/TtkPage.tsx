@@ -220,15 +220,15 @@ export function TtkPage() {
     setIikoError('')
     try {
       await saveIikoSettings()
-      const resp = await fetch('/api/iiko/inventory?filter=prepared', { credentials: 'include' })
+      const resp = await fetch('/api/iiko/nomenclature', { credentials: 'include' })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка')
-      // inventory endpoint returns {name, unit, category, price} — remap category → group
-      const mapped = (data.items as { name: string; unit: string; category: string; price?: number }[]).map(i => ({
+      // nomenclature endpoint returns {name, unit, price, group} — already has group name
+      const mapped = (data.items as { name: string; unit: string; price?: number; group?: string }[]).map(i => ({
         name: i.name,
         unit: i.unit,
         price: i.price || 0,
-        group: i.category || 'Без категории',
+        group: i.group || 'Без категории',
       }))
       setIikoPreviewItems(mapped)
       setIikoCheckedItems(new Set())
