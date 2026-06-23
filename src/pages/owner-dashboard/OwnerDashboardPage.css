@@ -268,7 +268,24 @@
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15,23,42,.1);
   z-index: 200;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: 420px;
+}
+
+.owner-search__group {
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-search__group-label {
+  padding: 6px 16px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .owner-search__dropdown--empty {

@@ -904,22 +904,50 @@ export function OwnerDashboardPage() {
     if (searchResults.length) { openSection(searchResults[0].section); setGlobalSearch('') }
   }
 
-  type SearchResult = { label: string; hint: string; section: OwnerSection }
-  const allSections: SearchResult[] = [
-    { label: 'Сотрудники', hint: 'Команда, должности, статус', section: 'employees' },
-    { label: 'Чек-листы', hint: 'Стандарты и задания', section: 'checklists' },
-    { label: 'Задачи', hint: 'Рабочие задачи', section: 'tasks' },
-    { label: 'План зала / Брони', hint: 'Залы, столы, бронирования', section: 'hallBookings' },
-    { label: 'Инвентаризация', hint: 'Товары, бланки, остатки', section: 'inventory' },
-    { label: 'Номенклатура', hint: 'Карточки блюд и товаров', section: 'ttk' },
-    { label: 'База знаний', hint: 'Обучение, материалы', section: 'knowledge' },
-    { label: 'Оплата', hint: 'Тариф, счета, реквизиты', section: 'payment' },
-  ]
+  type SearchResult = { id: string; label: string; hint: string; section: OwnerSection; group: string }
   const searchResults = useMemo<SearchResult[]>(() => {
     const q = globalSearch.trim().toLowerCase()
-    if (!q) return []
-    return allSections.filter((s) => s.label.toLowerCase().includes(q) || s.hint.toLowerCase().includes(q))
-  }, [globalSearch])
+    if (q.length < 1) return []
+    const results: SearchResult[] = []
+    const match = (s: string) => (s || '').toLowerCase().includes(q)
+
+    // Сотрудники
+    ;(summary?.employees || []).filter((e) => match(e.name) || match(e.position)).slice(0, 5).forEach((e) => {
+      results.push({ id: `emp_${e.id}`, label: e.name, hint: e.position, section: 'employees', group: 'Сотрудники' })
+    })
+
+    // Блюда / ТТК
+    ;(summary?.ttkItems || []).filter((i) => match(i.name)).slice(0, 5).forEach((i) => {
+      results.push({ id: `ttk_${i.id}`, label: (i as any).name, hint: (i as any).group || 'Номенклатура', section: 'ttk', group: 'Блюда' })
+    })
+
+    // Задачи
+    ;(summary?.tasks || []).filter((t) => match(t.title) || match(t.description || '')).slice(0, 4).forEach((t) => {
+      results.push({ id: `task_${t.id}`, label: t.title, hint: t.status || '', section: 'tasks', group: 'Задачи' })
+    })
+
+    // Чек-листы
+    ;(summary?.checklists || []).filter((c) => match(c.title) || match(c.position || '')).slice(0, 4).forEach((c) => {
+      results.push({ id: `cl_${c.id}`, label: c.title, hint: c.position || 'Чек-лист', section: 'checklists', group: 'Чек-листы' })
+    })
+
+    // База знаний
+    ;(summary?.knowledgeMaterials || []).filter((m) => match(m.title)).slice(0, 4).forEach((m) => {
+      results.push({ id: `km_${m.id}`, label: m.title, hint: 'База знаний', section: 'knowledge', group: 'База знаний' })
+    })
+
+    // Гости
+    ;(summary?.guests || []).filter((g) => match(g.name)).slice(0, 3).forEach((g) => {
+      results.push({ id: `guest_${g.id}`, label: g.name, hint: 'Гость', section: 'hallBookings', group: 'Гости' })
+    })
+
+    // Брони
+    ;(summary?.bookings || []).filter((b) => match(b.guestName || '')).slice(0, 3).forEach((b) => {
+      results.push({ id: `book_${b.id}`, label: b.guestName || 'Гость', hint: `${b.time || ''} · ${b.status || ''}`, section: 'hallBookings', group: 'Брони' })
+    })
+
+    return results
+  }, [globalSearch, summary])
 
   const pageCopy: Record<OwnerSection, { title: string; subtitle: string; searchPlaceholder: string }> = {
     dashboard: { title: `Добрый день, ${userName}!`, subtitle: restaurantName, searchPlaceholder: 'Поиск...' },
@@ -992,11 +1020,22 @@ export function OwnerDashboardPage() {
               ) : null}
               {searchFocused && searchResults.length > 0 ? (
                 <div className="owner-search__dropdown">
-                  {searchResults.map((r) => (
-                    <button key={r.section} type="button" className="owner-search__result" onClick={() => { openSection(r.section); setGlobalSearch('') }}>
-                      <span className="owner-search__result-label">{r.label}</span>
-                      <span className="owner-search__result-hint">{r.hint}</span>
-                    </button>
+                  {Object.entries(
+                    searchResults.reduce<Record<string, SearchResult[]>>((acc, r) => {
+                      if (!acc[r.group]) acc[r.group] = []
+                      acc[r.group].push(r)
+                      return acc
+                    }, {})
+                  ).map(([group, items]) => (
+                    <div key={group} className="owner-search__group">
+                      <span className="owner-search__group-label">{group}</span>
+                      {items.map((r) => (
+                        <button key={r.id} type="button" className="owner-search__result" onClick={() => { openSection(r.section); setGlobalSearch('') }}>
+                          <span className="owner-search__result-label">{r.label}</span>
+                          <span className="owner-search__result-hint">{r.hint}</span>
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
               ) : searchFocused && globalSearch.trim() ? (
