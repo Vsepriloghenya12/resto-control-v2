@@ -351,7 +351,12 @@ export function TtkPage() {
                       {!selectedItem.recipe?.length ? <p className="ttk-empty-small">Раскладка ещё не заполнена.</p> : null}
                       <div className="ttk-form-grid">
                         <label><span>Время приготовления</span><input value={String(selectedItem.cookingTime || '')} onChange={(e) => updateSelected({ cookingTime: e.target.value })} /></label>
-                        <label><span>Выход готового блюда</span><input value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} /></label>
+                        <label><span>Выход готового блюда</span>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <input style={{ flex: 1 }} value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} placeholder="300" />
+                            <input style={{ width: 64 }} value={selectedItem.outputUnit || ''} onChange={(e) => updateSelected({ outputUnit: e.target.value })} placeholder="г" />
+                          </div>
+                        </label>
                       </div>
                     </div>
                   </section>
