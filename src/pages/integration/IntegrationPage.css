@@ -230,13 +230,10 @@
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 900;
   display: grid;
   place-items: center;
-  letter-spacing: -0.04em;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .int-tab__name { font-size: 14px; }
@@ -262,13 +259,10 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .int-system-header strong {

@@ -1,4 +1,26 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+
+function IikoLogo() {
+  return (
+    <svg viewBox="0 0 48 48" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="10" fill="#e8390e" />
+      <text x="24" y="32" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900"
+        fontSize="22" fill="#fff" letterSpacing="-1">iiko</text>
+    </svg>
+  )
+}
+
+function QuickRestoLogo() {
+  return (
+    <svg viewBox="0 0 48 48" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="10" fill="#ff6b00" />
+      <text x="24" y="22" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900"
+        fontSize="11" fill="#fff" letterSpacing="0.5">QUICK</text>
+      <text x="24" y="35" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="900"
+        fontSize="11" fill="#fff" letterSpacing="0.5">RESTO</text>
+    </svg>
+  )
+}
 
 type System = 'iiko' | 'quickresto'
 
@@ -8,25 +30,25 @@ type Connection = {
   password: string
 }
 
-const SYSTEMS: Array<{ key: System; name: string; color: string; tagline: string; logoChar: string }> = [
+const SYSTEMS: Array<{ key: System; name: string; color: string; tagline: string; logo: React.ReactNode }> = [
+  {
+    key: 'quickresto',
+    name: 'Quick Resto',
+    color: '#ff6b00',
+    tagline: 'Quick Resto POS',
+    logo: <QuickRestoLogo />,
+  },
   {
     key: 'iiko',
     name: 'iiko',
     color: '#e8390e',
     tagline: 'iiko Office / iikoChain',
-    logoChar: 'ii',
-  },
-  {
-    key: 'quickresto',
-    name: 'Quick Resto',
-    color: '#2563eb',
-    tagline: 'Quick Resto POS',
-    logoChar: 'QR',
+    logo: <IikoLogo />,
   },
 ]
 
 export function IntegrationPage() {
-  const [active, setActive] = useState<System>('iiko')
+  const [active, setActive] = useState<System>('quickresto')
   const [connections, setConnections] = useState<Record<System, Connection>>({
     iiko: { host: '', login: '', password: '' },
     quickresto: { host: '', login: '', password: '' },
@@ -197,7 +219,7 @@ export function IntegrationPage() {
                   style={active === s.key ? { '--tab-color': s.color } as React.CSSProperties : undefined}
                   onClick={() => setActive(s.key)}
                 >
-                  <span className="int-tab__logo" style={{ background: s.color }}>{s.logoChar}</span>
+                  <span className="int-tab__logo">{s.logo}</span>
                   <span className="int-tab__name">{s.name}</span>
                   {status[s.key] === 'ok' && <span className="int-tab__dot" />}
                 </button>
@@ -206,8 +228,8 @@ export function IntegrationPage() {
 
             {/* Карточка системы */}
             <div className="int-system-header">
-              <div className="int-system-logo" style={{ background: sys.color }}>
-                {sys.logoChar}
+              <div className="int-system-logo">
+                {sys.logo}
               </div>
               <div>
                 <strong>{sys.name}</strong>
