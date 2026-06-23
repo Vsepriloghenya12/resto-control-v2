@@ -386,6 +386,68 @@
   color: #374151;
 }
 
+.tasks-modal__comments {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tasks-modal__comments-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tasks-modal__no-comments {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0;
+}
+.tasks-modal__comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.tasks-modal__comment {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 4px 8px;
+  align-items: baseline;
+}
+.tasks-modal__comment strong { font-size: 12px; color: #374151; }
+.tasks-modal__comment span { font-size: 13px; color: #111827; }
+.tasks-modal__comment small { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+.tasks-modal__comment-form {
+  display: flex;
+  gap: 6px;
+}
+.tasks-modal__comment-form input {
+  flex: 1;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.tasks-modal__comment-form button {
+  height: 36px;
+  padding: 0 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tasks-modal__comment-form button:disabled { opacity: 0.5; cursor: default; }
+
 .tasks-modal__footer {
   display: flex;
   align-items: center;

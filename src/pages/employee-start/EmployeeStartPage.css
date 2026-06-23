@@ -709,6 +709,19 @@
   font-size: 13px;
 }
 
+.employee-mobile__run-comment {
+  margin: 12px 20px 0;
+  width: calc(100% - 40px);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  resize: none;
+  color: #111;
+}
+.employee-mobile__run-comment:focus { outline: none; border-color: #2563eb; }
+
 .employee-mobile__sheet-actions {
   padding: 16px 20px 0;
   display: grid;

@@ -107,6 +107,8 @@ type DashboardSummary = {
   tables?: Array<{ id: string; name: string; status?: string }>
   knowledgeMaterials?: Array<{ id: string; title: string }>
   guests?: Array<{ id: string; name: string }>
+  attestationResults?: Array<{ id: string; attestationId: string; employeeName: string; score: number; completedAt: string }>
+  checklistRuns?: Array<{ id: string; title: string; comments?: Array<{ id: string; text: string; authorName: string; createdAt: string }>; submittedAt?: string }>
 }
 
 const navItems: Array<{ label: string; section: OwnerSection; icon: ReactNode }> = [
@@ -224,6 +226,23 @@ function buildDashboardModel(summary: DashboardSummary | null) {
   })
   bookings.filter((item) => item.status === 'new').slice(0, 2).forEach((booking) => {
     attentionItems.push({ title: `Новая бронь: ${booking.guestName || 'гость'}`, description: `${booking.guestsCount || 1} гостей${booking.time ? `, ${booking.time}` : ''}`, time: 'сегодня', tone: 'neutral', target: 'hallBookings' })
+  })
+
+  const since24h = new Date(Date.now() - 86_400_000).toISOString()
+  const attestationResults = summary?.attestationResults || []
+  attestationResults.filter((r) => r.completedAt > since24h).slice(0, 5).forEach((r) => {
+    attentionItems.push({ title: `Аттестация пройдена: ${r.employeeName}`, description: `Результат: ${r.score}%`, time: new Date(r.completedAt).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }), tone: r.score >= 70 ? 'neutral' : 'warning', target: 'attestation' })
+  })
+
+  const checklistRuns = summary?.checklistRuns || []
+  checklistRuns.filter((run) => Array.isArray(run.comments) && run.comments.length > 0 && run.comments.some((c) => c.createdAt > since24h)).slice(0, 3).forEach((run) => {
+    const lastComment = run.comments!.filter((c) => c.createdAt > since24h).at(-1)!
+    attentionItems.push({ title: `Комментарий к чек-листу: ${run.title}`, description: `${lastComment.authorName}: ${lastComment.text.slice(0, 60)}`, time: new Date(lastComment.createdAt).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }), tone: 'neutral', target: 'checklists' })
+  })
+
+  ;(summary?.tasks || []).filter((t) => Array.isArray((t as any).comments) && (t as any).comments.some((c: any) => c.createdAt > since24h)).slice(0, 3).forEach((t) => {
+    const lastComment = (t as any).comments.filter((c: any) => c.createdAt > since24h).at(-1)
+    attentionItems.push({ title: `Комментарий к задаче: ${t.title}`, description: `${lastComment.authorName}: ${lastComment.text.slice(0, 60)}`, time: new Date(lastComment.createdAt).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }), tone: 'neutral', target: 'tasks' })
   })
 
   const shiftEmployees: ShiftEmployee[] = employees

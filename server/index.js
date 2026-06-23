@@ -1010,6 +1010,34 @@ async function handleCollections(req, res, state, pathname, auth) {
     return true
   }
 
+  if (name === 'tasks' && itemId && action === 'comments' && req.method === 'POST') {
+    const body = await readBody(req)
+    const task = collection.items.find((i) => i.id === itemId && i.restaurantId === currentRestaurantId)
+    if (!task) throw httpError(404, 'Задача не найдена')
+    if (!String(body.text || '').trim()) throw httpError(400, 'Текст комментария обязателен')
+    if (!task.comments) task.comments = []
+    const comment = { id: id('cmt'), text: String(body.text).trim(), authorName: String(body.authorName || payload.user.name || 'Менеджер'), createdAt: nowIso() }
+    task.comments.push(comment)
+    task.updatedAt = nowIso()
+    await saveState(state)
+    send(res, 201, comment)
+    return true
+  }
+
+  if (name === 'checklist-runs' && itemId && action === 'comments' && req.method === 'POST') {
+    const body = await readBody(req)
+    const run = collection.items.find((i) => i.id === itemId && i.restaurantId === currentRestaurantId)
+    if (!run) throw httpError(404, 'Чек-лист не найден')
+    if (!String(body.text || '').trim()) throw httpError(400, 'Текст комментария обязателен')
+    if (!run.comments) run.comments = []
+    const comment = { id: id('cmt'), text: String(body.text).trim(), authorName: String(body.authorName || payload.user.name || 'Сотрудник'), createdAt: nowIso() }
+    run.comments.push(comment)
+    run.updatedAt = nowIso()
+    await saveState(state)
+    send(res, 201, comment)
+    return true
+  }
+
   if (name === 'push-subscriptions' && req.method === 'POST') {
     const body = await readBody(req)
     const item = { id: id('push'), userId: payload.user.id, restaurantId: currentRestaurantId, subscription: body.subscription || body, createdAt: nowIso(), updatedAt: nowIso() }
@@ -1254,6 +1282,7 @@ async function handleDashboard(req, res, state, pathname, auth) {
   const tables = state.tables.filter((item) => item.restaurantId === restaurantId)
   const knowledgeMaterials = state.knowledgeMaterials.filter((item) => item.restaurantId === restaurantId)
   const guests = state.regularGuests.filter((item) => item.restaurantId === restaurantId)
+  const attestationResults = (state.attestationResults || []).filter((item) => item.restaurantId === restaurantId)
 
   send(res, 200, {
     restaurant: payload.restaurant,
@@ -1274,6 +1303,7 @@ async function handleDashboard(req, res, state, pathname, auth) {
     tables,
     knowledgeMaterials,
     guests,
+    attestationResults,
   })
   return true
 }

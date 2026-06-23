@@ -193,6 +193,7 @@ function accentColor(status?: string) {
 function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSaved: () => Promise<void> }) {
   const [progress, setProgress] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
+  const [runComment, setRunComment] = useState('')
   const items = checklist.items || []
   const doneCount = items.filter((item) => progress[item.id]).length
 
@@ -207,6 +208,7 @@ function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSav
       totalItems: items.length,
       items: items.map((item) => ({ ...item, done: Boolean(progress[item.id]) })),
       submittedAt: new Date().toISOString(),
+      comments: runComment.trim() ? [{ id: `cmt_${Date.now()}`, text: runComment.trim(), authorName: 'Сотрудник', createdAt: new Date().toISOString() }] : [],
     })
     await onSaved()
     setSaving(false)
@@ -222,6 +224,13 @@ function ChecklistRunPanel({ checklist, onSaved }: { checklist: Checklist; onSav
           </button>
         )) : <p>Пункты чек-листа ещё не настроены.</p>}
       </div>
+      <textarea
+        className="employee-mobile__run-comment"
+        placeholder="Комментарий к чек-листу (необязательно)..."
+        value={runComment}
+        onChange={(e) => setRunComment(e.target.value)}
+        rows={2}
+      />
       <div className="employee-mobile__sheet-actions">
         <button type="button" onClick={() => void saveRun()} disabled={!items.length || saving}>{saving ? 'Сохраняю...' : 'Сохранить прохождение'}</button>
       </div>

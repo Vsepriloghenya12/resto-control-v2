@@ -5,6 +5,8 @@ import './TasksPage.css'
 type TaskStatus = 'not_started' | 'in_progress' | 'done' | 'overdue'
 type AssignmentType = 'position' | 'employee'
 
+type TaskComment = { id: string; text: string; authorName: string; createdAt: string }
+
 type Task = {
   id: string
   title: string
@@ -19,6 +21,7 @@ type Task = {
   requiresPhoto: boolean
   active: boolean
   extraNote?: string
+  comments?: TaskComment[]
 }
 
 const statusLabels: Record<TaskStatus, string> = { not_started: 'Не начата', in_progress: 'В работе', done: 'Выполнена', overdue: 'Просрочена' }
@@ -54,6 +57,8 @@ export function TasksPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<Partial<Task>>(emptyDraft())
   const [saving, setSaving] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [commentSaving, setCommentSaving] = useState(false)
 
   async function loadTasks() {
     const result = await api.list<Task>('tasks')
@@ -75,6 +80,7 @@ export function TasksPage() {
   function openEdit(task: Task) {
     setEditingId(task.id)
     setDraft({ ...task })
+    setCommentText('')
     setModalOpen(true)
   }
 
@@ -116,6 +122,23 @@ export function TasksPage() {
     setTasks((items) => items.filter((item) => item.id !== editingId))
     closeModal()
     showNotice('Задача удалена.')
+  }
+
+  async function addComment() {
+    if (!editingId || !commentText.trim()) return
+    setCommentSaving(true)
+    try {
+      const comment = await fetch(`/api/tasks/${editingId}/comments`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: commentText.trim() }),
+      }).then((r) => r.json()) as TaskComment
+      setDraft((d) => ({ ...d, comments: [...(d.comments || []), comment] }))
+      setTasks((items) => items.map((t) => t.id === editingId ? { ...t, comments: [...(t.comments || []), comment] } : t))
+      setCommentText('')
+    } finally {
+      setCommentSaving(false)
+    }
   }
 
   async function setTaskStatus(id: string, status: TaskStatus) {
@@ -232,6 +255,35 @@ export function TasksPage() {
                   <span>Активна</span>
                 </label>
               </div>
+              {editingId ? (
+                <div className="tasks-modal__comments">
+                  <span className="tasks-modal__comments-label">Комментарии</span>
+                  {(draft.comments || []).length === 0 ? (
+                    <p className="tasks-modal__no-comments">Комментариев пока нет.</p>
+                  ) : (
+                    <div className="tasks-modal__comment-list">
+                      {(draft.comments || []).map((c) => (
+                        <div key={c.id} className="tasks-modal__comment">
+                          <strong>{c.authorName}</strong>
+                          <span>{c.text}</span>
+                          <small>{new Date(c.createdAt).toLocaleString('ru', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="tasks-modal__comment-form">
+                    <input
+                      type="text" placeholder="Написать комментарий..."
+                      value={commentText} onChange={(e) => setCommentText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') void addComment() }}
+                    />
+                    <button type="button" disabled={!commentText.trim() || commentSaving} onClick={() => void addComment()}>
+                      {commentSaving ? '...' : 'Отправить'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="tasks-modal__footer">
                 {editingId ? <button type="button" className="tasks-modal__delete-btn" onClick={() => void deleteTask()}>Удалить</button> : <span />}
                 <button type="button" className="tasks-modal__save-btn" disabled={!draft.title?.trim() || saving} onClick={() => void saveTask()}>
