@@ -417,11 +417,8 @@ export function TtkPage() {
 
               {iikoModalStep === 'preview' && (
                 <>
-                  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>
+                  <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>
                     Разверните категорию и выберите нужные позиции. Выбрано: <strong>{iikoCheckedItems.size}</strong>
-                  </p>
-                  <p style={{ margin: '0 0 8px', fontSize: 11, color: '#9ca3af' }}>
-                    Групп: {iikoGroupList.length} | Первые 3: {iikoGroupList.slice(0, 3).map(g => `"${g}"`).join(', ')}
                   </p>
                   <div>
                     {iikoGroupList.map((g) => {
@@ -451,14 +448,6 @@ export function TtkPage() {
                       )
                     })}
                   </div>
-                  <div className="ttk-modal__footer-row" style={{ marginTop: 16 }}>
-                    <button className="ttk-ref-btn" type="button" onClick={() => setIikoModalStep('settings')}>← Назад</button>
-                    <button className="ttk-primary-button" type="button"
-                      disabled={iikoCheckedItems.size === 0}
-                      onClick={() => void importIikoItems()}>
-                      Импортировать {iikoCheckedItems.size} позиций
-                    </button>
-                  </div>
                 </>
               )}
 
@@ -466,6 +455,15 @@ export function TtkPage() {
                 <p style={{ padding: '20px 0', textAlign: 'center', color: '#6b7280' }}>Создаю позиции в базе...</p>
               )}
             </div>
+            {iikoModalStep === 'preview' && (
+              <div className="ttk-modal__footer">
+                <button className="ttk-primary-button" type="button"
+                  disabled={iikoCheckedItems.size === 0}
+                  onClick={() => void importIikoItems()}>
+                  Импортировать {iikoCheckedItems.size} позиций
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

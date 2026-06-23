@@ -956,6 +956,18 @@
   max-width: 95vw;
   box-shadow: 0 20px 60px rgba(0,0,0,.18);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.ttk-modal__footer {
+  padding: 14px 20px;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .ttk-modal__header {
@@ -994,8 +1006,9 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-height: 70vh;
   overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .ttk-ref-section h4 {
