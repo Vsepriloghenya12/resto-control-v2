@@ -459,20 +459,16 @@ export function InventoryPage() {
                 </p>
               : <table className="inv-table">
                   <thead>
-                    <tr><th>Название</th><th>Категория</th><th>Ед.</th><th>Мин. остаток</th><th></th></tr>
+                    <tr><th>Название</th><th></th><th>Ед.</th></tr>
                   </thead>
                   <tbody>
                     {nomVisible.map(p => (
                       <tr key={p.id}>
                         <td><strong>{p.name}</strong></td>
-                        <td><span className="inv-cat-badge">{p.category || '—'}</span></td>
-                        <td>{p.unit}</td>
-                        <td>{p.minBalance ?? <span className="inv-cell-dim">—</span>}</td>
                         <td>
-                          <div className="inv-row-actions">
-                            <button type="button" className="inv-del-btn" onClick={() => void deleteProduct(p.id)}>✕</button>
-                          </div>
+                          <button type="button" className="inv-del-btn" onClick={() => void deleteProduct(p.id)}>✕</button>
                         </td>
+                        <td>{p.unit}</td>
                       </tr>
                     ))}
                   </tbody>
