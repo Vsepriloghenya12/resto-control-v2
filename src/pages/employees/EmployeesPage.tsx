@@ -293,13 +293,14 @@ export function EmployeesPage() {
   const [positionNewName, setPositionNewName] = useState('')
   const [positionNewDept, setPositionNewDept] = useState('Зал')
   const [positionSaving, setPositionSaving] = useState(false)
+  const [positionError, setPositionError] = useState('')
 
   const positionNames = positionsList.length > 0 ? positionsList.map(p => p.name) : DEFAULT_POSITIONS
 
   async function loadPositions() {
     try {
       const data = await api.list<Position>('positions')
-      setPositionsList(data.sort((a, b) => a.order - b.order))
+      setPositionsList(data.items.sort((a, b) => a.order - b.order))
     } catch {
       setPositionsList([])
     }
@@ -309,10 +310,13 @@ export function EmployeesPage() {
     const name = positionNewName.trim()
     if (!name) return
     setPositionSaving(true)
+    setPositionError('')
     try {
       const created = await api.create<Position>('positions', { name, department: positionNewDept, order: positionsList.length + 1 })
       setPositionsList(prev => [...prev, created])
       setPositionNewName('')
+    } catch (e) {
+      setPositionError(e instanceof Error ? e.message : 'Ошибка при добавлении')
     } finally {
       setPositionSaving(false)
     }
@@ -1291,45 +1295,46 @@ export function EmployeesPage() {
         <div className="employees-modal-backdrop" role="presentation" onMouseDown={() => setPositionsOpen(false)}>
           <div className="employees-modal employees-modal--positions" role="dialog" aria-modal="true" aria-label="Справочник должностей" onMouseDown={(e) => e.stopPropagation()}>
             <div className="employees-modal__header">
-              <h3>Справочник должностей</h3>
+              <h3>Должности</h3>
               <button type="button" className="employees-modal__close" onClick={() => setPositionsOpen(false)} aria-label="Закрыть">×</button>
             </div>
-            <div className="employees-modal__body">
-              <p className="employees-positions__hint">Должности используются при создании сотрудников, чек-листов и задач.</p>
-              <div className="employees-positions__list">
-                {positionsList.length === 0 && <p className="employees-positions__empty">Должности не добавлены. Добавьте первую должность.</p>}
-                {Object.entries(
-                  positionsList.reduce<Record<string, Position[]>>((acc, p) => {
-                    const d = p.department || 'Другое';
-                    (acc[d] = acc[d] || []).push(p)
-                    return acc
-                  }, {})
-                ).map(([dept, items]) => (
-                  <div key={dept} className="employees-positions__group">
-                    <span className="employees-positions__dept">{dept}</span>
-                    {items.map(p => (
-                      <div key={p.id} className="employees-positions__item">
-                        <span>{p.name}</span>
-                        <button type="button" className="employees-positions__delete" onClick={() => void deletePosition(p.id)} aria-label="Удалить">×</button>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <div className="employees-positions__add">
-                <input
-                  value={positionNewName}
-                  onChange={(e) => setPositionNewName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void addPosition() }}
-                  placeholder="Название должности"
-                />
-                <select value={positionNewDept} onChange={(e) => setPositionNewDept(e.target.value)}>
-                  {scheduleDepartments.map(d => <option key={d}>{d}</option>)}
-                </select>
-                <button type="button" className="employees-create-button" disabled={positionSaving || !positionNewName.trim()} onClick={() => void addPosition()}>
-                  + Добавить
-                </button>
-              </div>
+            <div className="employees-positions__add">
+              <input
+                value={positionNewName}
+                onChange={(e) => { setPositionNewName(e.target.value); setPositionError('') }}
+                onKeyDown={(e) => { if (e.key === 'Enter') void addPosition() }}
+                placeholder="Название должности"
+                autoFocus
+              />
+              <select value={positionNewDept} onChange={(e) => setPositionNewDept(e.target.value)}>
+                {scheduleDepartments.map(d => <option key={d}>{d}</option>)}
+              </select>
+              <button type="button" className="employees-positions__add-btn" disabled={positionSaving || !positionNewName.trim()} onClick={() => void addPosition()}>
+                {positionSaving ? '...' : '+ Добавить'}
+              </button>
+            </div>
+            {positionError && <p className="employees-error" style={{ margin: '0', padding: '0 24px 8px', fontSize: 13 }}>{positionError}</p>}
+            <div className="employees-positions__list">
+              {positionsList.length === 0 && (
+                <p className="employees-positions__empty">Должностей пока нет</p>
+              )}
+              {Object.entries(
+                positionsList.reduce<Record<string, Position[]>>((acc, p) => {
+                  const d = p.department || 'Другое';
+                  (acc[d] = acc[d] || []).push(p)
+                  return acc
+                }, {})
+              ).map(([dept, items]) => (
+                <div key={dept} className="employees-positions__group">
+                  <span className="employees-positions__dept">{dept}</span>
+                  {items.map(p => (
+                    <div key={p.id} className="employees-positions__item">
+                      <span>{p.name}</span>
+                      <button type="button" className="employees-positions__delete" onClick={() => void deletePosition(p.id)} aria-label="Удалить">×</button>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         </div>
