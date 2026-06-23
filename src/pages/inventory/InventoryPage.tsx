@@ -210,18 +210,6 @@ export function InventoryPage() {
   const active = assignments.filter(a => a.status !== 'completed' && a.status !== 'submitted')
   const submitted = assignments.filter(a => a.status === 'completed' || a.status === 'submitted')
 
-  // Номенклатура
-  const nomProducts = useMemo(() => {
-    const q = nomQuery.trim().toLowerCase()
-    return products.filter(p => {
-      if (nomSection !== 'all') {
-        const sec = p.section === sectionNames[nomSection] || p.section === nomSection
-        if (!sec) return false
-      }
-      if (q && !p.name.toLowerCase().includes(q) && !p.category.toLowerCase().includes(q)) return false
-      return true
-    })
-  }, [products, nomQuery, nomSection])
 
   async function deleteProduct(id: string) {
     await api.update<InventoryProduct>('inventory-products', id, { active: false })
