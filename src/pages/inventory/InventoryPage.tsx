@@ -43,10 +43,10 @@ export function InventoryPage() {
   const [assignDate, setAssignDate] = useState(new Date().toISOString().slice(0, 10))
   const [assignTitle, setAssignTitle] = useState('Вечерняя инвентаризация')
 
-  // ── Номенклатура (меню / ТТК) ──
+  // ── Номенклатура (бланки по подразделениям) ──
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
   const [nomQuery, setNomQuery] = useState('')
-  const [nomCat, setNomCat] = useState('all')
+  const [nomBlank, setNomBlank] = useState<SectionKey>('bar')
 
   // Добавить / редактировать позицию
   const [editOpen, setEditOpen] = useState(false)
@@ -156,6 +156,34 @@ export function InventoryPage() {
     showNotice(`Импортировано ${count} позиций из iiko.`)
   }
 
+  // Добавить продукт вручную
+  const [addProdOpen, setAddProdOpen] = useState(false)
+  const [addProdName, setAddProdName] = useState('')
+  const [addProdUnit, setAddProdUnit] = useState('шт')
+  const [addProdCat, setAddProdCat] = useState('')
+  const [addProdMin, setAddProdMin] = useState('')
+  const [addProdSaving, setAddProdSaving] = useState(false)
+
+  function openAddProduct() {
+    setAddProdName(''); setAddProdUnit('шт'); setAddProdCat(''); setAddProdMin('')
+    setAddProdOpen(true)
+  }
+
+  async function doAddProduct() {
+    if (!addProdName.trim()) return
+    setAddProdSaving(true)
+    const created = await api.create<InventoryProduct>('inventory-products', {
+      name: addProdName.trim(), unit: addProdUnit.trim() || 'шт',
+      category: addProdCat.trim() || 'Без категории',
+      section: sectionNames[nomBlank],
+      minBalance: addProdMin ? parseFloat(addProdMin) : 0,
+      active: true,
+    })
+    setProducts(prev => [...prev, created])
+    setAddProdOpen(false); setAddProdSaving(false)
+    showNotice('Продукт добавлен.')
+  }
+
   // iiko import
   type IikoItem = { name: string; unit: string; category: string }
   const [iikoOpen, setIikoOpen] = useState(false)
@@ -181,12 +209,13 @@ export function InventoryPage() {
 
   const nomVisible = useMemo(() => {
     const q = nomQuery.trim().toLowerCase()
-    return menuItems.filter(m => {
-      if (nomCat !== 'all' && m.category !== nomCat) return false
-      if (q && !m.name.toLowerCase().includes(q) && !m.category.toLowerCase().includes(q)) return false
+    const sectionTitle = sectionNames[nomBlank]
+    return products.filter(p => {
+      if (p.section !== sectionTitle && p.section !== nomBlank) return false
+      if (q && !p.name.toLowerCase().includes(q)) return false
       return true
     })
-  }, [menuItems, nomQuery, nomCat])
+  }, [products, nomQuery, nomBlank])
 
   // Назначить
   async function doAssign() {
@@ -236,7 +265,7 @@ export function InventoryPage() {
   async function openIikoImport() {
     setIikoOpen(true); setIikoLoading(true); setIikoError('')
     setIikoAllItems([]); setIikoChecked(new Set()); setIikoSearch('')
-    setIikoActiveCat('all'); setIikoTargetSection('bar')
+    setIikoActiveCat('all'); setIikoTargetSection(nomBlank)
     try {
       const resp = await fetch('/api/iiko/inventory?filter=goods', { credentials: 'include' })
       const data = await resp.json()
@@ -286,7 +315,7 @@ export function InventoryPage() {
         </button>
         <button type="button" className={`inv-tab${tab === 'nomenclature' ? ' is-active' : ''}`} onClick={() => setTab('nomenclature')}>
           Номенклатура
-          {menuItems.length > 0 && <span className="inv-tab__badge">{menuItems.length}</span>}
+          {products.length > 0 && <span className="inv-tab__badge">{products.length}</span>}
         </button>
       </div>
 
@@ -388,65 +417,60 @@ export function InventoryPage() {
         </div>
       )}
 
-      {/* ── Номенклатура (меню / ТТК) ── */}
+      {/* ── Номенклатура (бланки по подразделениям) ── */}
       {tab === 'nomenclature' && (
         <div className="inv-content">
+          {/* Выбор подразделения */}
+          <div className="inv-blanks">
+            {sections.map(s => {
+              const count = products.filter(p => p.section === s.title || p.section === s.id).length
+              return (
+                <button key={s.id} type="button"
+                  className={`inv-blank-btn${nomBlank === s.id ? ' is-active' : ''}`}
+                  onClick={() => setNomBlank(s.id)}>
+                  <span className="inv-blank-btn__name">{s.title}</span>
+                  <span className="inv-blank-btn__cnt">{count} позиций</span>
+                </button>
+              )
+            })}
+          </div>
+
           <div className="inv-card">
-            {/* Шапка */}
             <div className="inv-card__header">
-              <h3>Меню / ТТК <span className="inv-card__count">{nomVisible.length} из {menuItems.length}</span></h3>
+              <h3>{sectionNames[nomBlank]} <span className="inv-card__count">{nomVisible.length} позиций</span></h3>
               <div className="inv-card__actions">
-                <button type="button" className="inv-add-btn" onClick={() => openEdit()}>+ Добавить</button>
-                <button type="button" className="inv-iiko-load-btn" onClick={() => void openMenuIiko()}>↓ Из iiko</button>
+                <button type="button" className="inv-add-btn" onClick={() => openAddProduct()}>+ Добавить вручную</button>
+                <button type="button" className="inv-iiko-load-btn" onClick={() => void openIikoImport()}>↓ Из iiko</button>
               </div>
             </div>
 
-            {/* Категориальные табы */}
-            <div className="inv-nom-cats">
-              <button type="button" className={`inv-nom-cat${nomCat === 'all' ? ' is-active' : ''}`} onClick={() => setNomCat('all')}>
-                Все <span>{menuItems.length}</span>
-              </button>
-              {menuCats.map(cat => (
-                <button key={cat} type="button" className={`inv-nom-cat${nomCat === cat ? ' is-active' : ''}`} onClick={() => setNomCat(cat)}>
-                  {cat} <span>{menuItems.filter(m => m.category === cat).length}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Поиск */}
             <div className="inv-nom-filters">
               <div className="inv-nom-search">
                 <SearchIcon />
-                <input value={nomQuery} onChange={e => setNomQuery(e.target.value)} placeholder="Поиск по названию или категории..." />
+                <input value={nomQuery} onChange={e => setNomQuery(e.target.value)} placeholder="Поиск по названию..." />
               </div>
             </div>
 
-            {/* Таблица */}
             {nomVisible.length === 0
-              ? <p className="inv-empty">{menuItems.length === 0 ? 'Загрузите меню из iiko или добавьте позиции вручную' : 'Ничего не найдено'}</p>
+              ? <p className="inv-empty">
+                  {products.filter(p => p.section === sectionNames[nomBlank] || p.section === nomBlank).length === 0
+                    ? <>Бланк пуст. Добавьте товары из iiko или вручную.</>
+                    : 'Ничего не найдено'}
+                </p>
               : <table className="inv-table">
                   <thead>
-                    <tr>
-                      <th>Название</th>
-                      <th>Категория</th>
-                      <th>Ед.</th>
-                      <th>Цена</th>
-                      <th>Описание</th>
-                      <th></th>
-                    </tr>
+                    <tr><th>Название</th><th>Категория</th><th>Ед.</th><th>Мин. остаток</th><th></th></tr>
                   </thead>
                   <tbody>
-                    {nomVisible.map(m => (
-                      <tr key={m.id}>
-                        <td><strong>{m.name}</strong></td>
-                        <td><span className="inv-cat-badge">{m.category}</span></td>
-                        <td>{m.unit}</td>
-                        <td>{m.price != null ? `${m.price} ₽` : <span className="inv-cell-dim">—</span>}</td>
-                        <td className="inv-desc-cell">{m.description || <span className="inv-cell-dim">—</span>}</td>
+                    {nomVisible.map(p => (
+                      <tr key={p.id}>
+                        <td><strong>{p.name}</strong></td>
+                        <td><span className="inv-cat-badge">{p.category || '—'}</span></td>
+                        <td>{p.unit}</td>
+                        <td>{p.minBalance ?? <span className="inv-cell-dim">—</span>}</td>
                         <td>
                           <div className="inv-row-actions">
-                            <button type="button" className="inv-edit-btn" onClick={() => openEdit(m)}>✎</button>
-                            <button type="button" className="inv-del-btn" onClick={() => void deleteMenuItem(m.id)}>✕</button>
+                            <button type="button" className="inv-del-btn" onClick={() => void deleteProduct(p.id)}>✕</button>
                           </div>
                         </td>
                       </tr>
@@ -572,6 +596,44 @@ export function InventoryPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Добавить продукт вручную */}
+      {addProdOpen && (
+        <div className="inv-iiko-backdrop" onMouseDown={() => !addProdSaving && setAddProdOpen(false)}>
+          <div className="inv-add-modal" onMouseDown={e => e.stopPropagation()}>
+            <div className="inv-add-modal__header">
+              <strong>Добавить продукт в «{sectionNames[nomBlank]}»</strong>
+              <button type="button" className="inv-iiko-close" onClick={() => setAddProdOpen(false)}>✕</button>
+            </div>
+            <div className="inv-add-modal__body">
+              <label className="inv-field">
+                <span>Название *</span>
+                <input value={addProdName} onChange={e => setAddProdName(e.target.value)} placeholder="Например: Сыр Гауда" autoFocus />
+              </label>
+              <div className="inv-add-row">
+                <label className="inv-field">
+                  <span>Единица измерения</span>
+                  <input value={addProdUnit} onChange={e => setAddProdUnit(e.target.value)} placeholder="шт" />
+                </label>
+                <label className="inv-field">
+                  <span>Мин. остаток</span>
+                  <input type="number" min="0" value={addProdMin} onChange={e => setAddProdMin(e.target.value)} placeholder="0" />
+                </label>
+              </div>
+              <label className="inv-field">
+                <span>Категория</span>
+                <input value={addProdCat} onChange={e => setAddProdCat(e.target.value)} placeholder="Например: Молочка" />
+              </label>
+            </div>
+            <div className="inv-add-modal__footer">
+              <button type="button" className="inv-iiko-cancel" onClick={() => setAddProdOpen(false)}>Отмена</button>
+              <button type="button" className="inv-iiko-import" disabled={!addProdName.trim() || addProdSaving} onClick={() => void doAddProduct()}>
+                {addProdSaving ? 'Сохраняю...' : 'Добавить'}
+              </button>
+            </div>
           </div>
         </div>
       )}

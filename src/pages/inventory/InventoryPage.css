@@ -636,3 +636,30 @@
   cursor: pointer; transition: opacity 0.15s;
 }
 .inv-iiko-import:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Бланки подразделений (вкладка Номенклатура) ── */
+.inv-blanks {
+  display: flex;
+  gap: 12px;
+  padding: 0 24px 4px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.inv-blank-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 120px;
+  padding: 14px 20px;
+  border: 2px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.inv-blank-btn:hover { border-color: #6366f1; background: #f5f3ff; }
+.inv-blank-btn.is-active { border-color: #4f46e5; background: #eef2ff; }
+.inv-blank-btn__name { font-size: 15px; font-weight: 700; color: #111827; }
+.inv-blank-btn.is-active .inv-blank-btn__name { color: #4f46e5; }
+.inv-blank-btn__cnt { font-size: 12px; color: #6b7280; font-weight: 500; }
