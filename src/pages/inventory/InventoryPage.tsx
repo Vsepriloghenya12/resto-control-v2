@@ -590,16 +590,31 @@ export function InventoryPage() {
 
             {iikoLoading && <div className="inv-iiko-state">Загружаю товары из iiko...</div>}
             {iikoError && <div className="inv-iiko-state inv-iiko-state--error">⚠ {iikoError}<br /><small>Проверьте настройки в разделе «Интеграции»</small></div>}
-            {iikoImporting && <div className="inv-iiko-state">Импортирую {iikoCheckedTotal} позиций...</div>}
+            {iikoImporting && <div className="inv-iiko-state">Импортирую {iikoCheckedTotal} позиций в «{sectionNames[iikoTargetSection]}»...</div>}
 
             {!iikoLoading && !iikoError && !iikoImporting && (
               <>
+                {/* ШАГ 1: выбор бланка */}
+                <div className="inv-iiko-target">
+                  <span className="inv-iiko-target__label">Добавить в бланк:</span>
+                  <div className="inv-iiko-target__btns">
+                    {sections.map(s => (
+                      <button key={s.id} type="button"
+                        className={`inv-iiko-target__btn${iikoTargetSection === s.id ? ' is-active' : ''}`}
+                        onClick={() => setIikoTargetSection(s.id)}>{s.title}</button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ШАГ 2: группы из iiko */}
                 <div className="inv-iiko-sec-tabs">
                   <button type="button" className={`inv-iiko-sec-tab${iikoActiveCat === 'all' ? ' is-active' : ''}`} onClick={() => setIikoActiveCat('all')}>
                     Все <span className="inv-iiko-sec-tab__cnt inv-iiko-sec-tab__cnt--gray">{iikoAllItems.length}</span>
                   </button>
                   {iikoCats.map(cat => (
-                    <button key={cat} type="button" className={`inv-iiko-sec-tab${iikoActiveCat === cat ? ' is-active' : ''}`} onClick={() => setIikoActiveCat(cat)}>{cat}</button>
+                    <button key={cat} type="button" className={`inv-iiko-sec-tab${iikoActiveCat === cat ? ' is-active' : ''}`} onClick={() => setIikoActiveCat(cat)}>
+                      {cat} <span className="inv-iiko-sec-tab__cnt">{iikoAllItems.filter(i => i.category === cat).length}</span>
+                    </button>
                   ))}
                 </div>
 
@@ -636,20 +651,10 @@ export function InventoryPage() {
                 </div>
 
                 <div className="inv-iiko-footer">
-                  <div className="inv-iiko-footer__section">
-                    <span>Подразделение:</span>
-                    <div className="inv-iiko-section-btns">
-                      {sections.map(s => (
-                        <button key={s.id} type="button"
-                          className={`inv-iiko-section-btn${iikoTargetSection === s.id ? ' is-active' : ''}`}
-                          onClick={() => setIikoTargetSection(s.id)}>{s.title}</button>
-                      ))}
-                    </div>
-                  </div>
                   <div className="inv-iiko-footer__actions">
                     <button type="button" className="inv-iiko-cancel" onClick={() => setIikoOpen(false)}>Отмена</button>
                     <button type="button" className="inv-iiko-import" disabled={iikoCheckedTotal === 0} onClick={() => void doIikoImport()}>
-                      Импортировать {iikoCheckedTotal} позиций
+                      Добавить {iikoCheckedTotal > 0 ? `${iikoCheckedTotal} позиций` : ''} в «{sectionNames[iikoTargetSection]}»
                     </button>
                   </div>
                 </div>
