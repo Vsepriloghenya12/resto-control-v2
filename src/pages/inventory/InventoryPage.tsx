@@ -238,7 +238,7 @@ export function InventoryPage() {
     setIikoAllItems([]); setIikoChecked(new Set()); setIikoSearch('')
     setIikoActiveCat('all'); setIikoTargetSection('bar')
     try {
-      const resp = await fetch('/api/iiko/inventory', { credentials: 'include' })
+      const resp = await fetch('/api/iiko/inventory?filter=goods', { credentials: 'include' })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка загрузки')
       setIikoAllItems(data.items as IikoItem[])
