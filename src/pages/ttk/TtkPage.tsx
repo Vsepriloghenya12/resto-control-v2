@@ -85,7 +85,7 @@ export function TtkPage() {
   const [iikoPassword, setIikoPassword] = useState('')
   const [iikoConnecting, setIikoConnecting] = useState(false)
   const [iikoError, setIikoError] = useState('')
-  const [iikoPreviewItems, setIikoPreviewItems] = useState<{ name: string; unit: string; price: number; group: string }[]>([])
+  const [iikoPreviewItems, setIikoPreviewItems] = useState<{ name: string; unit: string; price: number; group: string; recipe: RecipeLine[] }[]>([])
   const [iikoSelectedGroups, setIikoSelectedGroups] = useState<Set<string>>(new Set())
   const [editModalOpen, setEditModalOpen] = useState(false)
 
@@ -224,11 +224,12 @@ export function TtkPage() {
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка')
       // nomenclature endpoint returns {name, unit, price, group} — already has group name
-      const mapped = (data.items as { name: string; unit: string; price?: number; group?: string }[]).map(i => ({
+      const mapped = (data.items as { name: string; unit: string; price?: number; group?: string; recipe?: RecipeLine[] }[]).map(i => ({
         name: i.name,
         unit: i.unit,
         price: i.price || 0,
         group: i.group || 'Без категории',
+        recipe: i.recipe || [],
       }))
       setIikoPreviewItems(mapped)
       setIikoCheckedItems(new Set())
@@ -251,6 +252,7 @@ export function TtkPage() {
         group: item.group,
         unit: item.unit,
         price: item.price || 0,
+        recipe: item.recipe || [],
       })
       setItems((cur) => [...cur, created])
       count++

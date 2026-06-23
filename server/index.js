@@ -1550,64 +1550,80 @@ async function handleIiko(req, res, state, pathname, auth) {
     const host = restaurant.iikoHost
     const login = restaurant.iikoLogin
     const password = restaurant.iikoPassword
-    if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено. Укажите хост, логин и пароль в настройках.')
+    if (!host || !login || !password) throw httpError(400, 'Подключение к iiko не настроено.')
 
     const token = await iikoToken(host, login, password)
-
-    // Fetch products XML
     const { body: productsXml } = await iikoGet(`https://${host}/resto/api/products?key=${encodeURIComponent(token)}`)
 
-    // Parse products XML: id, name, mainUnit, category, price
-    const items = []
+    // Parse groups and dishes from same XML
+    const groupMap = new Map() // id → { name, parentId }
+    const dishes = []
+
     const productRe = /<productDto>([\s\S]*?)<\/productDto>/g
     let pm
     while ((pm = productRe.exec(productsXml)) !== null) {
       const block = pm[1]
       const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const type = get('productType')
-      if (type !== 'DISH') continue
+      const id = get('id')
       const name = get('name')
-      if (!name) continue
+      const type = get('productType')
+      const parentId = get('parent') || get('parentId') || ''
+
+      if (!id || !name) continue
+
+      if (!type) {
+        groupMap.set(id, { name, parentId })
+        continue
+      }
+      if (type !== 'DISH') continue
+
       const unit = get('mainUnit') || 'шт'
-      const price = parseFloat(get('price') || '0') || 0
-      const category = get('category') || get('productCategoryId') || ''
-      const groupId = get('parent') || get('parentId') || ''
-      items.push({ name, unit, price, category, groupId })
+      // Try multiple price fields
+      const priceRaw = get('price') || get('sellPrice') || get('defaultSellPrice') || '0'
+      const price = parseFloat(priceRaw) || 0
+
+      // Parse recipe from <techCardItems> block if present
+      const techMatch = /<techCardItems>([\s\S]*?)<\/techCardItems>/.exec(block)
+      const recipe = []
+      if (techMatch) {
+        const techRe = /<techCardItem>([\s\S]*?)<\/techCardItem>/g
+        let tm
+        while ((tm = techRe.exec(techMatch[1])) !== null) {
+          const tb = tm[1]
+          const tget = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(tb); return m ? m[1].trim() : '' }
+          const ingredient = tget('productName') || tget('name') || ''
+          const amount = tget('amount') || tget('quantity') || tget('netto') || ''
+          const ingUnit = tget('unitName') || tget('unit') || ''
+          if (ingredient) recipe.push({ ingredient, amount: `${amount}${ingUnit ? ' ' + ingUnit : ''}` })
+        }
+      }
+
+      dishes.push({ id, name, unit, price, parentId, recipe })
     }
 
-    // Try to get category names
-    const { body: catsXml } = await iikoGet(`https://${host}/resto/api/productCategories?key=${encodeURIComponent(token)}`)
-    const catMap = {}
-    const catRe = /<productCategory>([\s\S]*?)<\/productCategory>/g
-    let cm
-    while ((cm = catRe.exec(catsXml)) !== null) {
-      const block = cm[1]
-      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const cid = get('id')
-      const cname = get('name')
-      if (cid && cname) catMap[cid] = cname
+    // Resolve group name: walk up to find meaningful (non-root) parent name
+    function resolveGroup(parentId, depth = 0) {
+      if (!parentId || depth > 8) return ''
+      const g = groupMap.get(parentId)
+      if (!g) return ''
+      if (g.parentId && groupMap.has(g.parentId)) {
+        // If parent has a parent → go up one more level to get a meaningful category
+        const upper = resolveGroup(g.parentId, depth + 1)
+        return upper || g.name
+      }
+      return g.name
     }
 
-    // Also try nomenclature groups
-    const { body: groupsXml } = await iikoGet(`https://${host}/resto/api/nomenclature?key=${encodeURIComponent(token)}`).catch(() => ({ body: '' }))
-    const groupMap = {}
-    const groupRe = /<group>([\s\S]*?)<\/group>/g
-    let gm
-    while ((gm = groupRe.exec(groupsXml)) !== null) {
-      const block = gm[1]
-      const get = (tag) => { const m = new RegExp(`<${tag}>([^<]*)<\/${tag}>`).exec(block); return m ? m[1].trim() : '' }
-      const gid = get('id')
-      const gname = get('name')
-      if (gid && gname) groupMap[gid] = gname
-    }
+    const items = dishes.map(d => ({
+      name: d.name,
+      unit: d.unit,
+      price: d.price,
+      group: resolveGroup(d.parentId) || 'Без категории',
+      recipe: d.recipe,
+    })).sort((a, b) => a.name.localeCompare(b.name, 'ru'))
 
-    // Resolve group names
-    const resolved = items.map((item) => ({
-      ...item,
-      group: catMap[item.category] || groupMap[item.groupId] || item.category || 'Без категории',
-    }))
-
-    send(res, 200, { items: resolved, total: resolved.length })
+    console.log('[iiko/nomenclature] dishes:', items.length, 'groups:', new Set(items.map(i => i.group)).size)
+    send(res, 200, { items, total: items.length })
     return true
   }
 
