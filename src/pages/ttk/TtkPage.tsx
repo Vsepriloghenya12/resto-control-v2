@@ -321,68 +321,124 @@ export function TtkPage() {
         </main>
 
         <aside className="ttk-editor-panel">
-          {selectedItem ? <div className="ttk-editor-scroll"><section className="ttk-card-hero">
-            <div className="ttk-card-hero__photo-col">
-              <div className="ttk-card-hero__cover" onClick={() => photoInputRef.current?.click()}>
-                {selectedItem.photoUrl
-                  ? <img className="ttk-card-hero__cover-img" src={selectedItem.photoUrl} alt={selectedItem.name} />
-                  : <div className="ttk-card-hero__cover-empty"><span>🍽</span><span>Добавить фото</span></div>}
-                <div className="ttk-card-hero__cover-overlay">
-                  {selectedItem.photoUrl ? 'Изменить' : '+ Фото'}
-                </div>
-                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
-              </div>
-              {selectedItem.photoUrl ? (
-                <button type="button" className="ttk-card-hero__photo-remove" onClick={() => updateSelected({ photoUrl: '' })}>✕ Удалить фото</button>
-              ) : null}
-            </div>
-            <div className="ttk-card-hero__info"><span>{selectedGroup?.name}</span><h2>{selectedItem.name}</h2><p>{selectedItem.description || 'Описание позиции пока не заполнено.'}</p></div></section>
-            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Основное</h3></div><div className="ttk-form-grid"><label><span>Наименование</span><input value={selectedItem.name} onChange={(e) => updateSelected({ name: e.target.value })} /></label><label><span>Единица измерения</span><select value={selectedItem.unit} onChange={(e) => updateSelected({ unit: e.target.value })}><option value="">—</option>{refUnits.map((u) => <option key={u}>{u}</option>)}</select></label><label><span>Цена</span><input value={selectedItem.price} type="number" onChange={(e) => updateSelected({ price: Number(e.target.value || 0) })} /></label><label><span>Тэг</span><select value={selectedItem.tag || ''} onChange={(e) => updateSelected({ tag: e.target.value })}><option value="">—</option>{refTags.map((t) => <option key={t}>{t}</option>)}</select></label><label className="ttk-field-wide"><span>Описание</span><textarea value={selectedItem.description || ''} onChange={(e) => updateSelected({ description: e.target.value })} /></label></div></section>
-            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Технология</h3></div><div className="ttk-recipe-list">{(selectedItem.recipe || []).map((line, index) => <div className="ttk-recipe-line" key={`${line.ingredient}-${index}`}><span>{index + 1}</span><input value={line.ingredient} readOnly /><input value={line.amount || line.quantity || ''} readOnly /></div>)}{!selectedItem.recipe?.length ? <p className="ttk-empty-small">Раскладка ещё не заполнена.</p> : null}<div className="ttk-form-grid ttk-form-grid--two"><label><span>Время приготовления</span><input value={String(selectedItem.cookingTime || '')} onChange={(e) => updateSelected({ cookingTime: e.target.value })} /></label><label><span>Выход готового блюда</span><input value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} /></label></div></div></section>
-            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>КБЖУ</h3></div><div className="ttk-kbju-grid"><label><span>Ккал</span><input type="number" min="0" value={getKcal(selectedItem)} onChange={(e) => updateSelected({ kcal: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, kcal: Number(e.target.value || 0) } })} /></label><label><span>Белки, г</span><input type="number" min="0" value={getProtein(selectedItem)} onChange={(e) => updateSelected({ proteins: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, protein: Number(e.target.value || 0), proteins: Number(e.target.value || 0) } })} /></label><label><span>Жиры, г</span><input type="number" min="0" value={getFat(selectedItem)} onChange={(e) => updateSelected({ fats: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, fat: Number(e.target.value || 0), fats: Number(e.target.value || 0) } })} /></label><label><span>Углеводы, г</span><input type="number" min="0" value={getCarbs(selectedItem)} onChange={(e) => updateSelected({ carbs: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, carbs: Number(e.target.value || 0) } })} /></label></div></section>
-            <section className="ttk-section-card">
-              <div className="ttk-section-card__header">
-                <h3>Гастрономические пары</h3>
-                <button type="button" className="ttk-ref-btn ttk-ref-btn--primary" onClick={() => updateSelected({ gastroPairs: [...(selectedItem.gastroPairs || []), ''] })}>+ Добавить</button>
-              </div>
-              <div className="ttk-pairs-list">
-                {(selectedItem.gastroPairs || []).length === 0 ? <p className="ttk-empty-small">Гастропары ещё не добавлены.</p> : null}
-                {(selectedItem.gastroPairs || []).map((pair, i) => (
-                  <div key={i} className="ttk-pair-row">
-                    <span className="ttk-pair-row__num">{i + 1}</span>
-                    <select
-                      value={pair}
-                      onChange={(e) => {
-                        const next = [...(selectedItem.gastroPairs || [])]
-                        next[i] = e.target.value
-                        updateSelected({ gastroPairs: next })
-                      }}
-                    >
-                      <option value="">— выберите блюдо —</option>
-                      {items.filter((it) => it.id !== selectedItem.id).map((it) => (
-                        <option key={it.id} value={it.id}>{it.name}</option>
+          {selectedItem ? (
+            <div className="ttk-editor-scroll">
+              <div className="ttk-editor-cols">
+
+                {/* ── Левая колонка: формы ── */}
+                <div className="ttk-editor-left">
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header"><h3>Основное</h3></div>
+                    <div className="ttk-form-grid">
+                      <label className="ttk-field-wide"><span>Наименование</span><input value={selectedItem.name} onChange={(e) => updateSelected({ name: e.target.value })} /></label>
+                      <label><span>Единица измерения</span><select value={selectedItem.unit} onChange={(e) => updateSelected({ unit: e.target.value })}><option value="">—</option>{refUnits.map((u) => <option key={u}>{u}</option>)}</select></label>
+                      <label><span>Цена</span><input value={selectedItem.price} type="number" onChange={(e) => updateSelected({ price: Number(e.target.value || 0) })} /></label>
+                      <label><span>Тэг</span><select value={selectedItem.tag || ''} onChange={(e) => updateSelected({ tag: e.target.value })}><option value="">—</option>{refTags.map((t) => <option key={t}>{t}</option>)}</select></label>
+                      <label className="ttk-field-wide"><span>Описание</span><textarea value={selectedItem.description || ''} onChange={(e) => updateSelected({ description: e.target.value })} /></label>
+                    </div>
+                  </section>
+
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header"><h3>Технология</h3></div>
+                    <div className="ttk-recipe-list">
+                      {(selectedItem.recipe || []).map((line, index) => (
+                        <div className="ttk-recipe-line" key={`${line.ingredient}-${index}`}>
+                          <span>{index + 1}</span>
+                          <input value={line.ingredient} readOnly />
+                          <input value={line.amount || line.quantity || ''} readOnly />
+                        </div>
                       ))}
-                    </select>
-                    <button type="button" className="ttk-pair-row__del" onClick={() => {
-                      const next = (selectedItem.gastroPairs || []).filter((_, idx) => idx !== i)
-                      updateSelected({ gastroPairs: next })
-                    }}>✕</button>
+                      {!selectedItem.recipe?.length ? <p className="ttk-empty-small">Раскладка ещё не заполнена.</p> : null}
+                      <div className="ttk-form-grid">
+                        <label><span>Время приготовления</span><input value={String(selectedItem.cookingTime || '')} onChange={(e) => updateSelected({ cookingTime: e.target.value })} /></label>
+                        <label><span>Выход готового блюда</span><input value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} /></label>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header"><h3>Продажа и контроль</h3></div>
+                    <div className="ttk-switch-grid">
+                      <label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.takeaway)} onChange={(e) => updateSelected({ takeaway: e.target.checked })} /><span>На вынос</span></label>
+                      <label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.online)} onChange={(e) => updateSelected({ online: e.target.checked })} /><span>Онлайн-заказ</span></label>
+                      <label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.discounts)} onChange={(e) => updateSelected({ discounts: e.target.checked })} /><span>Скидки</span></label>
+                      <label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.marked)} onChange={(e) => updateSelected({ marked: e.target.checked })} /><span>Маркировка</span></label>
+                      <label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.requiresScan)} onChange={(e) => updateSelected({ requiresScan: e.target.checked })} /><span>Нужен скан</span></label>
+                      <label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.excise)} onChange={(e) => updateSelected({ excise: e.target.checked })} /><span>Подакцизный</span></label>
+                    </div>
+                  </section>
+
+                  <div className="ttk-editor-actions">
+                    <button className="ttk-primary-button" type="button" onClick={() => void saveSelected()}>Сохранить</button>
+                    <button className="ttk-danger-button" type="button" onClick={() => void deleteItem()}>Удалить</button>
                   </div>
-                ))}
+                </div>
+
+                {/* ── Правая колонка: фото + КБЖУ + допы ── */}
+                <div className="ttk-editor-right">
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header"><h3>Фото</h3></div>
+                    <div className="ttk-photo-block">
+                      <div className="ttk-card-hero__cover" onClick={() => photoInputRef.current?.click()}>
+                        {selectedItem.photoUrl
+                          ? <img className="ttk-card-hero__cover-img" src={selectedItem.photoUrl} alt={selectedItem.name} />
+                          : <div className="ttk-card-hero__cover-empty"><span>🍽</span><span>Добавить фото</span></div>}
+                        <div className="ttk-card-hero__cover-overlay">
+                          {selectedItem.photoUrl ? 'Изменить' : '+ Фото'}
+                        </div>
+                        <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+                      </div>
+                      {selectedItem.photoUrl && (
+                        <button type="button" className="ttk-card-hero__photo-remove" onClick={() => updateSelected({ photoUrl: '' })}>✕ Удалить фото</button>
+                      )}
+                      <p className="ttk-photo-hint"><strong>{selectedGroup?.name}</strong> · {selectedItem.name}</p>
+                    </div>
+                  </section>
+
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header"><h3>КБЖУ</h3></div>
+                    <div className="ttk-kbju-grid">
+                      <label><span>Ккал</span><input type="number" min="0" value={getKcal(selectedItem)} onChange={(e) => updateSelected({ kcal: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, kcal: Number(e.target.value || 0) } })} /></label>
+                      <label><span>Белки, г</span><input type="number" min="0" value={getProtein(selectedItem)} onChange={(e) => updateSelected({ proteins: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, protein: Number(e.target.value || 0), proteins: Number(e.target.value || 0) } })} /></label>
+                      <label><span>Жиры, г</span><input type="number" min="0" value={getFat(selectedItem)} onChange={(e) => updateSelected({ fats: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, fat: Number(e.target.value || 0), fats: Number(e.target.value || 0) } })} /></label>
+                      <label><span>Углеводы, г</span><input type="number" min="0" value={getCarbs(selectedItem)} onChange={(e) => updateSelected({ carbs: Number(e.target.value || 0), kbju: { ...selectedItem.kbju, carbs: Number(e.target.value || 0) } })} /></label>
+                    </div>
+                  </section>
+
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header">
+                      <h3>Гастропары</h3>
+                      <button type="button" className="ttk-ref-btn ttk-ref-btn--primary" onClick={() => updateSelected({ gastroPairs: [...(selectedItem.gastroPairs || []), ''] })}>+ Добавить</button>
+                    </div>
+                    <div className="ttk-pairs-list">
+                      {(selectedItem.gastroPairs || []).length === 0 ? <p className="ttk-empty-small">Не добавлены.</p> : null}
+                      {(selectedItem.gastroPairs || []).map((pair, i) => (
+                        <div key={i} className="ttk-pair-row">
+                          <span className="ttk-pair-row__num">{i + 1}</span>
+                          <select value={pair} onChange={(e) => { const next = [...(selectedItem.gastroPairs || [])]; next[i] = e.target.value; updateSelected({ gastroPairs: next }) }}>
+                            <option value="">— выберите блюдо —</option>
+                            {items.filter((it) => it.id !== selectedItem.id).map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
+                          </select>
+                          <button type="button" className="ttk-pair-row__del" onClick={() => updateSelected({ gastroPairs: (selectedItem.gastroPairs || []).filter((_, idx) => idx !== i) })}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="ttk-section-card">
+                    <div className="ttk-section-card__header"><h3>Допы</h3></div>
+                    <div className="ttk-form-grid">
+                      <label className="ttk-field-wide">
+                        <span>Комментарий по допам</span>
+                        <textarea value={selectedItem.extras || ''} onChange={(e) => updateSelected({ extras: e.target.value })} placeholder="Опишите возможные дополнения к блюду..." />
+                      </label>
+                    </div>
+                  </section>
+                </div>
+
               </div>
-            </section>
-            <section className="ttk-section-card">
-              <div className="ttk-section-card__header"><h3>Допы</h3></div>
-              <div className="ttk-form-grid">
-                <label className="ttk-field-wide">
-                  <span>Комментарий по допам</span>
-                  <textarea value={selectedItem.extras || ''} onChange={(e) => updateSelected({ extras: e.target.value })} placeholder="Опишите возможные дополнения к блюду..." />
-                </label>
-              </div>
-            </section>
-            <section className="ttk-section-card"><div className="ttk-section-card__header"><h3>Продажа и контроль</h3></div><div className="ttk-switch-grid"><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.takeaway)} onChange={(e) => updateSelected({ takeaway: e.target.checked })} /><span>Доступно на вынос</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.online)} onChange={(e) => updateSelected({ online: e.target.checked })} /><span>Доступно для онлайн-заказа</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.discounts)} onChange={(e) => updateSelected({ discounts: e.target.checked })} /><span>Скидки применяются</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.marked)} onChange={(e) => updateSelected({ marked: e.target.checked })} /><span>Маркировочный товар</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.requiresScan)} onChange={(e) => updateSelected({ requiresScan: e.target.checked })} /><span>Нельзя взять без пика / сканирования</span></label><label className="ttk-switch-row"><input type="checkbox" checked={Boolean(selectedItem.excise)} onChange={(e) => updateSelected({ excise: e.target.checked })} /><span>Подакцизный товар</span></label></div></section>
-            <div className="ttk-editor-actions"><button className="ttk-primary-button" type="button" onClick={() => void saveSelected()}>Сохранить изменения</button><button className="ttk-danger-button" type="button" onClick={() => void deleteItem()}>Удалить позицию</button></div>
-          </div> : <div className="ttk-empty"><span><BookIcon /></span><strong>Выберите позицию</strong></div>}
+            </div>
+          ) : <div className="ttk-empty"><span><BookIcon /></span><strong>Выберите позицию</strong></div>}
         </aside>
       </div>
 

@@ -1057,6 +1057,53 @@
 
 .ttk-ref-add input:focus { border-color: #2563eb; }
 
+/* ── Editor two-column layout ── */
+.ttk-editor-cols {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+}
+
+.ttk-editor-left,
+.ttk-editor-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Photo block in right column */
+.ttk-photo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ttk-photo-block .ttk-card-hero__cover {
+  width: 100%;
+  height: 160px;
+}
+
+.ttk-photo-block .ttk-card-hero__photo-remove {
+  width: 100%;
+}
+
+.ttk-photo-hint {
+  margin: 0;
+  font-size: 11px;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* КБЖУ 2×2 in narrow right col */
+.ttk-editor-right .ttk-kbju-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 /* Photo upload in card hero */
 .ttk-card-hero {
   display: flex;
