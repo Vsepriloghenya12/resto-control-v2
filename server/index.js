@@ -867,12 +867,21 @@ function makeOptions(correct, distractors) {
   return { options: opts, correctIndex: opts.indexOf(correct) }
 }
 
+const MENU_DECOYS = [
+  'Суп харчо', 'Жульен с грибами', 'Котлета по-киевски', 'Борщ украинский',
+  'Пельмени сибирские', 'Оливье с колбасой', 'Цезарь с курицей', 'Греческий салат',
+  'Форель на гриле', 'Рататуй', 'Тирамису', 'Наполеон', 'Медовик', 'Лазанья',
+  'Карбонара', 'Ризотто с грибами', 'Том ям', 'Утка по-пекински', 'Паэлья',
+]
+
 function generateAttestationQuestions(state, restaurantId, type) {
   const questions = []
   const qid = () => `q_${Math.random().toString(36).slice(2, 10)}`
 
   if (type === 'menu' || type === 'full') {
-    const items = (state.ttkItems || []).filter((i) => i.restaurantId === restaurantId)
+    const ttkItems = (state.ttkItems || []).filter((i) => i.restaurantId === restaurantId)
+    const menuItems = (state.menuItems || []).filter((i) => i.restaurantId === restaurantId)
+    const items = [...ttkItems, ...menuItems.map((i) => ({ ...i, group: i.category, cookingTime: null, gastroPairs: [] }))]
     const groups = [...new Set(items.map((i) => i.group || i.groupId).filter(Boolean))]
     const prices = [...new Set(items.map((i) => i.price).filter((p) => p > 0))]
     const times = [...new Set(items.map((i) => i.cookingTime).filter(Boolean))]
@@ -929,6 +938,16 @@ function generateAttestationQuestions(state, restaurantId, type) {
         const ci2 = opts2.indexOf(impostor)
         questions.push({ id: qid(), source: 'ttk', sourceId: impostor.id, text: `Какое из блюд НЕ относится к категории «${groupName}»?`, options: opts2.map((x) => x.name), correctIndex: ci2 })
       }
+    })
+
+    // "Spot the real dish" questions — work even with 1 item
+    const realNames = new Set(items.map((i) => i.name))
+    const availableDecoys = MENU_DECOYS.filter((n) => !realNames.has(n))
+    items.forEach((item) => {
+      const decoys = shuffle(availableDecoys).slice(0, 3)
+      if (decoys.length < 3) return
+      const { options, correctIndex } = makeOptions(item.name, decoys)
+      questions.push({ id: qid(), source: 'ttk', sourceId: item.id, text: 'Какое из перечисленных блюд есть в нашем меню?', options, correctIndex })
     })
 
     // Extras (описание доп) questions
