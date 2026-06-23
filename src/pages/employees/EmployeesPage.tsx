@@ -1117,15 +1117,14 @@ export function EmployeesPage() {
               <span>Статус:</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
             </label>
-            <button className="employees-reset-button" type="button" onClick={() => { setSearch(''); setPosition('Все'); setStatus('Все') }}>Сбросить</button>
+            <button className="employees-reset-button" type="button" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setIikoImportOpen(true); void loadIikoEmployees() }}>↓ iiko</button>
             <button className="employees-primary-button" type="button" onClick={startCreate}>+ Сотрудник</button>
-            <button className="employees-reset-button" type="button" onClick={() => { setIikoImportOpen(true); void loadIikoEmployees() }}>Импорт из iiko</button>
           </div>
 
           <div className="employees-table-wrap">
             <table className="employees-table employees-table--clickable">
               <thead>
-                <tr><th>Сотрудник</th><th>Должность</th><th>Статус</th><th>Аттестация</th><th>Сегодня</th><th>Активность</th></tr>
+                <tr><th>Сотрудник</th><th>Должность</th><th>Аттестация</th><th>Смен в этом месяце</th></tr>
               </thead>
               <tbody>
                 {isLoading ? <tr><td colSpan={6}>Загрузка...</td></tr> : null}
@@ -1133,10 +1132,8 @@ export function EmployeesPage() {
                   <tr key={employee.id} className="employees-row employees-table--clickable" onClick={() => openEmployee(employee)}>
                     <td><div className="employees-person"><span>{getInitials(employee.name)}</span><div><strong>{employee.name}</strong><small>{employee.login}</small></div></div></td>
                     <td>{employee.position}</td>
-                    <td><span className={`employees-status employees-status--${getStatusClass(employee)}`}>{getStatusLabel(employee)}</span></td>
                     <td><AttestationBar value={employee.attestationPercent || 0} /></td>
-                    <td>{employee.shiftStatus === 'open' ? 'Смена открыта' : 'Смена не открыта'}</td>
-                    <td>{employee.updatedAt ? new Date(employee.updatedAt).toLocaleDateString('ru-RU') : '—'}</td>
+                    <td>{monthSchedules.filter(s => s.employeeId === employee.id).length || '—'}</td>
                   </tr>
                 ))}
                 {!isLoading && filteredEmployees.length === 0 ? <tr><td colSpan={6}>Сотрудники не найдены</td></tr> : null}
@@ -1182,55 +1179,64 @@ export function EmployeesPage() {
 
       {iikoImportOpen && (
         <div className="employees-modal-backdrop" role="presentation" onMouseDown={() => setIikoImportOpen(false)}>
-          <div className="employees-modal" role="dialog" aria-modal="true" style={{ maxWidth: 560 }} onMouseDown={(e) => e.stopPropagation()}>
+          <div className="employees-modal" role="dialog" aria-modal="true" style={{ maxWidth: 600, display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onMouseDown={(e) => e.stopPropagation()}>
             <div className="employees-modal__header">
               <h3>Импорт сотрудников из iiko</h3>
               <button type="button" className="employees-modal__close" onClick={() => setIikoImportOpen(false)}>×</button>
             </div>
-            <div className="employees-modal__body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-              {iikoImportLoading && <p style={{ color: '#6b7280', textAlign: 'center', padding: '20px 0' }}>Загружаю сотрудников из iiko...</p>}
-              {iikoImportError && <p style={{ color: '#ef4444' }}>{iikoImportError}</p>}
-              {!iikoImportLoading && iikoImportItems.length === 0 && !iikoImportError && <p style={{ color: '#6b7280' }}>Сотрудники не найдены</p>}
-              {iikoImportItems.length > 0 && (
-                <>
-                  <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>
-                    Выберите сотрудников для импорта. Уже существующие (с тем же именем) будут пропущены. Временный пароль: <strong>iiko123</strong>
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid #f0f2f5', marginBottom: 4 }}>
-                      <input type="checkbox"
-                        checked={iikoImportItems.every((_, i) => iikoImportChecked.has(i))}
-                        onChange={(e) => setIikoImportChecked(e.target.checked ? new Set(iikoImportItems.map((_, i) => i)) : new Set())}
+
+            {iikoImportLoading && <p style={{ padding: '24px 20px', color: '#6b7280', textAlign: 'center' }}>Загружаю сотрудников из iiko...</p>}
+            {iikoImportError && <p style={{ padding: '12px 20px', color: '#ef4444' }}>{iikoImportError}</p>}
+            {!iikoImportLoading && iikoImportItems.length === 0 && !iikoImportError && <p style={{ padding: '24px 20px', color: '#6b7280' }}>Сотрудники не найдены</p>}
+
+            {iikoImportItems.length > 0 && <>
+              <div style={{ padding: '10px 20px', borderBottom: '1px solid #f0f2f5', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  type="checkbox"
+                  id="iiko-check-all"
+                  checked={iikoImportItems.every((_, i) => iikoImportChecked.has(i))}
+                  onChange={(e) => setIikoImportChecked(e.target.checked ? new Set(iikoImportItems.map((_, i) => i)) : new Set())}
+                />
+                <label htmlFor="iiko-check-all" style={{ fontSize: 13, color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
+                  Выбрать всех · <span style={{ color: '#6b7280' }}>{iikoImportChecked.size} / {iikoImportItems.length}</span>
+                </label>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>Временный пароль: <strong>iiko123</strong></span>
+              </div>
+
+              <div style={{ overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>
+                {iikoImportItems.map((it, i) => {
+                  const exists = employees.some(e => e.name === it.name)
+                  return (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '32px 1fr auto', alignItems: 'center', gap: 10, padding: '9px 20px', borderBottom: '1px solid #f9fafb', background: exists ? '#f9fafb' : iikoImportChecked.has(i) ? '#eff6ff' : 'transparent', opacity: exists ? 0.5 : 1 }}>
+                      <input
+                        type="checkbox"
+                        disabled={exists}
+                        checked={iikoImportChecked.has(i)}
+                        onChange={() => setIikoImportChecked(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })}
+                        style={{ justifySelf: 'center' }}
                       />
-                      <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Выбрать всех ({iikoImportChecked.size} / {iikoImportItems.length})</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {it.name}
+                          {exists && <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>уже есть</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.role}{it.phone ? ` · ${it.phone}` : ''}</div>
+                      </div>
+                      <select
+                        disabled={exists || !iikoImportChecked.has(i)}
+                        value={iikoImportPositions[i] || ''}
+                        onChange={(e) => setIikoImportPositions(prev => ({ ...prev, [i]: e.target.value }))}
+                        style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer', width: 150 }}
+                      >
+                        <option value="" disabled>Должность</option>
+                        {positions.filter(p => p !== 'Все').map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
                     </div>
-                    {iikoImportItems.map((it, i) => {
-                      const exists = employees.some(e => e.name === it.name)
-                      return (
-                        <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', borderRadius: 6, background: exists ? '#f9fafb' : iikoImportChecked.has(i) ? '#eff6ff' : 'transparent', cursor: exists ? 'default' : 'pointer', opacity: exists ? 0.5 : 1 }}>
-                          <input type="checkbox" disabled={exists} checked={iikoImportChecked.has(i)} onChange={() => {
-                            setIikoImportChecked(prev => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
-                          }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{it.name}{exists ? <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>уже есть</span> : null}</div>
-                            <div style={{ fontSize: 11, color: '#6b7280' }}>{it.role}{it.phone ? ` · ${it.phone}` : ''}</div>
-                          </div>
-                          <select
-                            disabled={exists || !iikoImportChecked.has(i)}
-                            value={iikoImportPositions[i] || ''}
-                            onChange={(e) => setIikoImportPositions(prev => ({ ...prev, [i]: e.target.value }))}
-                            style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer' }}
-                          >
-                            <option value="" disabled>Должность</option>
-                            {positions.filter(p => p !== 'Все').map(p => <option key={p} value={p}>{p}</option>)}
-                          </select>
-                        </label>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
+                  )
+                })}
+              </div>
+            </>}
+
             {iikoImportItems.length > 0 && !iikoImportLoading && (
               <div className="employees-modal__footer">
                 <button className="employees-create-button" type="button" disabled={iikoImporting || iikoImportChecked.size === 0} onClick={() => void doIikoImport()}>

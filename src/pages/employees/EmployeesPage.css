@@ -629,7 +629,26 @@
 }
 
 .employees-filters--compact {
-  grid-template-columns: minmax(280px, 1fr) 180px 150px 104px 128px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.employees-filters--compact .employees-search {
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.employees-filters--compact .employees-select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 130px;
+}
+
+.employees-filters--compact .employees-reset-button,
+.employees-filters--compact .employees-primary-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .employees-table--clickable th:nth-child(1),
