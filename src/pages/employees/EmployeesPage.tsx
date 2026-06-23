@@ -78,7 +78,8 @@ type ShiftEditor = {
   note: string
 }
 
-const positions = ['Все', 'Официант', 'Старший официант', 'Бармен', 'Старший бармен', 'Повар', 'Су-шеф', 'Шеф-повар', 'Хостес', 'Администратор', 'Управляющий', 'Курьер', 'Мойщик', 'Уборщик', 'Клининг']
+type Position = { id: string; name: string; department: string; order: number }
+const DEFAULT_POSITIONS = ['Официант', 'Старший официант', 'Бармен', 'Старший бармен', 'Повар', 'Су-шеф', 'Шеф-повар', 'Хостес', 'Администратор', 'Управляющий', 'Курьер', 'Мойщик', 'Уборщик', 'Клининг']
 const statuses = ['Все', 'На смене', 'Не на смене']
 const scheduleDepartments = ['Зал', 'Бар', 'Кухня', 'Клининг']
 const defaultWorkModes: Record<string, { start: string; end: string }> = {
@@ -286,6 +287,42 @@ export function EmployeesPage() {
   )
   const [empRates, setEmpRates] = useState<Record<string, { hourly: number; bonus: number }>>({})
 
+  // positions reference
+  const [positionsList, setPositionsList] = useState<Position[]>([])
+  const [positionsOpen, setPositionsOpen] = useState(false)
+  const [positionNewName, setPositionNewName] = useState('')
+  const [positionNewDept, setPositionNewDept] = useState('Зал')
+  const [positionSaving, setPositionSaving] = useState(false)
+
+  const positionNames = positionsList.length > 0 ? positionsList.map(p => p.name) : DEFAULT_POSITIONS
+
+  async function loadPositions() {
+    try {
+      const data = await api.list<Position>('positions')
+      setPositionsList(data.sort((a, b) => a.order - b.order))
+    } catch {
+      setPositionsList([])
+    }
+  }
+
+  async function addPosition() {
+    const name = positionNewName.trim()
+    if (!name) return
+    setPositionSaving(true)
+    try {
+      const created = await api.create<Position>('positions', { name, department: positionNewDept, order: positionsList.length + 1 })
+      setPositionsList(prev => [...prev, created])
+      setPositionNewName('')
+    } finally {
+      setPositionSaving(false)
+    }
+  }
+
+  async function deletePosition(id: string) {
+    await api.remove('positions', id)
+    setPositionsList(prev => prev.filter(p => p.id !== id))
+  }
+
   // iiko import
   type IikoEmployee = { iikoId: string; name: string; role: string; phone: string }
   const [iikoImportOpen, setIikoImportOpen] = useState(false)
@@ -320,7 +357,7 @@ export function EmployeesPage() {
 
   function guessPosition(role: string): string {
     const r = role.toLowerCase()
-    for (const p of positions.filter(p => p !== 'Все')) {
+    for (const p of positionNames) {
       if (r.includes(p.toLowerCase())) return p
     }
     return ''
@@ -395,7 +432,7 @@ export function EmployeesPage() {
     }
   }
 
-  useEffect(() => { void loadEmployees(); void loadSchedule() }, [])
+  useEffect(() => { void loadEmployees(); void loadSchedule(); void loadPositions() }, [])
   useEffect(() => { void loadSchedule() }, [scheduleMonth])
 
   const filteredEmployees = useMemo(() => {
@@ -1111,13 +1148,14 @@ export function EmployeesPage() {
             </label>
             <label className="employees-select">
               <span>Должность:</span>
-              <select value={position} onChange={(event) => setPosition(event.target.value)}>{positions.map((item) => <option key={item}>{item}</option>)}</select>
+              <select value={position} onChange={(event) => setPosition(event.target.value)}>{['Все', ...positionNames].map((item) => <option key={item}>{item}</option>)}</select>
             </label>
             <label className="employees-select">
               <span>Статус:</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
             </label>
             <button className="employees-reset-button" type="button" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setIikoImportOpen(true); void loadIikoEmployees() }}>↓ iiko</button>
+            <button className="employees-reset-button" type="button" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => setPositionsOpen(true)}>Должности</button>
             <button className="employees-primary-button" type="button" onClick={startCreate}>+ Сотрудник</button>
           </div>
 
@@ -1159,7 +1197,7 @@ export function EmployeesPage() {
             <div className="employees-modal__body">
               <label><span>Имя сотрудника</span><input autoFocus value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
               <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
-              <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positions.filter((item) => item !== 'Все').map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
               <label>
                 <span>Временный пароль</span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -1229,7 +1267,7 @@ export function EmployeesPage() {
                         style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer', width: 150 }}
                       >
                         <option value="" disabled>Должность</option>
-                        {positions.filter(p => p !== 'Все').map(p => <option key={p} value={p}>{p}</option>)}
+                        {positionNames.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                   )
@@ -1249,6 +1287,54 @@ export function EmployeesPage() {
         </div>
       )}
 
+      {positionsOpen && (
+        <div className="employees-modal-backdrop" role="presentation" onMouseDown={() => setPositionsOpen(false)}>
+          <div className="employees-modal employees-modal--positions" role="dialog" aria-modal="true" aria-label="Справочник должностей" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="employees-modal__header">
+              <h3>Справочник должностей</h3>
+              <button type="button" className="employees-modal__close" onClick={() => setPositionsOpen(false)} aria-label="Закрыть">×</button>
+            </div>
+            <div className="employees-modal__body">
+              <p className="employees-positions__hint">Должности используются при создании сотрудников, чек-листов и задач.</p>
+              <div className="employees-positions__list">
+                {positionsList.length === 0 && <p className="employees-positions__empty">Должности не добавлены. Добавьте первую должность.</p>}
+                {Object.entries(
+                  positionsList.reduce<Record<string, Position[]>>((acc, p) => {
+                    const d = p.department || 'Другое';
+                    (acc[d] = acc[d] || []).push(p)
+                    return acc
+                  }, {})
+                ).map(([dept, items]) => (
+                  <div key={dept} className="employees-positions__group">
+                    <span className="employees-positions__dept">{dept}</span>
+                    {items.map(p => (
+                      <div key={p.id} className="employees-positions__item">
+                        <span>{p.name}</span>
+                        <button type="button" className="employees-positions__delete" onClick={() => void deletePosition(p.id)} aria-label="Удалить">×</button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              <div className="employees-positions__add">
+                <input
+                  value={positionNewName}
+                  onChange={(e) => setPositionNewName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void addPosition() }}
+                  placeholder="Название должности"
+                />
+                <select value={positionNewDept} onChange={(e) => setPositionNewDept(e.target.value)}>
+                  {scheduleDepartments.map(d => <option key={d}>{d}</option>)}
+                </select>
+                <button type="button" className="employees-create-button" disabled={positionSaving || !positionNewName.trim()} onClick={() => void addPosition()}>
+                  + Добавить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isEditing && selectedEmployee ? (
         <div className="employees-modal-backdrop" role="presentation" onMouseDown={closeEditModal}>
           <div className="employees-modal" role="dialog" aria-modal="true" aria-label="Редактирование сотрудника" onMouseDown={(e) => e.stopPropagation()}>
@@ -1259,7 +1345,7 @@ export function EmployeesPage() {
             <div className="employees-modal__body">
               <label><span>Имя сотрудника</span><input autoFocus value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
               <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
-              <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positions.filter((item) => item !== 'Все').map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
               <label><span>Закрытие смены</span><select value={form.shiftCloseMethod} onChange={(e) => setForm((v) => ({ ...v, shiftCloseMethod: e.target.value as ShiftCloseMethod }))}><option value="checklist">По чек-листу закрытия</option><option value="button">По кнопке «Закрыть смену»</option><option value="schedule">По графику (автоматически)</option></select></label>
 {error ? <p className="employees-error">{error}</p> : null}
             </div>

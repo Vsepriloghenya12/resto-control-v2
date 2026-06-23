@@ -288,6 +288,22 @@ function createSeedState() {
       { id: 'employee_2', restaurantId: restaurant.id, name: 'Алексей Смирнов', login: 'barman@resto.local', position: 'Бармен', status: 'active', shiftStatus: 'closed', attestationPercent: 62, createdAt, updatedAt: createdAt },
       { id: 'employee_3', restaurantId: restaurant.id, name: 'Ольга Соколова', login: 'cleaning@resto.local', position: 'Клининг', status: 'active', shiftStatus: 'closed', attestationPercent: 55, createdAt, updatedAt: createdAt },
     ],
+    positions: [
+      { id: 'pos_1',  restaurantId: restaurant.id, name: 'Официант',         department: 'Зал',     order: 1,  createdAt, updatedAt: createdAt },
+      { id: 'pos_2',  restaurantId: restaurant.id, name: 'Старший официант', department: 'Зал',     order: 2,  createdAt, updatedAt: createdAt },
+      { id: 'pos_3',  restaurantId: restaurant.id, name: 'Хостес',           department: 'Зал',     order: 3,  createdAt, updatedAt: createdAt },
+      { id: 'pos_4',  restaurantId: restaurant.id, name: 'Администратор',    department: 'Зал',     order: 4,  createdAt, updatedAt: createdAt },
+      { id: 'pos_5',  restaurantId: restaurant.id, name: 'Управляющий',      department: 'Зал',     order: 5,  createdAt, updatedAt: createdAt },
+      { id: 'pos_6',  restaurantId: restaurant.id, name: 'Бармен',           department: 'Бар',     order: 6,  createdAt, updatedAt: createdAt },
+      { id: 'pos_7',  restaurantId: restaurant.id, name: 'Старший бармен',   department: 'Бар',     order: 7,  createdAt, updatedAt: createdAt },
+      { id: 'pos_8',  restaurantId: restaurant.id, name: 'Повар',            department: 'Кухня',   order: 8,  createdAt, updatedAt: createdAt },
+      { id: 'pos_9',  restaurantId: restaurant.id, name: 'Су-шеф',           department: 'Кухня',   order: 9,  createdAt, updatedAt: createdAt },
+      { id: 'pos_10', restaurantId: restaurant.id, name: 'Шеф-повар',        department: 'Кухня',   order: 10, createdAt, updatedAt: createdAt },
+      { id: 'pos_11', restaurantId: restaurant.id, name: 'Курьер',           department: 'Кухня',   order: 11, createdAt, updatedAt: createdAt },
+      { id: 'pos_12', restaurantId: restaurant.id, name: 'Мойщик',           department: 'Клининг', order: 12, createdAt, updatedAt: createdAt },
+      { id: 'pos_13', restaurantId: restaurant.id, name: 'Уборщик',          department: 'Клининг', order: 13, createdAt, updatedAt: createdAt },
+      { id: 'pos_14', restaurantId: restaurant.id, name: 'Клининг',          department: 'Клининг', order: 14, createdAt, updatedAt: createdAt },
+    ],
     tasks: [
       { id: 'task_1', restaurantId: restaurant.id, title: 'Проверить резерв на вечер', description: 'Проверить брони и подготовить зал.', assignmentType: 'position', assignedPosition: 'Администратор', status: 'not_started', dueDate: new Date().toISOString().slice(0, 10), dueTime: '17:00', requiresPhoto: false, active: true, createdAt, updatedAt: createdAt },
       { id: 'task_2', restaurantId: restaurant.id, title: 'Протереть столы на террасе', description: 'Фото не отдельный раздел, а часть задачи.', assignmentType: 'position', assignedPosition: 'Клининг', status: 'overdue', dueDate: new Date().toISOString().slice(0, 10), dueTime: '10:30', requiresPhoto: true, active: true, createdAt, updatedAt: createdAt },
@@ -595,6 +611,7 @@ function collectionByPath(state, name) {
     orders: 'orders',
     attestations: 'attestations',
     'attestation-results': 'attestationResults',
+    positions: 'positions',
   }
   const key = allowed[name]
   if (!key) return null
@@ -835,7 +852,7 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     state.memberships = state.memberships.filter((membership) => !removedMembershipIds.has(membership.id))
     state.users = state.users.filter((user) => !removedUserIds.has(user.id) || state.memberships.some((membership) => membership.userId === user.id))
 
-    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages', 'orders', 'attestations', 'attestationResults']
+    const keys = ['employees', 'tasks', 'checklistTemplates', 'checklistRuns', 'halls', 'tables', 'bookings', 'payments', 'technicalRequests', 'knowledgeMaterials', 'regularGuests', 'pushSubscriptions', 'staffSchedules', 'inventoryAssignments', 'inventoryProducts', 'ttkItems', 'supportChats', 'supportMessages', 'orders', 'attestations', 'attestationResults', 'positions']
     for (const key of keys) {
       if (Array.isArray(state[key])) state[key] = state[key].filter((item) => item.restaurantId !== restaurantId)
     }
