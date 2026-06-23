@@ -418,6 +418,9 @@ export function TtkPage() {
                   <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6b7280' }}>
                     Разверните категорию и выберите нужные позиции. Выбрано: <strong>{iikoCheckedItems.size}</strong>
                   </p>
+                  <p style={{ margin: '0 0 8px', fontSize: 11, color: '#9ca3af' }}>
+                    Групп: {iikoGroupList.length} | Первые 3: {iikoGroupList.slice(0, 3).map(g => `"${g}"`).join(', ')}
+                  </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 420, overflowY: 'auto' }}>
                     {iikoGroupList.map((g) => {
                       const groupItems = iikoPreviewItems.map((it, i) => ({ it, i })).filter(({ it }) => it.group === g)
