@@ -1131,25 +1131,12 @@ export function EmployeeStartPage() {
 
 
   function renderOrders() {
-    const orderStatusLabel: Record<Order['status'], string> = {
-      new: 'Новый',
-      in_progress: 'Готовится',
-      done: 'Выполнен',
-      cancelled: 'Отменён',
-    }
-    const orderStatusColor: Record<Order['status'], string> = {
-      new: 'orange',
-      in_progress: 'blue',
-      done: 'green',
-      cancelled: 'gray',
-    }
-
-    async function updateOrderStatus(orderId: string, status: Order['status']) {
+    async function deleteOrder(orderId: string) {
       try {
-        await api.update('orders', orderId, { status })
-        setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status } : o))
+        await api.remove('orders', orderId)
+        setOrders((prev) => prev.filter((o) => o.id !== orderId))
       } catch {
-        showNotice('Не удалось обновить статус.')
+        showNotice('Не удалось удалить заказ.')
       }
     }
 
@@ -1163,37 +1150,7 @@ export function EmployeeStartPage() {
         {!ordersLoading && orders.length === 0 && <p className="employee-mobile__empty">Заказов пока нет.</p>}
         <div className="employee-mobile__plain-list">
           {orders.map((order) => (
-            <div key={order.id} className="employee-mobile__list-card" style={{ display: 'block', padding: 0, overflow: 'hidden' }}>
-              <div className={`employee-mobile__list-card__accent employee-mobile__list-card__accent--${orderStatusColor[order.status]}`} style={{ width: '100%', height: 3 }} />
-              <div style={{ padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <strong style={{ fontSize: 15, fontWeight: 700 }}>{order.tableName}</strong>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: order.status === 'done' ? '#16a34a' : order.status === 'cancelled' ? '#9ca3af' : order.status === 'in_progress' ? '#2563eb' : '#ea580c' }}>{orderStatusLabel[order.status]}</span>
-                </div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
-                  {order.guestsCount} гостей · {order.total} ₽ · {new Date(order.createdAt).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}
-                  {order.createdByName ? ` · ${order.createdByName}` : ''}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 8 }}>
-                  {order.items.map((item, i) => (
-                    <div key={i} style={{ fontSize: 13, color: '#374151' }}>
-                      {item.name} × {item.quantity}
-                      {item.comment ? <span style={{ color: '#2563eb' }}> — {item.comment}</span> : null}
-                    </div>
-                  ))}
-                </div>
-                {order.comment ? <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>💬 {order.comment}</div> : null}
-                {order.status === 'new' && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button type="button" onClick={() => void updateOrderStatus(order.id, 'in_progress')} style={{ flex: 1, height: 36, border: 'none', borderRadius: 10, background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Готовится</button>
-                    <button type="button" onClick={() => void updateOrderStatus(order.id, 'cancelled')} style={{ flex: 1, height: 36, border: '1px solid #fecaca', borderRadius: 10, background: '#fff5f5', color: '#dc2626', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Отменить</button>
-                  </div>
-                )}
-                {order.status === 'in_progress' && (
-                  <button type="button" onClick={() => void updateOrderStatus(order.id, 'done')} style={{ width: '100%', height: 36, border: 'none', borderRadius: 10, background: '#16a34a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Выполнен</button>
-                )}
-              </div>
-            </div>
+            <OrderNoteCard key={order.id} order={order} onDelete={() => void deleteOrder(order.id)} />
           ))}
         </div>
       </section>
@@ -1609,5 +1566,50 @@ export function EmployeeStartPage() {
         </div>
       ) : null}
     </main>
+  )
+}
+
+function OrderNoteCard({ order, onDelete }: { order: Order; onDelete: () => void }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div
+      style={{ background: 'var(--rc-card)', border: '1px solid var(--rc-border)', borderRadius: 12, padding: '12px 14px', cursor: 'pointer' }}
+      onClick={() => setExpanded((v) => !v)}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <strong style={{ fontSize: 15, fontWeight: 700 }}>{order.tableName}</strong>
+        <span style={{ fontSize: 12, color: 'var(--rc-muted)' }}>
+          {new Date(order.createdAt).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--rc-muted)' }}>
+        {order.items.length} позиц. · {order.total} ₽
+        {order.createdByName ? ` · ${order.createdByName}` : ''}
+      </div>
+
+      {expanded && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {order.items.map((item, i) => (
+              <div key={i} style={{ fontSize: 13, color: 'var(--rc-text)' }}>
+                {item.name} × {item.quantity}
+                {item.comment ? <span style={{ color: '#2563eb' }}> — {item.comment}</span> : null}
+              </div>
+            ))}
+          </div>
+          {order.comment ? (
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--rc-muted)' }}>💬 {order.comment}</div>
+          ) : null}
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{ marginTop: 12, width: '100%', height: 36, border: '1px solid #fecaca', borderRadius: 10, background: '#fff5f5', color: '#dc2626', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+          >
+            Удалить заказ
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
