@@ -1476,7 +1476,7 @@ export function EmployeeStartPage() {
 
                 {/* Сетка категорий */}
                 {orderSubStep === 'categories' && (
-                  <div className="employee-mobile__order-categories" style={{ padding: '10px 14px', flex: 1, overflowY: 'auto', paddingBottom: orderCart.length > 0 ? `${cartListHeight + 56}px` : '10px' }}>
+                  <div className="employee-mobile__order-categories" style={{ padding: '10px 14px', flex: 1, overflowY: 'auto', paddingBottom: orderCart.length > 0 ? `${CART_MIN_H + 56}px` : '10px' }}>
                     {ttkGroups.map((g) => {
                       const count = ttkItems.filter((it) => it.group === g.id || it.groupId === g.id || it.group === g.name).length
                       const inCartCount = orderCart.filter((ci) => {
@@ -1496,7 +1496,7 @@ export function EmployeeStartPage() {
 
                 {/* Список блюд выбранной категории */}
                 {orderSubStep === 'dishes' && (
-                  <div className="employee-mobile__order-items" style={{ padding: `0 14px ${orderCart.length > 0 ? cartListHeight + 56 : 8}px`, flex: 1, overflowY: 'auto' }}>
+                  <div className="employee-mobile__order-items" style={{ padding: `0 14px ${orderCart.length > 0 ? CART_MIN_H + 56 : 8}px`, flex: 1, overflowY: 'auto' }}>
                     {categoryItems.map((item) => {
                       const inCart = orderCart.find((c) => c.itemId === item.id)
                       return (
