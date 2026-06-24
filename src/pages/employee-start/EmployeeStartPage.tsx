@@ -323,7 +323,6 @@ export function EmployeeStartPage() {
   const [orderHallId, setOrderHallId] = useState('')
   const [orderDraft, setOrderDraft] = useState({ tableId: '', guestsCount: 2, comment: '' })
   const [orderSaving, setOrderSaving] = useState(false)
-  const [ttkGroups, setTtkGroups] = useState<TtkGroup[]>([])
   const [orderCategoryId, setOrderCategoryId] = useState('')
   const [orderCart, setOrderCart] = useState<OrderCartItem[]>([])
   const [orderCartOpen, setOrderCartOpen] = useState(false)
@@ -443,10 +442,6 @@ export function EmployeeStartPage() {
     setSummary(nextSummary)
     const currentEmployee = nextSummary.employees?.find((item) => item.userId === session?.user.id || item.name === session?.user.name)
     if (currentEmployee?.shiftStatus) setShiftOpen(currentEmployee.shiftStatus === 'open')
-    try {
-      const groupsResult = await api.list<TtkGroup>('ttk-groups')
-      setTtkGroups(groupsResult.items)
-    } catch { /* groups optional */ }
   }
 
   async function loadHallPlan() {
@@ -839,6 +834,15 @@ export function EmployeeStartPage() {
   const visibleBookings = visibleHallTables.filter((table) => table.booking).sort((a, b) => String(a.booking?.time).localeCompare(String(b.booking?.time)))
 
   const ttkItems = summary?.ttkItems || []
+  const ttkGroups: TtkGroup[] = (() => {
+    const seen = new Set<string>()
+    const result: TtkGroup[] = []
+    for (const item of ttkItems) {
+      const g = item.group || item.groupId || ''
+      if (g && !seen.has(g)) { seen.add(g); result.push({ id: g, name: g }) }
+    }
+    return result
+  })()
   const stopListItems = ttkItems.filter((item) => Boolean(item.stopList || item.inStopList || item.isStopped || item.status === 'stop'))
   const activeTasks = userTasks.filter((item) => item.status !== 'done')
   const activeChecklists = userChecklists.filter((item) => item.active !== false)
