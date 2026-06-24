@@ -501,6 +501,7 @@ export function EmployeesPage() {
       attestationPercent: employee.attestationPercent || 0,
     })
     setScheduleForm((current) => ({ ...current, employeeId: employee.id, employeeIds: Array.from(new Set([...current.employeeIds, employee.id])), department: getDepartment(employee.position) }))
+    setShowEmployeePassword(false)
     setError('')
     setIsEditing(true)
   }

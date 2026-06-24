@@ -52,7 +52,17 @@ function id(prefix) {
 }
 
 function normalizeLogin(login) {
-  return String(login || '').trim().toLowerCase()
+  const raw = String(login || '').trim().toLowerCase()
+  // If looks like a phone number — normalize to digits only, +7 → 8
+  if (/^[\d\s\-\+\(\)]+$/.test(raw)) {
+    const digits = raw.replace(/\D/g, '')
+    if (digits.length >= 7 && digits.length <= 15) {
+      // Normalize +7xxxxxxxxxx → 8xxxxxxxxxx
+      if (digits.length === 11 && digits.startsWith('7')) return '8' + digits.slice(1)
+      return digits
+    }
+  }
+  return raw
 }
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
@@ -1170,11 +1180,21 @@ async function handleCollections(req, res, state, pathname, auth) {
     } else {
       const { password, ...rest } = body
       Object.assign(item, rest, { updatedAt: nowIso() })
-      if (name === 'employees' && password && String(password).trim().length >= 4) {
+      if (name === 'employees') {
         const user = state.users.find((u) => u.id === item.userId)
         if (user) {
-          user.passwordHash = hashPassword(String(password).trim())
+          if (rest.login) user.login = normalizeLogin(rest.login)
+          if (rest.name) user.name = String(rest.name).trim()
+          if (password && String(password).trim().length >= 4) {
+            user.passwordHash = hashPassword(String(password).trim())
+          }
           user.updatedAt = nowIso()
+        }
+        const membership = state.memberships.find((m) => m.userId === item.userId && m.restaurantId === item.restaurantId)
+        if (membership && rest.position) {
+          membership.position = rest.position
+          membership.role = roleFromPosition(rest.position)
+          membership.updatedAt = nowIso()
         }
       }
     }
