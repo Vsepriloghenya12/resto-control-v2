@@ -268,13 +268,15 @@ function SwipeableCartItem({ item, onDelete, onComment, onQty }: {
 
   return (
     <div className="order-swipe-wrap">
-      <div className="order-swipe-bg order-swipe-bg--left">
+      {/* swipeX < 0 = свайп влево = удалить (красный фон справа) */}
+      <div className="order-swipe-bg order-swipe-bg--left" style={{ display: swipeX < 0 ? 'flex' : 'none' }}>
         <span className="order-swipe-bg__action">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
           <span>Удалить</span>
         </span>
       </div>
-      <div className="order-swipe-bg order-swipe-bg--right">
+      {/* swipeX > 0 = свайп вправо = коммент (синий фон слева) */}
+      <div className="order-swipe-bg order-swipe-bg--right" style={{ display: swipeX > 0 ? 'flex' : 'none' }}>
         <span className="order-swipe-bg__action">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Коммент</span>
@@ -1474,7 +1476,7 @@ export function EmployeeStartPage() {
 
                 {/* Сетка категорий */}
                 {orderSubStep === 'categories' && (
-                  <div className="employee-mobile__order-categories" style={{ padding: '10px 14px', flex: 1, overflowY: 'auto' }}>
+                  <div className="employee-mobile__order-categories" style={{ padding: '10px 14px', flex: 1, overflowY: 'auto', paddingBottom: orderCart.length > 0 ? `${cartListHeight + 56}px` : '10px' }}>
                     {ttkGroups.map((g) => {
                       const count = ttkItems.filter((it) => it.group === g.id || it.groupId === g.id || it.group === g.name).length
                       const inCartCount = orderCart.filter((ci) => {
@@ -1494,7 +1496,7 @@ export function EmployeeStartPage() {
 
                 {/* Список блюд выбранной категории */}
                 {orderSubStep === 'dishes' && (
-                  <div className="employee-mobile__order-items" style={{ padding: '0 14px', flex: 1, overflowY: 'auto' }}>
+                  <div className="employee-mobile__order-items" style={{ padding: `0 14px ${orderCart.length > 0 ? cartListHeight + 56 : 8}px`, flex: 1, overflowY: 'auto' }}>
                     {categoryItems.map((item) => {
                       const inCart = orderCart.find((c) => c.itemId === item.id)
                       return (
@@ -1519,8 +1521,8 @@ export function EmployeeStartPage() {
                   </div>
                 )}
 
-                {/* Нижняя панель — корзина */}
-                <div className="order-modal__cart-panel">
+                {/* Нижняя панель — корзина (оверлей поверх меню) */}
+                <div className="order-modal__cart-panel" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10 }}>
                   {orderCart.length > 0 && (
                     <div className="order-modal__cart-list" style={{ height: cartListHeight }}>
                       <div
@@ -1530,15 +1532,12 @@ export function EmployeeStartPage() {
                           cartDragStartH.current = cartListHeight
                         }}
                         onTouchMove={(e) => {
+                          e.stopPropagation()
                           const delta = cartDragStartY.current - e.touches[0].clientY
-                          const next = Math.max(CART_MIN_H, Math.min(window.innerHeight * 0.72, cartDragStartH.current + delta))
+                          const next = Math.max(CART_MIN_H, Math.min(window.innerHeight * 0.75, cartDragStartH.current + delta))
                           setCartListHeight(next)
                         }}
-                        onTouchEnd={() => {
-                          const maxH = window.innerHeight * 0.72
-                          const mid = (CART_MIN_H + maxH) / 2
-                          setCartListHeight(cartListHeight > mid ? maxH : CART_MIN_H)
-                        }}
+                        onTouchEnd={() => { /* остаётся на месте */ }}
                       />
                       {[...orderCart].reverse().map((ci) => (
                         <SwipeableCartItem

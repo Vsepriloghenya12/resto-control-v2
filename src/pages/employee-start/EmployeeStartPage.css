@@ -1626,6 +1626,7 @@
   height: 100%;
   background: var(--rc-card);
   overflow: hidden;
+  position: relative;
 }
 
 .order-modal__header {
@@ -1790,11 +1791,12 @@
   line-height: 1 !important;
 }
 
-/* Cart panel at bottom */
+/* Cart panel — floating overlay at bottom */
 .order-modal__cart-panel {
-  flex-shrink: 0;
   background: var(--rc-card);
-  border-top: 2px solid var(--rc-border);
+  border-top: 1.5px solid var(--rc-border);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.10);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -1802,7 +1804,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
-  transition: height 0.2s ease;
 }
 
 .order-modal__cart-list::-webkit-scrollbar { display: none; }
