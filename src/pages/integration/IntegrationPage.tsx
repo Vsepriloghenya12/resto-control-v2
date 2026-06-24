@@ -46,20 +46,24 @@ const SYSTEMS: Array<{ key: System; name: string; color: string; tagline: string
   },
 ]
 
+function detectSystemName(host: string): string {
+  const h = host.toLowerCase()
+  if (h.includes('iiko')) return 'iiko'
+  if (h.includes('quickresto') || h.includes('syrve')) return 'Quick Resto'
+  return 'кассовой системы'
+}
+
 export function IntegrationPage() {
-  const [active, setActive] = useState<System>('quickresto')
-  const [connections, setConnections] = useState<Record<System, Connection>>({
-    iiko: { host: '', login: '', password: '' },
-    quickresto: { host: '', login: '', password: '' },
-  })
-  const [status, setStatus] = useState<Record<System, 'idle' | 'testing' | 'ok' | 'error'>>({
-    iiko: 'idle',
-    quickresto: 'idle',
-  })
-  const [errorMsg, setErrorMsg] = useState<Record<System, string>>({ iiko: '', quickresto: '' })
-  const [saving, setSaving] = useState<Record<System, boolean>>({ iiko: false, quickresto: false })
+  const [conn, setConn] = useState<Connection>({ host: '', login: '', password: '' })
+  const [st, setSt] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle')
+  const [err, setErr] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const [notice, setNotice] = useState('')
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const systemName = detectSystemName(conn.host)
+  const isConnected = st === 'ok'
+  const isTesting = st === 'testing'
 
   function showNotice(msg: string) {
     setNotice(msg)
@@ -67,93 +71,62 @@ export function IntegrationPage() {
     noticeTimer.current = setTimeout(() => setNotice(''), 3000)
   }
 
-  useEffect(() => {
-    void loadSettings()
-  }, [])
+  useEffect(() => { void loadSettings() }, [])
 
   async function loadSettings() {
     try {
       const resp = await fetch('/api/restaurant', { credentials: 'include' })
       if (!resp.ok) return
       const r = await resp.json()
-      setConnections({
-        iiko: {
-          host: r.iikoHost || '',
-          login: r.iikoLogin || '',
-          password: r.iikoPassword || '',
-        },
-        quickresto: {
-          host: r.qrHost || '',
-          login: r.qrLogin || '',
-          password: r.qrPassword || '',
-        },
-      })
-      if (r.iikoHost) setStatus((s) => ({ ...s, iiko: 'ok' }))
-      if (r.qrHost) setStatus((s) => ({ ...s, quickresto: 'ok' }))
+      const host = r.iikoHost || r.qrHost || ''
+      const login = r.iikoLogin || r.qrLogin || ''
+      const password = r.iikoPassword || r.qrPassword || ''
+      setConn({ host, login, password })
+      if (host) setSt('ok')
     } catch { /* ignore */ }
   }
 
-  function setField(sys: System, field: keyof Connection, value: string) {
-    setConnections((c) => ({ ...c, [sys]: { ...c[sys], [field]: value } }))
-    if (status[sys] !== 'idle') setStatus((s) => ({ ...s, [sys]: 'idle' }))
-    setErrorMsg((e) => ({ ...e, [sys]: '' }))
+  function setField(field: keyof Connection, value: string) {
+    setConn((c) => ({ ...c, [field]: value }))
+    if (st !== 'idle') setSt('idle')
+    setErr('')
   }
 
-  async function save(sys: System) {
-    setSaving((s) => ({ ...s, [sys]: true }))
-    const c = connections[sys]
-    const patch = sys === 'iiko'
-      ? { iikoHost: c.host.trim(), iikoLogin: c.login.trim(), iikoPassword: c.password }
-      : { qrHost: c.host.trim(), qrLogin: c.login.trim(), qrPassword: c.password }
+  async function save() {
+    setIsSaving(true)
+    const h = conn.host.toLowerCase()
+    const isQR = h.includes('quickresto') || h.includes('syrve')
+    const patch = isQR
+      ? { qrHost: conn.host.trim(), qrLogin: conn.login.trim(), qrPassword: conn.password, iikoHost: '', iikoLogin: '', iikoPassword: '' }
+      : { iikoHost: conn.host.trim(), iikoLogin: conn.login.trim(), iikoPassword: conn.password, qrHost: '', qrLogin: '', qrPassword: '' }
     try {
-      const resp = await fetch('/api/restaurant', {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      })
+      const resp = await fetch('/api/restaurant', { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
       if (!resp.ok) throw new Error('Ошибка сохранения')
       showNotice('Настройки сохранены.')
     } catch (e) {
       showNotice(e instanceof Error ? e.message : 'Ошибка')
     } finally {
-      setSaving((s) => ({ ...s, [sys]: false }))
+      setIsSaving(false)
     }
   }
 
-  async function testConnection(sys: System) {
-    setStatus((s) => ({ ...s, [sys]: 'testing' }))
-    setErrorMsg((e) => ({ ...e, [sys]: '' }))
-    const c = connections[sys]
+  async function testConnection() {
+    setSt('testing')
+    setErr('')
     try {
-      await save(sys)
-      const endpoint = sys === 'iiko' ? '/api/iiko/test' : '/api/quickresto/test'
-      const resp = await fetch(endpoint, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ host: c.host.trim(), login: c.login.trim(), password: c.password }),
-      })
+      await save()
+      const h = conn.host.toLowerCase()
+      const isQR = h.includes('quickresto') || h.includes('syrve')
+      const endpoint = isQR ? '/api/quickresto/test' : '/api/iiko/test'
+      const resp = await fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ host: conn.host.trim(), login: conn.login.trim(), password: conn.password }) })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.message || 'Ошибка подключения')
-      setStatus((s) => ({ ...s, [sys]: 'ok' }))
+      setSt('ok')
     } catch (e) {
-      setStatus((s) => ({ ...s, [sys]: 'error' }))
-      setErrorMsg((er) => ({ ...er, [sys]: e instanceof Error ? e.message : 'Ошибка подключения' }))
+      setSt('error')
+      setErr(e instanceof Error ? e.message : 'Ошибка подключения')
     }
   }
-
-  const sys = SYSTEMS.find((s) => s.key === active)!
-  const conn = connections[active]
-  const st = status[active]
-  const err = errorMsg[active]
-  const isSaving = saving[active]
-
-  const isConnected = st === 'ok'
-  const isTesting = st === 'testing'
-
-  const hostPlaceholder = 'Хост или IP-адрес'
-  const loginPlaceholder = 'Логин'
 
   return (
     <div className="int-page">
@@ -208,37 +181,21 @@ export function IntegrationPage() {
         {/* Правая панель */}
         <div className="int-panel">
           <div className="int-card">
-            {/* Табы систем */}
-            <div className="int-tabs">
-              {SYSTEMS.map((s, i) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  className={`int-tab${active === s.key ? ' int-tab--active' : ''}`}
-                  onClick={() => setActive(s.key)}
-                >
-                  <span className="int-tab__name">Система {i + 1}</span>
-                  {status[s.key] === 'ok' && <span className="int-tab__dot" />}
-                </button>
-              ))}
+            <div className="int-card__title">
+              <strong>Подключение к кассе</strong>
+              <div className={`int-status-badge int-status-badge--${isConnected ? 'ok' : st === 'error' ? 'error' : 'idle'}`}>
+                {isConnected ? `● ${systemName}` : st === 'error' ? '● Ошибка' : '○ Не настроено'}
+              </div>
             </div>
 
             <div className="int-divider" />
 
-            {/* Поля */}
             <div className="int-form">
               <div className="int-field">
                 <label className="int-field__label">Хост</label>
                 <div className="int-field__wrap">
                   <ServerIcon className="int-field__icon" />
-                  <input
-                    className="int-input"
-                    type="text"
-                    placeholder={hostPlaceholder}
-                    value={conn.host}
-                    onChange={(e) => setField(active, 'host', e.target.value)}
-                    autoComplete="off"
-                  />
+                  <input className="int-input" type="text" placeholder="Хост или IP-адрес" value={conn.host} onChange={(e) => setField('host', e.target.value)} autoComplete="off" />
                 </div>
               </div>
 
@@ -246,14 +203,7 @@ export function IntegrationPage() {
                 <label className="int-field__label">Логин</label>
                 <div className="int-field__wrap">
                   <UserIcon className="int-field__icon" />
-                  <input
-                    className="int-input"
-                    type="text"
-                    placeholder={loginPlaceholder}
-                    value={conn.login}
-                    onChange={(e) => setField(active, 'login', e.target.value)}
-                    autoComplete="off"
-                  />
+                  <input className="int-input" type="text" placeholder="Логин" value={conn.login} onChange={(e) => setField('login', e.target.value)} autoComplete="off" />
                 </div>
               </div>
 
@@ -261,34 +211,17 @@ export function IntegrationPage() {
                 <label className="int-field__label">Пароль</label>
                 <div className="int-field__wrap">
                   <LockIcon className="int-field__icon" />
-                  <PasswordInput
-                    value={conn.password}
-                    onChange={(v) => setField(active, 'password', v)}
-                  />
+                  <PasswordInput value={conn.password} onChange={(v) => setField('password', v)} />
                 </div>
               </div>
 
-              {err && (
-                <div className="int-error">
-                  <span>⚠</span> {err}
-                </div>
-              )}
+              {err && <div className="int-error"><span>⚠</span> {err}</div>}
 
               <div className="int-actions">
-                <button
-                  type="button"
-                  className="int-btn int-btn--secondary"
-                  disabled={isTesting || isSaving || !conn.host || !conn.login || !conn.password}
-                  onClick={() => void testConnection(active)}
-                >
+                <button type="button" className="int-btn int-btn--secondary" disabled={isTesting || isSaving || !conn.host || !conn.login || !conn.password} onClick={() => void testConnection()}>
                   {isTesting ? 'Проверяю...' : 'Проверить соединение'}
                 </button>
-                <button
-                  type="button"
-                  className="int-btn int-btn--primary"
-                  disabled={isSaving || !conn.host || !conn.login || !conn.password}
-                  onClick={() => void save(active)}
-                >
+                <button type="button" className="int-btn int-btn--primary" disabled={isSaving || !conn.host || !conn.login || !conn.password} onClick={() => void save()}>
                   {isSaving ? 'Сохраняю...' : 'Сохранить'}
                 </button>
               </div>
@@ -297,7 +230,7 @@ export function IntegrationPage() {
             {isConnected && (
               <div className="int-connected-note">
                 <span className="int-connected-note__dot" />
-                Подключение активно. Номенклатуру можно синхронизировать в разделе <strong>Номенклатура</strong>.
+                Подключено к <strong>{systemName}</strong>. Синхронизируйте номенклатуру в разделе <strong>Номенклатура</strong>.
               </div>
             )}
           </div>
