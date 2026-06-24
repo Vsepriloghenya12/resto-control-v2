@@ -230,7 +230,7 @@ export function IntegrationPage() {
             {isConnected && (
               <div className="int-connected-note">
                 <span className="int-connected-note__dot" />
-                Подключено к <strong>{systemName}</strong>. Синхронизируйте номенклатуру в разделе <strong>Номенклатура</strong>.
+                Подключено к <strong>{systemName}</strong>
               </div>
             )}
           </div>
