@@ -1507,9 +1507,10 @@ export function EmployeeStartPage() {
 
                 {/* Нижняя панель — корзина */}
                 <div className="order-modal__cart-panel">
-                  {orderCartOpen && orderCart.length > 0 && (
+                  {orderCart.length > 0 && (
                     <div className="order-modal__cart-list">
-                      {orderCart.map((ci) => (
+                      <div className="order-modal__cart-handle" />
+                      {[...orderCart].reverse().map((ci) => (
                         <SwipeableCartItem
                           key={ci.itemId}
                           item={ci}
@@ -1524,7 +1525,7 @@ export function EmployeeStartPage() {
                       </div>
                     </div>
                   )}
-                  <div className="order-modal__cart-bar" onClick={() => cartCount() > 0 && setOrderCartOpen((v) => !v)}>
+                  <div className="order-modal__cart-bar">
                     <div className="order-modal__cart-bar__left">
                       {cartCount() > 0
                         ? <><span className="order-modal__cart-count">{cartCount()}</span><span>позиций · {cartTotal()} ₽</span></>

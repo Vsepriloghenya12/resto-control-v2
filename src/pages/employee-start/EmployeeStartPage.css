@@ -1794,14 +1794,26 @@
 .order-modal__cart-panel {
   flex-shrink: 0;
   background: var(--rc-card);
-  border-top: 1px solid var(--rc-border);
+  border-top: 2px solid var(--rc-border);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 .order-modal__cart-list {
-  max-height: 50vh;
+  max-height: calc(3 * 46px + 8px);
   overflow-y: auto;
-  padding: 8px 0 0;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.order-modal__cart-list::-webkit-scrollbar { display: none; }
+
+.order-modal__cart-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--rc-border);
+  border-radius: 2px;
+  margin: 8px auto 4px;
+  flex-shrink: 0;
 }
 
 .order-modal__cart-fields {
@@ -1923,10 +1935,12 @@
 .order-swipe-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 9px 14px;
   background: var(--rc-card);
   will-change: transform;
+  min-height: 46px;
+  box-sizing: border-box;
 }
 
 .order-swipe-item__info {
