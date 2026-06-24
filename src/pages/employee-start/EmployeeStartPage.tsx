@@ -326,6 +326,10 @@ export function EmployeeStartPage() {
   const [orderCategoryId, setOrderCategoryId] = useState('')
   const [orderCart, setOrderCart] = useState<OrderCartItem[]>([])
   const [orderCartOpen, setOrderCartOpen] = useState(false)
+  const CART_MIN_H = 3 * 46 + 16
+  const [cartListHeight, setCartListHeight] = useState(CART_MIN_H)
+  const cartDragStartY = useRef(0)
+  const cartDragStartH = useRef(0)
   const [commentTarget, setCommentTarget] = useState<string | null>(null)
   const [commentText, setCommentText] = useState('')
   const [orders, setOrders] = useState<Order[]>([])
@@ -913,7 +917,7 @@ export function EmployeeStartPage() {
           </button>
         </section>
 
-        <button type="button" className="employee-mobile__accept-order-btn" onClick={() => { setOrderDraft({ tableId: '', guestsCount: 2, comment: '' }); setOrderStep('table'); setOrderSubStep('categories'); setOrderHallId(halls[0]?.id || ''); setOrderCart([]); setOrderCartOpen(false); setOrderCategoryId(''); setOrderModal(true) }}>
+        <button type="button" className="employee-mobile__accept-order-btn" onClick={() => { setOrderDraft({ tableId: '', guestsCount: 2, comment: '' }); setOrderStep('table'); setOrderSubStep('categories'); setOrderHallId(halls[0]?.id || ''); setOrderCart([]); setOrderCartOpen(false); setOrderCategoryId(''); setCartListHeight(CART_MIN_H); setOrderModal(true) }}>
           <ClipboardIcon />
           <span>Принять заказ</span>
         </button>
@@ -1508,8 +1512,24 @@ export function EmployeeStartPage() {
                 {/* Нижняя панель — корзина */}
                 <div className="order-modal__cart-panel">
                   {orderCart.length > 0 && (
-                    <div className="order-modal__cart-list">
-                      <div className="order-modal__cart-handle" />
+                    <div className="order-modal__cart-list" style={{ height: cartListHeight }}>
+                      <div
+                        className="order-modal__cart-handle"
+                        onTouchStart={(e) => {
+                          cartDragStartY.current = e.touches[0].clientY
+                          cartDragStartH.current = cartListHeight
+                        }}
+                        onTouchMove={(e) => {
+                          const delta = cartDragStartY.current - e.touches[0].clientY
+                          const next = Math.max(CART_MIN_H, Math.min(window.innerHeight * 0.72, cartDragStartH.current + delta))
+                          setCartListHeight(next)
+                        }}
+                        onTouchEnd={() => {
+                          const maxH = window.innerHeight * 0.72
+                          const mid = (CART_MIN_H + maxH) / 2
+                          setCartListHeight(cartListHeight > mid ? maxH : CART_MIN_H)
+                        }}
+                      />
                       {[...orderCart].reverse().map((ci) => (
                         <SwipeableCartItem
                           key={ci.itemId}

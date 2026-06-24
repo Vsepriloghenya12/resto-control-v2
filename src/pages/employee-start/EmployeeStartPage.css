@@ -1799,22 +1799,26 @@
 }
 
 .order-modal__cart-list {
-  max-height: calc(3 * 46px + 8px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
+  transition: height 0.2s ease;
 }
 
 .order-modal__cart-list::-webkit-scrollbar { display: none; }
 
 .order-modal__cart-handle {
-  width: 36px;
-  height: 4px;
+  width: 40px;
+  height: 5px;
   background: var(--rc-border);
-  border-radius: 2px;
-  margin: 8px auto 4px;
+  border-radius: 3px;
+  margin: 8px auto 6px;
   flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
 }
+
+.order-modal__cart-handle:active { cursor: grabbing; background: var(--rc-muted); }
 
 .order-modal__cart-fields {
   display: grid;
