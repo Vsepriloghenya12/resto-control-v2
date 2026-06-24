@@ -1208,7 +1208,7 @@ export function EmployeesPage() {
                 <span>Временный пароль</span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input style={{ flex: 1, paddingRight: '40px' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} />
-                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#8e929c', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowEmployeePassword((v) => !v) }} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#8e929c', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
                 </span>
               </label>
               {error ? <p className="employees-error">{error}</p> : null}
@@ -1358,7 +1358,7 @@ export function EmployeesPage() {
                 <span>Новый пароль <small style={{ fontWeight: 400, color: 'var(--rc-muted)' }}>(оставьте пустым чтобы не менять)</small></span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input style={{ flex: 1, paddingRight: '40px' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Введите новый пароль" type={showEmployeePassword ? 'text' : 'password'} />
-                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowEmployeePassword((v) => !v) }} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
                 </span>
               </label>
 {error ? <p className="employees-error">{error}</p> : null}
