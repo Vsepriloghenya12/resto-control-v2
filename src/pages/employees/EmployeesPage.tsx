@@ -1204,13 +1204,13 @@ export function EmployeesPage() {
               <label><span>Имя сотрудника</span><input autoFocus value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
               <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
               <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
-              <label>
-                <span>Временный пароль</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--rc-text)' }}>Временный пароль</span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input style={{ flex: 1, paddingRight: '40px' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} />
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowEmployeePassword((v) => !v) }} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#8e929c', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                  <input style={{ flex: 1, paddingRight: '40px', width: '100%', boxSizing: 'border-box' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} />
+                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#8e929c', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
                 </span>
-              </label>
+              </div>
               {error ? <p className="employees-error">{error}</p> : null}
             </div>
             <div className="employees-modal__footer">
@@ -1354,13 +1354,13 @@ export function EmployeesPage() {
               <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
               <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
               <label><span>Закрытие смены</span><select value={form.shiftCloseMethod} onChange={(e) => setForm((v) => ({ ...v, shiftCloseMethod: e.target.value as ShiftCloseMethod }))}><option value="checklist">По чек-листу закрытия</option><option value="button">По кнопке «Закрыть смену»</option><option value="schedule">По графику (автоматически)</option></select></label>
-              <label>
-                <span>Новый пароль <small style={{ fontWeight: 400, color: 'var(--rc-muted)' }}>(оставьте пустым чтобы не менять)</small></span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--rc-text)' }}>Новый пароль <small style={{ fontWeight: 400, color: 'var(--rc-muted)' }}>(оставьте пустым чтобы не менять)</small></span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input style={{ flex: 1, paddingRight: '40px' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Введите новый пароль" type={showEmployeePassword ? 'text' : 'password'} />
-                  <button type="button" onMouseDown={(e) => { e.preventDefault(); setShowEmployeePassword((v) => !v) }} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                  <input style={{ flex: 1, paddingRight: '40px', width: '100%', boxSizing: 'border-box' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Введите новый пароль" type={showEmployeePassword ? 'text' : 'password'} />
+                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
                 </span>
-              </label>
+              </div>
 {error ? <p className="employees-error">{error}</p> : null}
             </div>
             <div className="employees-modal__footer employees-modal__footer--edit">
