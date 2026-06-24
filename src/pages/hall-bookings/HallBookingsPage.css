@@ -283,11 +283,75 @@
   flex: 0 0 auto;
 }
 
+.hall-halls-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0 16px 12px;
+  flex-wrap: wrap;
+}
+
+.hall-halls-bar__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 44px 8px 12px;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 10px;
+  background: var(--rc-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.hall-halls-bar__item:hover { border-color: var(--rc-text); }
+
+.hall-halls-bar__item--active {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.hall-halls-bar__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rc-text);
+}
+
+.hall-halls-bar__item--active .hall-halls-bar__name {
+  color: #fff;
+}
+
+.hall-halls-bar__meta {
+  font-size: 11px;
+  color: var(--rc-muted);
+}
+
+.hall-halls-bar__item--active .hall-halls-bar__meta {
+  color: rgba(255,255,255,0.7);
+}
+
+.hall-halls-bar__edit,
+.hall-halls-bar__delete {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--rc-muted);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.hall-halls-bar__edit { top: 6px; right: 24px; }
+.hall-halls-bar__delete { top: 6px; right: 6px; }
+
+.hall-halls-bar__edit:hover { color: #2563eb; background: #eff6ff; }
+.hall-halls-bar__delete:hover { color: #dc2626; background: #fee2e2; }
+
 .hall-workspace {
-  display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 300px;
-  gap: 14px;
-  align-items: start;
   min-width: 0;
 }
 
@@ -617,6 +681,268 @@
   min-width: 0;
 }
 
+/* ─── View toggle ─────────────────────────────────────────────────────────── */
+
+.hall-view-toggle {
+  display: flex;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hall-view-toggle__btn {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  color: var(--rc-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.hall-view-toggle__btn + .hall-view-toggle__btn {
+  border-left: 1.5px solid var(--rc-border);
+}
+
+.hall-view-toggle__btn--active {
+  background: var(--rc-text);
+  color: var(--rc-card);
+}
+
+/* ─── Schema view ─────────────────────────────────────────────────────────── */
+
+.hall-schema {
+  position: relative;
+  min-height: 300px;
+  background-image:
+    linear-gradient(var(--rc-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rc-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-color: var(--rc-card-2);
+  margin: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rc-border);
+  overflow: hidden;
+  user-select: none;
+}
+
+.hall-schema__empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--rc-muted);
+  font-size: 14px;
+}
+
+.hall-schema-table {
+  position: absolute;
+  width: 100px;
+  min-height: 70px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px;
+  cursor: grab;
+  transition: box-shadow 0.12s;
+  text-align: center;
+}
+
+.hall-schema-table:active { cursor: grabbing; }
+
+.hall-schema-table:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+
+.hall-schema-table--free     { background: var(--rc-green-soft, #f0fdf4); border-color: var(--rc-green, #22c55e); }
+.hall-schema-table--reserved { background: var(--rc-blue-soft, #eff6ff); border-color: #93c5fd; }
+.hall-schema-table--arrived  { background: var(--rc-orange-soft, #fefce8); border-color: #fde047; }
+.hall-schema-table--occupied { background: var(--rc-red-soft, #fff7ed); border-color: #fdba74; }
+.hall-schema-table--disabled { background: var(--rc-hover, #f9fafb); border-color: var(--rc-border); }
+
+.hall-schema-table__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rc-text);
+}
+
+.hall-schema-table__seats {
+  font-size: 11px;
+  color: var(--rc-muted);
+}
+
+.hall-schema-table__guest {
+  font-size: 11px;
+  color: #2563eb;
+  font-weight: 600;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hall-schema-table--circle {
+  border-radius: 50%;
+}
+
+.hall-schema-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 3px;
+  cursor: se-resize;
+}
+
+.hall-schema-shape-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: rgba(0,0,0,0.12);
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.hall-schema-delete {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: rgba(220,38,38,0.18);
+  border-radius: 4px;
+  font-size: 9px;
+  cursor: pointer;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* ─── Schema elements (walls, entrance) ──────────────────────────────────── */
+
+.hall-schema-element {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.hall-schema-element:active { cursor: grabbing; }
+
+.hall-schema-element--wall {
+  background: var(--rc-text);
+  border-radius: 4px;
+}
+
+.hall-schema-element--entrance {
+  background: #d1fae5;
+  border: 2px dashed #10b981;
+  border-radius: 8px;
+}
+
+.hall-schema-element__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  pointer-events: none;
+}
+
+.hall-schema-element--entrance .hall-schema-element__label {
+  color: #065f46;
+}
+
+/* ─── Schema toolbar ──────────────────────────────────────────────────────── */
+
+.hall-schema-canvas-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 40%, rgba(0,0,0,0.25) 40%);
+  border-radius: 0 0 12px 0;
+}
+
+.hall-schema-canvas-resize::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(0,0,0,0.4);
+  border-bottom: 2px solid rgba(0,0,0,0.4);
+}
+
+.hall-schema-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--rc-border);
+}
+
+.hall-schema-toolbar__btn {
+  height: 34px;
+  padding: 0 14px;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 8px;
+  background: var(--rc-card);
+  color: var(--rc-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hall-schema-toolbar__btn:hover { background: var(--rc-hover); }
+
+.hall-schema-toolbar__edit {
+  height: 34px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--rc-text);
+  color: var(--rc-card);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hall-schema-toolbar__save {
+  height: 34px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: #16a34a;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .hall-side-panel__header {
   padding-bottom: 12px;
   border-bottom: 1px solid var(--rc-border);
@@ -872,7 +1198,7 @@
 
 @media (max-width: 1500px) {
   .hall-workspace {
-    grid-template-columns: 240px minmax(0, 1fr) 280px;
+    min-width: 0;
   }
 
   .hall-table {
@@ -1060,3 +1386,13 @@
 }
 
 .hall-add-booking-btn:hover { background: #dbeafe; }
+
+.hall-schema-table__waiter {
+  font-size: 10px;
+  color: #7c3aed;
+  font-weight: 600;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

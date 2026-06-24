@@ -663,3 +663,221 @@
 .inv-blank-btn__name { font-size: 15px; font-weight: 700; color: var(--rc-text); }
 .inv-blank-btn.is-active .inv-blank-btn__name { color: var(--rc-blue); }
 .inv-blank-btn__cnt { font-size: 12px; color: var(--rc-muted); font-weight: 500; }
+
+/* Select for assignee */
+.inv-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  background: var(--rc-card);
+  color: var(--rc-text);
+  cursor: pointer;
+}
+.inv-select:focus { border-color: #6366f1; outline: none; }
+
+/* Custom section button */
+.inv-section-btn--add {
+  border-style: dashed;
+  color: var(--rc-muted);
+}
+.inv-section-btn--add:hover { color: #6366f1; border-color: #6366f1; }
+
+.inv-blank-btn--add {
+  border-style: dashed;
+}
+.inv-blank-btn--add .inv-blank-btn__name { color: var(--rc-muted); }
+.inv-blank-btn--add:hover .inv-blank-btn__name { color: #6366f1; }
+
+/* Clickable table rows */
+.inv-table__row--clickable { cursor: pointer; }
+.inv-table__row--clickable:hover td { background: var(--rc-hover); }
+
+/* Document modal */
+.inv-doc-modal {
+  background: var(--rc-card);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 40px rgba(0,0,0,.18);
+}
+
+.inv-doc-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+  gap: 12px;
+}
+.inv-doc-modal__header strong { display: block; font-size: 18px; font-weight: 800; color: var(--rc-text); }
+.inv-doc-modal__header span { font-size: 14px; color: var(--rc-muted); }
+
+.inv-doc-modal__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 20px;
+}
+
+.inv-doc-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--rc-card-2);
+  border-radius: 8px;
+  gap: 8px;
+}
+.inv-doc-meta-row span { font-size: 13px; color: var(--rc-muted); }
+.inv-doc-meta-row strong { font-size: 14px; font-weight: 700; color: var(--rc-text); text-align: right; }
+
+.inv-doc-modal__results {
+  padding: 0 20px 20px;
+}
+.inv-doc-modal__results h4 { font-size: 14px; font-weight: 700; color: var(--rc-text); margin: 0 0 10px; }
+
+/* Custom section blank card with edit/delete */
+.inv-blank-btn--custom {
+  position: relative;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-blank-btn__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+}
+
+.inv-blank-btn__actions {
+  display: flex;
+  gap: 4px;
+  padding: 0 10px 8px;
+}
+
+.inv-blank-btn__actions button {
+  background: none;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--rc-muted);
+  transition: background 0.12s, color 0.12s;
+}
+.inv-blank-btn__actions button:hover { background: var(--rc-hover); color: var(--rc-text); }
+
+/* Inline edit/delete in section btns (assign form) */
+.inv-section-btn-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.inv-section-inline-edit,
+.inv-section-inline-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--rc-muted);
+  padding: 2px 4px;
+  border-radius: 5px;
+  line-height: 1;
+}
+.inv-section-inline-edit:hover { color: #2563eb; }
+.inv-section-inline-del:hover { color: #dc2626; }
+
+/* All sections now have edit/delete — editable layout */
+.inv-blank-btn--editable {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-blank-btn--editable .inv-blank-btn__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+  width: 100%;
+}
+
+.inv-blank-btn--editable .inv-blank-btn__actions {
+  display: flex;
+  gap: 4px;
+  padding: 0 10px 8px;
+}
+
+/* Nomenclature sub-tabs */
+.inv-nom-subtabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--rc-card-2);
+  border: 1px solid var(--rc-border);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.inv-nom-subtab {
+  flex: 1;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rc-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.inv-nom-subtab:hover { color: var(--rc-text); }
+.inv-nom-subtab.is-active { background: var(--rc-card); color: var(--rc-text); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+/* Output badge */
+.inv-output-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--rc-blue-soft);
+  color: var(--rc-blue);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Edit button */
+.inv-edit-btn {
+  background: none;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--rc-muted);
+  transition: background 0.12s, color 0.12s;
+}
+.inv-edit-btn:hover { background: var(--rc-hover); color: #2563eb; border-color: #2563eb; }

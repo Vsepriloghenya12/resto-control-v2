@@ -83,7 +83,6 @@
   font-weight: 900;
 }
 
-
 .payment-support-button {
   width: fit-content;
   min-height: 34px;
@@ -112,99 +111,243 @@
   white-space: nowrap;
 }
 
-.payment-tariff-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* === Tariff Carousel === */
+.ptariff-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.payment-tariff-card {
+.ptariff-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  padding: 16px 0;
+}
+
+.ptariff-track {
+  display: flex;
+  gap: 16px;
+}
+
+.ptc {
+  flex: 0 0 calc((100cqi - 32px) / 3);
   position: relative;
-  min-height: 150px;
-  display: grid;
-  align-content: space-between;
-  gap: 12px;
-  border: 1px solid var(--rc-border);
-  border-radius: 12px;
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 18px;
+  padding: 22px;
   background: var(--rc-card);
   color: var(--rc-text);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  transition: border-color 200ms, box-shadow 200ms, transform 200ms;
+  min-height: 210px;
 }
 
-.payment-tariff-card--featured {
-  border-color: #fed7aa;
-  background: #fffaf5;
+.ptc:hover:not(.ptc--hero) {
+  border-color: #93c5fd;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.09);
+  transform: translateY(-2px);
 }
 
-.payment-tariff-card--selected {
-  border-color: #1d4ed8;
-  background: var(--rc-card-2);
-  box-shadow: inset 3px 0 0 #1d4ed8;
+.ptc--hero {
+  background: linear-gradient(145deg, #0f2147 0%, #1e3a8a 52%, #1e40af 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 18px 48px rgba(30, 58, 138, 0.38), 0 4px 12px rgba(30, 58, 138, 0.2);
 }
 
-.payment-tariff-card strong {
-  display: block;
-  color: var(--rc-text);
-  font-size: 15px;
-  font-weight: 900;
+.ptc--hero:hover {
+  box-shadow: 0 24px 56px rgba(30, 58, 138, 0.48);
+  transform: translateY(-3px);
 }
 
-.payment-tariff-card p {
-  margin: 5px 0 0;
-  color: var(--rc-muted);
-  font-size: 12px;
-  font-weight: 750;
+.ptc--selected:not(.ptc--hero) {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.13);
 }
 
-.payment-tariff-price b {
-  color: var(--rc-text);
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-
-.payment-tariff-price em {
-  margin-left: 4px;
-  color: var(--rc-muted);
-  font-size: 12px;
-  font-weight: 800;
-  font-style: normal;
-}
-
-.payment-tariff-card small {
-  color: #52637a;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.payment-tariff-card__badge,
-.payment-tariff-card__selected {
+.ptc__popular {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 16px;
+  right: 16px;
   min-height: 22px;
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   border-radius: 999px;
-  padding: 0 8px;
+  padding: 0 9px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fde68a;
   font-size: 11px;
   font-weight: 900;
 }
 
-.payment-tariff-card__badge {
-  color: #b45309;
-  background: #ffedd5;
+.ptc__current-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  background: #dcfae6;
+  color: #027a48;
+  font-size: 11px;
+  font-weight: 900;
 }
 
-.payment-tariff-card__selected {
+.ptc__name {
+  display: block;
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--rc-text);
+}
+
+.ptc--hero .ptc__name { color: #ffffff; }
+
+.ptc__staff {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--rc-muted);
+}
+
+.ptc--hero .ptc__staff { color: rgba(255, 255, 255, 0.6); }
+
+.ptc__price {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.ptc__price b {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--rc-text);
+}
+
+.ptc--hero .ptc__price b { color: #ffffff; }
+
+.ptc__price em {
+  font-size: 12px;
+  font-weight: 800;
+  font-style: normal;
+  color: var(--rc-muted);
+}
+
+.ptc--hero .ptc__price em { color: rgba(255, 255, 255, 0.55); }
+
+.ptc__note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #52637a;
+}
+
+.ptc--hero .ptc__note { color: rgba(255, 255, 255, 0.7); }
+
+.ptc__cta {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  height: 34px;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: var(--rc-hover);
+  color: var(--rc-text);
+  font-size: 12px;
+  font-weight: 900;
+  transition: background 200ms, color 200ms;
+}
+
+.ptc:hover:not(.ptc--hero) .ptc__cta {
+  background: var(--rc-blue-soft);
   color: #1d4ed8;
-  background: #dbeafe;
 }
 
+.ptc--hero .ptc__cta {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.ptc--hero:hover .ptc__cta { background: rgba(255, 255, 255, 0.26); }
+
+.ptc--selected:not(.ptc--hero) .ptc__cta {
+  background: #dcfae6;
+  color: #027a48;
+}
+
+.ptariff-arrow {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 50%;
+  background: var(--rc-card);
+  color: var(--rc-text);
+  cursor: pointer;
+  transition: background 200ms, border-color 200ms, color 200ms, box-shadow 200ms;
+}
+
+.ptariff-arrow:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.28);
+}
+
+.ptariff-arrow:disabled { opacity: 0.28; cursor: default; }
+
+.ptariff-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.ptariff-dot {
+  height: 6px;
+  width: 6px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rc-border);
+  cursor: pointer;
+  padding: 0;
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1), background 300ms;
+}
+
+.ptariff-dot--active {
+  width: 22px;
+  background: #1d4ed8;
+}
+
+@container (max-width: 859px) {
+  .ptc { flex-basis: calc((100cqi - 16px) / 2); }
+}
+
+@container (max-width: 559px) {
+  .ptc { flex-basis: 100cqi; }
+}
+
+/* === Layout === */
 .payment-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -485,160 +628,8 @@
   font-weight: 850;
 }
 
-@media (max-width: 1320px) {
-  .payment-summary-grid,
-  
-.payment-support-button {
-  width: fit-content;
-  min-height: 34px;
-  margin-top: 10px;
-  border: 1px solid #bfdbfe;
-  border-radius: 9px;
-  padding: 0 12px;
-  background: var(--rc-blue-soft);
-  color: #1d4ed8;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.payment-trial-pill {
-  min-height: 30px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0 12px;
-  background: #fff7ed;
-  color: #c2410c;
-  font-size: 12px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.payment-tariff-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.payment-tariff-card {
-  position: relative;
-  min-height: 150px;
-  display: grid;
-  align-content: space-between;
-  gap: 12px;
-  border: 1px solid var(--rc-border);
-  border-radius: 12px;
-  padding: 14px;
-  background: var(--rc-card);
-  color: var(--rc-text);
-  font-family: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.payment-tariff-card--featured {
-  border-color: #fed7aa;
-  background: #fffaf5;
-}
-
-.payment-tariff-card--selected {
-  border-color: #1d4ed8;
-  background: var(--rc-card-2);
-  box-shadow: inset 3px 0 0 #1d4ed8;
-}
-
-.payment-tariff-card strong {
-  display: block;
-  color: var(--rc-text);
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.payment-tariff-card p {
-  margin: 5px 0 0;
-  color: var(--rc-muted);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.payment-tariff-price b {
-  color: var(--rc-text);
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-
-.payment-tariff-price em {
-  margin-left: 4px;
-  color: var(--rc-muted);
-  font-size: 12px;
-  font-weight: 800;
-  font-style: normal;
-}
-
-.payment-tariff-card small {
-  color: #52637a;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.payment-tariff-card__badge,
-.payment-tariff-card__selected {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  min-height: 22px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0 8px;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.payment-tariff-card__badge {
-  color: #b45309;
-  background: #ffedd5;
-}
-
-.payment-tariff-card__selected {
-  color: #1d4ed8;
-  background: #dbeafe;
-}
-
-.payment-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .payment-form-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .payment-tariff-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 780px) {
-  .payment-form-grid,
-  .payment-form-grid__wide,
-  .payment-document,
-  .payment-tariff-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .payment-card-header,
-  .payment-card-actions,
-  .payment-summary-card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
 .payment-row-note { color: var(--rc-muted); font-size: 13px; font-weight: 800; }
+
 .payment-support-modal {
   position: fixed;
   inset: 0;
@@ -648,6 +639,7 @@
   padding: 20px;
   background: rgba(15, 23, 42, 0.28);
 }
+
 .payment-support-dialog {
   width: min(520px, 100%);
   display: grid;
@@ -658,6 +650,7 @@
   background: var(--rc-card);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
 }
+
 .payment-support-dialog textarea {
   width: 100%;
   resize: vertical;
@@ -666,4 +659,34 @@
   padding: 12px;
   color: var(--rc-text);
   font: inherit;
+}
+
+/* === Responsive === */
+@media (max-width: 1320px) {
+  .payment-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .payment-form-grid,
+  .payment-form-grid__wide,
+  .payment-document {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-card-header,
+  .payment-card-actions,
+  .payment-summary-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

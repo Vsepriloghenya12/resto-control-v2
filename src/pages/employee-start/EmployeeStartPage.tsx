@@ -53,12 +53,13 @@ type Order = {
 }
 type DetailKind = 'task' | 'checklist' | 'inventory' | 'notification' | 'knowledge' | 'guest' | 'support' | 'ttk' | 'stopList' | 'schedule' | null
 type HallStatus = 'free' | 'reserved' | 'arrived' | 'occupied' | 'disabled'
-type HallMode = 'tables' | 'bookings'
+type HallMode = 'tables' | 'schema' | 'bookings'
 type HallFilter = 'all' | HallStatus
 
 type Task = { id: string; title: string; description?: string; status?: string; assignedPosition?: string; dueTime?: string; dueDate?: string; requiresPhoto?: boolean }
 type Checklist = { id: string; title: string; position?: string; active?: boolean; startTime?: string; endTime?: string; items?: Array<{ id: string; title: string; required?: boolean; requiresCompletionPhoto?: boolean }> }
-type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; dueDate?: string; rowsCount?: number }
+type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; assignedBy?: string; dueDate?: string; rowsCount?: number }
+type InvProduct = { id: string; name: string; unit: string; section: string; active?: boolean }
 type Knowledge = { id: string; title: string; section?: string; type?: string; description?: string; status?: string }
 type TtkItem = { id: string; name: string; group?: string; groupId?: string; unit?: string; price?: number; tag?: string; description?: string; cookingTime?: string; output?: string; online?: boolean; takeaway?: boolean; stopList?: boolean; inStopList?: boolean; isStopped?: boolean; status?: string }
 type TtkGroup = { id: string; name: string }
@@ -81,9 +82,9 @@ type DashboardSummary = {
   staffSchedules?: StaffSchedule[]
 }
 
-type MobileHall = { id: string; name: string; tablesCount: number }
-type MobileBooking = { id: string; guestName: string; phone?: string; time: string; guestsCount: number; status: 'new' | 'confirmed' | 'arrived' | 'seated' | 'cancelled' | 'no_show'; comment?: string }
-type MobileHallTable = { id: string; hallId: string; name: string; seats: number; status: HallStatus; booking?: MobileBooking }
+type MobileHall = { id: string; name: string; tablesCount: number; schemaW?: number; schemaH?: number; schemaElements?: Array<{ id: string; type: 'wall' | 'entrance'; x: number; y: number; w: number; h: number }> }
+type MobileBooking = { id: string; guestName: string; phone?: string; time: string; guestsCount: number; status: 'new' | 'confirmed' | 'arrived' | 'seated' | 'cancelled' | 'no_show'; comment?: string; assignedEmployeeId?: string; assignedEmployeeName?: string }
+type MobileHallTable = { id: string; hallId: string; name: string; seats: number; status: HallStatus; booking?: MobileBooking; x?: number; y?: number; w?: number; h?: number; shape?: 'rect' | 'circle' }
 type DetailState = { kind: DetailKind; title: string; subtitle?: string; body?: ReactNode; actions?: ReactNode }
 
 function getHallStatusLabel(status: HallStatus) {
@@ -91,7 +92,7 @@ function getHallStatusLabel(status: HallStatus) {
     free: 'Свободен',
     reserved: 'Подтверждена',
     arrived: 'Пришли по брони',
-    occupied: 'Гости сели',
+    occupied: 'Гости за столом',
     disabled: 'Недоступен',
   }
   return labels[status]
@@ -102,7 +103,7 @@ function getBookingStatusLabel(status: MobileBooking['status']) {
     new: 'Новая',
     confirmed: 'Подтверждена',
     arrived: 'Пришли по брони',
-    seated: 'Гости сели',
+    seated: 'Гости за столом',
     cancelled: 'Отменена',
     no_show: 'Не пришли',
   }
@@ -329,6 +330,10 @@ export function EmployeeStartPage() {
   const [taskFilter, setTaskFilter] = useState<'all' | 'active' | 'overdue' | 'done'>('all')
   const [bookingForm, setBookingForm] = useState<{ guestName: string; phone: string; date: string; time: string; guestsCount: number; comment: string } | null>(null)
   const [bookingSaving, setBookingSaving] = useState(false)
+  const [waiterPicker, setWaiterPicker] = useState<null | 'seated' | 'walkIn'>(null)
+  const [invModal, setInvModal] = useState<{ assignment: InventoryAssignment; products: InvProduct[]; counts: Record<string, string>; firstEmptyId: string | null } | null>(null)
+  const [invSaving, setInvSaving] = useState(false)
+  const invInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const [orderModal, setOrderModal] = useState(false)
   const [orderStep, setOrderStep] = useState<'table' | 'order'>('table')
   const [orderSubStep, setOrderSubStep] = useState<'categories' | 'dishes'>('categories')
@@ -568,6 +573,15 @@ export function EmployeeStartPage() {
     }
   }
 
+  async function openInventoryCounting(item: InventoryAssignment) {
+    const result = await api.list<InvProduct>('inventory-products')
+    const sectionProducts = result.items.filter(p => p.active !== false && (p.section === item.section || p.section === item.section?.toLowerCase()))
+    const counts: Record<string, string> = {}
+    sectionProducts.forEach(p => { counts[p.id] = '' })
+    setInvModal({ assignment: item, products: sectionProducts, counts, firstEmptyId: null })
+    setDetail(null)
+  }
+
   function inventoryDetail(item: InventoryAssignment): DetailState {
     return {
       kind: 'inventory',
@@ -575,13 +589,32 @@ export function EmployeeStartPage() {
       subtitle: item.section || 'Инвентаризация',
       body: (
         <div className="employee-mobile__detail-text">
+          {item.assignedBy && <span>Назначил: {item.assignedBy}</span>}
           <span>Статус: {statusText(item.status)}</span>
-          <span>Строк: {item.rowsCount || 0}</span>
+          <span>Позиций: {item.rowsCount || 0}</span>
           <span>Срок: {item.dueDate || 'не указан'}</span>
         </div>
       ),
-      actions: <button type="button" onClick={() => submitInventory(item.id)}>Отметить как сданную</button>,
+      actions: <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => { void openInventoryCounting(item) }}>Начать подсчёт</button>,
     }
+  }
+
+  async function submitInventoryCounts() {
+    if (!invModal) return
+    const emptyId = invModal.products.find(p => invModal.counts[p.id] === '')?.id ?? null
+    if (emptyId) {
+      setInvModal(prev => prev ? { ...prev, firstEmptyId: emptyId } : prev)
+      setTimeout(() => { invInputRefs.current[emptyId]?.focus(); invInputRefs.current[emptyId]?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 50)
+      return
+    }
+    setInvSaving(true)
+    const results: Record<string, number> = {}
+    invModal.products.forEach(p => { results[p.id] = parseFloat(invModal.counts[p.id] || '0') || 0 })
+    await api.update('inventory-assignments', invModal.assignment.id, { status: 'submitted', submittedAt: new Date().toISOString(), results, rowsCount: invModal.products.length })
+    setInvSaving(false)
+    setInvModal(null)
+    showNotice('Инвентаризация сдана.')
+    await loadData()
   }
 
   function knowledgeDetail(item: Knowledge): DetailState {
@@ -746,18 +779,39 @@ export function EmployeeStartPage() {
     await loadData()
   }
 
-  async function submitInventory(id: string) {
-    await api.update('inventory-assignments', id, { status: 'submitted', submittedAt: new Date().toISOString() })
-    showNotice('Инвентаризация отмечена как сданная.')
-    setDetail(null)
-    await loadData()
-  }
-
   async function updateSelectedBookingStatus(status: MobileBooking['status']) {
     if (!selectedTable?.booking) return
     await api.bookingStatus(selectedTable.booking.id, status)
     await loadHallPlan()
     setSelectedTable(null)
+  }
+
+  async function seatWithWaiter(emp: { id: string; name: string }) {
+    if (waiterPicker === 'seated' && selectedTable?.booking) {
+      await api.bookingStatus(selectedTable.booking.id, 'seated')
+      await apiRequest(`/api/bookings/${selectedTable.booking.id}`, { method: 'PATCH', body: JSON.stringify({ assignedEmployeeId: emp.id, assignedEmployeeName: emp.name }) })
+      await loadHallPlan()
+      setSelectedTable(null)
+    } else if (waiterPicker === 'walkIn' && selectedTable) {
+      const booking = await api.create<MobileBooking>('bookings', {
+        hallId: selectedTable.hallId,
+        tableId: selectedTable.id,
+        guestName: 'Гости без брони',
+        phone: '',
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toTimeString().slice(0, 5),
+        guestsCount: selectedTable.seats || 1,
+        status: 'seated',
+        comment: 'Посадка без предварительной брони',
+        assignedEmployeeId: emp.id,
+        assignedEmployeeName: emp.name,
+      })
+      await api.bookingStatus(booking.id, 'seated')
+      showNotice('Гости посажены за стол.')
+      await loadHallPlan()
+      setSelectedTable(null)
+    }
+    setWaiterPicker(null)
   }
 
   async function saveOrder() {
@@ -1025,7 +1079,8 @@ export function EmployeeStartPage() {
         </div>
 
         <div className="employee-mobile__hall-mode" aria-label="Режим плана зала">
-          <button type="button" className={hallMode === 'tables' ? 'is-active' : ''} onClick={() => setHallMode('tables')}>Столы</button>
+          <button type="button" className={hallMode === 'tables' ? 'is-active' : ''} onClick={() => setHallMode('tables')}>Список</button>
+          <button type="button" className={hallMode === 'schema' ? 'is-active' : ''} onClick={() => setHallMode('schema')}>Схема</button>
           <button type="button" className={hallMode === 'bookings' ? 'is-active' : ''} onClick={() => setHallMode('bookings')}>Брони</button>
         </div>
 
@@ -1040,8 +1095,43 @@ export function EmployeeStartPage() {
                 <div><strong>{table.name}</strong><span>{table.seats} места</span></div>
                 <p>{table.booking ? `${table.booking.time} · ${table.booking.guestName}` : 'Без брони'}</p>
                 <small>{getHallStatusLabel(table.status)}</small>
+                {table.booking?.assignedEmployeeName ? <small className="employee-mobile__table-waiter">👤 {table.booking.assignedEmployeeName}</small> : null}
               </button>
             )) : <p className="employee-mobile__empty">Столы не настроены.</p>}
+          </div>
+        ) : hallMode === 'schema' ? (
+          <div className="employee-mobile__hall-schema-wrap">
+            <div
+              className="employee-mobile__hall-schema"
+              style={{ width: selectedHall?.schemaW ?? 700, height: selectedHall?.schemaH ?? 460 }}
+            >
+              {(selectedHall?.schemaElements ?? []).map(el => (
+                <div
+                  key={el.id}
+                  className={`hall-schema-element hall-schema-element--${el.type}`}
+                  style={{ left: el.x, top: el.y, width: el.w, height: el.h }}
+                >
+                  <span className="hall-schema-element__label">{el.type === 'entrance' ? '🚪 Вход' : ''}</span>
+                </div>
+              ))}
+              {hallTables.filter(t => t.hallId === selectedHallId).map(table => (
+                <button
+                  key={table.id}
+                  type="button"
+                  className={`hall-schema-table hall-schema-table--${table.status}${table.shape === 'circle' ? ' hall-schema-table--circle' : ''}`}
+                  style={{ left: table.x ?? 20, top: table.y ?? 20, width: table.w ?? 90, height: table.h ?? 65, position: 'absolute' }}
+                  onClick={() => setSelectedTable(table)}
+                >
+                  <span className="hall-schema-table__name">{table.name}</span>
+                  <span className="hall-schema-table__seats">{table.seats} мест</span>
+                  {table.booking && <span className="hall-schema-table__guest">{table.booking.guestName}</span>}
+                  {table.booking?.assignedEmployeeName && <span className="hall-schema-table__waiter">👤 {table.booking.assignedEmployeeName}</span>}
+                </button>
+              ))}
+              {hallTables.filter(t => t.hallId === selectedHallId).length === 0 && (
+                <p className="hall-schema__empty">Схема не настроена</p>
+              )}
+            </div>
           </div>
         ) : (
           <div className="employee-mobile__booking-list">
@@ -1324,16 +1414,16 @@ export function EmployeeStartPage() {
             <div className="employee-mobile__sheet-handle" />
             <div className="employee-mobile__hall-sheet-title"><div><strong>{selectedTable.name}</strong><p>{selectedHall?.name || 'Зал'} · {selectedTable.seats} места</p></div><button type="button" onClick={() => setSelectedTable(null)}>×</button></div>
             {selectedTable.booking
-              ? <div className="employee-mobile__booking-card"><small>Активная бронь</small><strong>{selectedTable.booking.guestName}</strong><p>{selectedTable.booking.time} · {selectedTable.booking.guestsCount} гостей</p>{selectedTable.booking.phone ? <span>Телефон: {selectedTable.booking.phone}</span> : null}{selectedTable.booking.comment ? <span>Комментарий: {selectedTable.booking.comment}</span> : null}</div>
+              ? <div className="employee-mobile__booking-card"><small>Активная бронь</small><strong>{selectedTable.booking.guestName}</strong><p>{selectedTable.booking.time} · {selectedTable.booking.guestsCount} гостей</p>{selectedTable.booking.phone ? <span>Телефон: {selectedTable.booking.phone}</span> : null}{selectedTable.booking.comment ? <span>Комментарий: {selectedTable.booking.comment}</span> : null}{selectedTable.booking.assignedEmployeeName ? <span className="employee-mobile__booking-waiter">Официант: <strong>{selectedTable.booking.assignedEmployeeName}</strong></span> : null}</div>
               : <div className="employee-mobile__booking-card"><small>Бронь</small><strong>Брони нет</strong><p>{selectedTable.status === 'disabled' ? 'Стол недоступен' : 'Стол свободен для посадки'}</p></div>}
             <div className="employee-mobile__hall-actions">
               {selectedTable.booking ? <>
                 {selectedTable.booking.status !== 'arrived' && selectedTable.booking.status !== 'seated' ? <button type="button" className="employee-mobile__hall-actions-blue" onClick={() => updateSelectedBookingStatus('arrived')}>Пришли</button> : null}
-                {selectedTable.booking.status !== 'seated' ? <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => updateSelectedBookingStatus('seated')}>Гости сели</button> : null}
+                {selectedTable.booking.status !== 'seated' ? <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => setWaiterPicker('seated')}>Гости за столом</button> : null}
                 {selectedTable.booking.status === 'seated' || selectedTable.booking.status === 'arrived' ? <button type="button" className="employee-mobile__hall-actions-green" onClick={() => updateSelectedBookingStatus('cancelled')}>Гости ушли</button> : null}
                 {selectedTable.booking.phone ? <button type="button" onClick={() => { window.location.href = `tel:${selectedTable.booking?.phone}` }}>Позвонить</button> : null}
                 <button type="button" className="employee-mobile__hall-actions-red" onClick={() => updateSelectedBookingStatus('no_show')}>Не пришли</button>
-              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => { void seatWalkIn(selectedTable) }}>Посадить без брони</button>}
+              </> : <button type="button" className="employee-mobile__hall-actions-green" onClick={() => setWaiterPicker('walkIn')}>Посадить без брони</button>}
               <button type="button" className="employee-mobile__hall-actions-create" onClick={openBookingForm}>+ Создать бронь</button>
             </div>
           </div>
@@ -1359,6 +1449,67 @@ export function EmployeeStartPage() {
               <label><span>Комментарий</span><input type="text" value={bookingForm.comment} onChange={(e) => setBookingForm((f) => f && ({ ...f, comment: e.target.value }))} placeholder="Необязательно" /></label>
               <button type="submit" className="employee-mobile__hall-actions-create" disabled={bookingSaving}>{bookingSaving ? 'Сохраняю...' : 'Создать бронь'}</button>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {invModal ? (
+        <div className="employee-mobile__sheet-backdrop" onClick={() => !invSaving && setInvModal(null)}>
+          <div className="employee-mobile__sheet employee-mobile__inv-sheet" onClick={e => e.stopPropagation()}>
+            <div className="employee-mobile__sheet-handle" />
+            <div className="employee-mobile__hall-sheet-title">
+              <div>
+                <strong>{invModal.assignment.title}</strong>
+                <p>{invModal.assignment.section} · {invModal.assignment.dueDate}</p>
+              </div>
+              <button type="button" onClick={() => setInvModal(null)}>×</button>
+            </div>
+            {invModal.assignment.assignedBy && <div className="employee-mobile__inv-meta">Назначил: {invModal.assignment.assignedBy}</div>}
+            {invModal.firstEmptyId && <div className="employee-mobile__inv-warning">⚠ Заполните все поля. 0 — тоже значение.</div>}
+            <div className="employee-mobile__inv-list">
+              {invModal.products.length === 0 && <p className="employee-mobile__empty">Позиции для этого подразделения не найдены. Добавьте их в разделе «Инвентаризация».</p>}
+              {invModal.products.map(p => (
+                <div key={p.id} className={`employee-mobile__inv-row${invModal.firstEmptyId === p.id ? ' employee-mobile__inv-row--error' : ''}`}>
+                  <span className="employee-mobile__inv-row__name">{p.name}</span>
+                  <span className="employee-mobile__inv-row__unit">{p.unit}</span>
+                  <input
+                    ref={el => { invInputRefs.current[p.id] = el }}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0 это тоже значение"
+                    value={invModal.counts[p.id]}
+                    onChange={e => setInvModal(prev => prev ? { ...prev, counts: { ...prev.counts, [p.id]: e.target.value }, firstEmptyId: prev.firstEmptyId === p.id && e.target.value !== '' ? null : prev.firstEmptyId } : prev)}
+                    className="employee-mobile__inv-input"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="employee-mobile__inv-footer">
+              <button type="button" className="employee-mobile__hall-actions-purple" disabled={invSaving} onClick={() => { void submitInventoryCounts() }}>
+                {invSaving ? 'Отправляю...' : 'Отправить подсчёт'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {waiterPicker ? (
+        <div className="employee-mobile__sheet-backdrop" onClick={() => setWaiterPicker(null)}>
+          <div className="employee-mobile__sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="employee-mobile__sheet-handle" />
+            <div className="employee-mobile__hall-sheet-title">
+              <div><strong>Выберите официанта</strong><p>Кто обслуживает стол {selectedTable?.name}?</p></div>
+              <button type="button" onClick={() => setWaiterPicker(null)}>×</button>
+            </div>
+            <div className="employee-mobile__waiter-list">
+              {(summary?.employees || []).filter(emp => emp.status !== 'blocked' && emp.status !== 'fired' && emp.status !== 'deleted').map(emp => (
+                <button key={emp.id} type="button" className="employee-mobile__waiter-item" onClick={() => { void seatWithWaiter({ id: emp.id, name: emp.name }) }}>
+                  <strong>{emp.name}</strong>
+                  <span>{emp.position}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       ) : null}

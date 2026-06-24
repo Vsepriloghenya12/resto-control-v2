@@ -75,8 +75,10 @@ export function TtkPage() {
   const [refOpen, setRefOpen] = useState(false)
   const [refUnits, setRefUnits] = useState<string[]>(['шт', 'кг', 'г', 'л', 'мл', 'порц', 'уп'])
   const [refTags, setRefTags] = useState<string[]>(['Завтрак', 'Обед', 'Ужин', 'Веган', 'Острое', 'Алкоголь', 'Десерт'])
+  const [refOutputs, setRefOutputs] = useState<string[]>(['100 г', '150 г', '200 г', '250 г', '300 г', '350 г', '400 г', '500 мл', '300 мл', '200 мл', '150 мл'])
   const [newUnit, setNewUnit] = useState('')
   const [newTag, setNewTag] = useState('')
+  const [newOutput, setNewOutput] = useState('')
 
   // iiko sync
   const [iikoModalStep, setIikoModalStep] = useState<'closed' | 'settings' | 'preview' | 'importing'>('closed')
@@ -376,6 +378,24 @@ export function TtkPage() {
                   <button type="button" className="ttk-primary-button" onClick={() => { if (newTag.trim()) { setRefTags((p) => [...p, newTag.trim()]); setNewTag('') } }}>+</button>
                 </div>
               </div>
+
+              <div className="ttk-ref-section">
+                <h4>Выход готового блюда</h4>
+                <p className="ttk-ref-hint">Типовые значения для быстрого выбора в карточке позиции</p>
+                <div className="ttk-ref-list">
+                  {refOutputs.map((o) => (
+                    <div key={o} className="ttk-ref-tag">
+                      <span>{o}</span>
+                      <button type="button" onClick={() => setRefOutputs((prev) => prev.filter((x) => x !== o))}>✕</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="ttk-ref-add">
+                  <input value={newOutput} onChange={(e) => setNewOutput(e.target.value)} placeholder="Например: 250/50 г"
+                    onKeyDown={(e) => { if (e.key === 'Enter' && newOutput.trim()) { setRefOutputs((p) => [...p, newOutput.trim()]); setNewOutput('') } }} />
+                  <button type="button" className="ttk-primary-button" onClick={() => { if (newOutput.trim()) { setRefOutputs((p) => [...p, newOutput.trim()]); setNewOutput('') } }}>+</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -506,11 +526,16 @@ export function TtkPage() {
                         <label><span>Время приготовления</span><input value={String(selectedItem.cookingTime || '')} onChange={(e) => updateSelected({ cookingTime: e.target.value })} /></label>
                         <label><span>Выход готового блюда</span>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <input style={{ flex: 1 }} value={selectedItem.output || ''} onChange={(e) => updateSelected({ output: e.target.value })} placeholder="300" />
-                            <select style={{ width: 72 }} value={(selectedItem as any).outputUnit || ''} onChange={(e) => updateSelected({ outputUnit: e.target.value } as any)}>
-                              <option value="">—</option>
-                              {refUnits.map((u) => <option key={u}>{u}</option>)}
-                            </select>
+                            <input
+                              style={{ flex: 1 }}
+                              value={selectedItem.output || ''}
+                              onChange={(e) => updateSelected({ output: e.target.value })}
+                              placeholder="Например: 250 г"
+                              list="ref-outputs-list"
+                            />
+                            <datalist id="ref-outputs-list">
+                              {refOutputs.map((o) => <option key={o} value={o} />)}
+                            </datalist>
                           </div>
                         </label>
                       </div>

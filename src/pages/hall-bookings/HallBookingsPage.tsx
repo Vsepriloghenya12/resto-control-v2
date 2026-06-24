@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarIcon, ClockIcon, SearchIcon } from '../../shared/ui/Icon'
 import { api } from '../../shared/api/client'
 
 type HallStatus = 'free' | 'reserved' | 'arrived' | 'occupied' | 'disabled'
 type BookingStatus = 'new' | 'confirmed' | 'arrived' | 'seated' | 'cancelled' | 'no_show'
-type ViewMode = 'plan' | 'bookings'
+type ViewMode = 'plan' | 'schema' | 'bookings'
 
-type Hall = { id: string; name: string; active: boolean; tablesCount?: number; seatsCount?: number }
-type HallTable = { id: string; hallId: string; name: string; seats: number; status: HallStatus; active?: boolean }
+type Hall = { id: string; name: string; active: boolean; tablesCount?: number; seatsCount?: number; schemaElements?: SchemaElement[]; schemaW?: number; schemaH?: number }
+type HallTable = { id: string; hallId: string; name: string; seats: number; status: HallStatus; active?: boolean; x?: number; y?: number; w?: number; h?: number; shape?: 'rect' | 'circle' }
 type Booking = { id: string; hallId: string; tableId: string; guestName: string; phone: string; time: string; guestsCount: number; status: BookingStatus; comment?: string }
+type SchemaElement = { id: string; type: 'wall' | 'entrance'; x: number; y: number; w: number; h: number }
 
-const statusLabels: Record<HallStatus, string> = { free: 'Свободен', reserved: 'Забронирован', arrived: 'Пришли по брони', occupied: 'Гости сели', disabled: 'Недоступен' }
-const bookingStatusLabels: Record<BookingStatus, string> = { new: 'Новая', confirmed: 'Подтверждена', arrived: 'Пришли', seated: 'Гости сели', cancelled: 'Отменена', no_show: 'Не пришли' }
-const statusOptions = ['Все статусы', 'Свободен', 'Забронирован', 'Пришли по брони', 'Гости сели', 'Недоступен']
+const statusLabels: Record<HallStatus, string> = { free: 'Свободен', reserved: 'Забронирован', arrived: 'Пришли по брони', occupied: 'Гости за столом', disabled: 'Недоступен' }
+const bookingStatusLabels: Record<BookingStatus, string> = { new: 'Новая', confirmed: 'Подтверждена', arrived: 'Пришли', seated: 'Гости за столом', cancelled: 'Отменена', no_show: 'Не пришли' }
+const statusOptions = ['Все статусы', 'Свободен', 'Забронирован', 'Пришли по брони', 'Гости за столом', 'Недоступен']
 
 function StatusBadge({ status }: { status: HallStatus }) { return <span className={`hall-status hall-status--${status}`}>{statusLabels[status]}</span> }
 function BookingStatusBadge({ status }: { status: BookingStatus }) { return <span className={`hall-booking-status hall-booking-status--${status}`}>{bookingStatusLabels[status]}</span> }
@@ -47,6 +48,96 @@ export function HallBookingsPage() {
   type TableDraft = { name: string; seats: number }
   const [tableDrafts, setTableDrafts] = useState<TableDraft[]>([])
 
+  // Schema state
+  const [schemaEditMode, setSchemaEditMode] = useState(false)
+  const [schemaElements, setSchemaElements] = useState<SchemaElement[]>([])
+  const [schemaSize, setSchemaSize] = useState<{ w: number; h: number }>({ w: 800, h: 520 })
+  // local overrides while editing
+  const [editTables, setEditTables] = useState<Record<string, Partial<HallTable>>>({})
+  const schemaRef = useRef<HTMLDivElement>(null)
+  type DragTarget = { kind: 'table'; id: string } | { kind: 'element'; id: string } | { kind: 'resize-table'; id: string } | { kind: 'resize-element'; id: string }
+  const dragRef = useRef<{ target: DragTarget; startX: number; startY: number; origX: number; origY: number; origW: number; origH: number } | null>(null)
+
+  function getTableState(table: HallTable): HallTable {
+    return { ...table, ...editTables[table.id] }
+  }
+
+  function startDrag(e: React.MouseEvent, target: DragTarget, origX: number, origY: number, origW = 0, origH = 0) {
+    if (!schemaEditMode) return
+    e.preventDefault(); e.stopPropagation()
+    dragRef.current = { target, startX: e.clientX, startY: e.clientY, origX, origY, origW, origH }
+    function onMove(ev: MouseEvent) {
+      if (!dragRef.current) return
+      const dx = ev.clientX - dragRef.current.startX
+      const dy = ev.clientY - dragRef.current.startY
+      const { target: t, origX: ox, origY: oy, origW: ow, origH: oh } = dragRef.current
+      if (t.kind === 'table') {
+        setEditTables(prev => ({ ...prev, [t.id]: { ...prev[t.id], x: Math.max(0, ox + dx), y: Math.max(0, oy + dy) } }))
+      } else if (t.kind === 'resize-table') {
+        setEditTables(prev => ({ ...prev, [t.id]: { ...prev[t.id], w: Math.max(60, ow + dx), h: Math.max(50, oh + dy) } }))
+      } else if (t.kind === 'element') {
+        setSchemaElements(prev => prev.map(el => el.id === t.id ? { ...el, x: Math.max(0, ox + dx), y: Math.max(0, oy + dy) } : el))
+      } else if (t.kind === 'resize-element') {
+        setSchemaElements(prev => prev.map(el => el.id === t.id ? { ...el, w: Math.max(20, ow + dx), h: Math.max(10, oh + dy) } : el))
+      }
+    }
+    function onUp() {
+      dragRef.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
+  function enterEditMode() {
+    const overrides: Record<string, Partial<HallTable>> = {}
+    const COL_W = 130; const ROW_H = 100; const COLS = 4; const PAD = 20
+    selectedHallTables.forEach((t, i) => {
+      const hasPos = t.x != null && t.y != null
+      const col = i % COLS; const row = Math.floor(i / COLS)
+      overrides[t.id] = {
+        x: hasPos ? t.x : PAD + col * COL_W,
+        y: hasPos ? t.y : PAD + row * ROW_H,
+        w: t.w ?? 100,
+        h: t.h ?? 70,
+        shape: t.shape ?? 'rect',
+      }
+    })
+    setEditTables(overrides)
+    setSchemaElements(selectedHall?.schemaElements ?? [])
+    setSchemaSize({ w: selectedHall?.schemaW ?? 800, h: selectedHall?.schemaH ?? 520 })
+    setSchemaEditMode(true)
+  }
+
+  async function saveSchema() {
+    // save each table position/size/shape
+    await Promise.all(selectedHallTables.map(t => {
+      const ov = editTables[t.id]
+      if (!ov) return Promise.resolve()
+      return api.update('tables', t.id, { x: Math.round(ov.x ?? t.x ?? 40), y: Math.round(ov.y ?? t.y ?? 40), w: Math.round(ov.w ?? t.w ?? 100), h: Math.round(ov.h ?? t.h ?? 70), shape: ov.shape ?? t.shape ?? 'rect' })
+    }))
+    // save elements and canvas size to hall
+    if (selectedHall) await api.update('halls', selectedHall.id, { schemaElements, schemaW: schemaSize.w, schemaH: schemaSize.h })
+    // update local state
+    setTables(prev => prev.map(t => {
+      const ov = editTables[t.id]
+      return ov ? { ...t, ...ov } : t
+    }))
+    setHalls(prev => prev.map(h => h.id === selectedHall?.id ? { ...h, schemaElements, schemaW: schemaSize.w, schemaH: schemaSize.h } : h))
+    setSchemaEditMode(false)
+    setEditTables({})
+  }
+
+  function addSchemaElement(type: SchemaElement['type']) {
+    const el: SchemaElement = { id: Math.random().toString(36).slice(2), type, x: 80, y: 80, w: type === 'wall' ? 160 : 60, h: type === 'wall' ? 12 : 40 }
+    setSchemaElements(prev => [...prev, el])
+  }
+
+  function removeSchemaElement(id: string) {
+    setSchemaElements(prev => prev.filter(el => el.id !== id))
+  }
+
   type BookingDraft = { guestName: string; phone: string; date: string; time: string; guestsCount: number; comment: string; tableIds: string[] }
   const [bookingModalOpen, setBookingModalOpen] = useState(false)
   const [bookingDraft, setBookingDraft] = useState<BookingDraft>({ guestName: '', phone: '', date: new Date().toISOString().slice(0, 10), time: '19:00', guestsCount: 2, comment: '', tableIds: [] })
@@ -73,8 +164,7 @@ export function HallBookingsPage() {
       setBookings(bookingsResult.items)
       const firstHall = activeHalls[0]
       setSelectedHallId((current) => current || firstHall?.id || '')
-      const firstTable = tablesResult.items.find((table) => table.hallId === (firstHall?.id || selectedHallId))
-      setSelectedTableId((current) => current || firstTable?.id || '')
+      // не открываем модал автоматически
     } finally {
       setIsLoading(false)
     }
@@ -84,7 +174,7 @@ export function HallBookingsPage() {
 
   const selectedHall = halls.find((hall) => hall.id === selectedHallId) ?? halls[0]
   const selectedHallTables = tables.filter((table) => table.hallId === selectedHall?.id)
-  const selectedTable = tables.find((table) => table.id === selectedTableId && table.hallId === selectedHall?.id) ?? selectedHallTables[0]
+  const selectedTable = tables.find((table) => table.id === selectedTableId && table.hallId === selectedHall?.id)
   const selectedBooking = bookings.find((booking) => booking.tableId === selectedTable?.id && !['cancelled', 'no_show'].includes(booking.status))
   const selectedTableBookings = bookings.filter((booking) => booking.tableId === selectedTable?.id && !['cancelled', 'no_show'].includes(booking.status))
 
@@ -102,7 +192,7 @@ export function HallBookingsPage() {
 
   function selectHall(hallId: string) {
     setSelectedHallId(hallId)
-    setSelectedTableId(tables.find((table) => table.hallId === hallId)?.id ?? '')
+    setSelectedTableId('')
   }
 
   async function setBookingStatus(bookingId: string, status: BookingStatus) {
@@ -248,72 +338,188 @@ export function HallBookingsPage() {
         </div>
       ) : null}
 
-      <div className="hall-workspace">
-        <aside className="hall-list-panel">
-          <div className="hall-list-panel__header"><h2>Залы</h2></div>
-          <div className="hall-list">
-            {halls.map((hall) => {
-              const hallTables = tables.filter((table) => table.hallId === hall.id)
-              const free = hallTables.filter((item) => item.status === 'free').length
-              return (
-                <div className={hall.id === selectedHall?.id ? 'hall-card hall-card--active' : 'hall-card'} key={hall.id}
-                  onClick={() => { selectHall(hall.id); openHallEdit(hall) }}>
-                  <div className="hall-card__top"><strong>{hall.name}</strong></div>
-                  <p>{hallTables.length} ст · {hallTables.reduce((sum, item) => sum + item.seats, 0)} м</p>
-                  <button className="hall-card__delete" type="button" title="Удалить зал" onClick={(e) => { e.stopPropagation(); void deleteHall(hall) }}>✕</button>
-                </div>
-              )
-            })}
-            {!isLoading && halls.length === 0 ? <p className="hall-empty-text">Залы ещё не созданы.</p> : null}
-          </div>
-        </aside>
+      <div className="hall-halls-bar">
+        {halls.map((hall) => {
+          const hallTables = tables.filter((table) => table.hallId === hall.id)
+          return (
+            <button
+              key={hall.id}
+              type="button"
+              className={hall.id === selectedHall?.id ? 'hall-halls-bar__item hall-halls-bar__item--active' : 'hall-halls-bar__item'}
+              onClick={() => selectHall(hall.id)}
+            >
+              <span className="hall-halls-bar__name">{hall.name}</span>
+              <span className="hall-halls-bar__meta">{hallTables.length} ст · {hallTables.reduce((s, t) => s + t.seats, 0)} мест</span>
+              <span className="hall-halls-bar__edit" role="button" onClick={(e) => { e.stopPropagation(); openHallEdit(hall) }}>✎</span>
+              <span className="hall-halls-bar__delete" role="button" onClick={(e) => { e.stopPropagation(); void deleteHall(hall) }}>✕</span>
+            </button>
+          )
+        })}
+        {!isLoading && halls.length === 0 && <span className="hall-empty-text" style={{ padding: '0 8px' }}>Залов нет</span>}
+      </div>
 
+      <div className="hall-workspace">
         <main className="hall-tables-panel">
-          <div className="hall-tables-panel__header"><div><h2>{selectedHall?.name || 'План зала'}</h2><p>{selectedHallTables.length} столов · {selectedHallTables.reduce((sum, item) => sum + item.seats, 0)} посадочных мест</p></div><button type="button" onClick={createTable}>+ Стол</button></div>
+          <div className="hall-tables-panel__header">
+            <div><h2>{selectedHall?.name || 'План зала'}</h2><p>{selectedHallTables.length} столов · {selectedHallTables.reduce((sum, item) => sum + item.seats, 0)} посадочных мест</p></div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="hall-view-toggle">
+                <button type="button" className={mode === 'plan' ? 'hall-view-toggle__btn hall-view-toggle__btn--active' : 'hall-view-toggle__btn'} onClick={() => setMode('plan')}>Список</button>
+                <button type="button" className={mode === 'schema' ? 'hall-view-toggle__btn hall-view-toggle__btn--active' : 'hall-view-toggle__btn'} onClick={() => setMode('schema')}>Схема</button>
+                <button type="button" className={mode === 'bookings' ? 'hall-view-toggle__btn hall-view-toggle__btn--active' : 'hall-view-toggle__btn'} onClick={() => setMode('bookings')}>Брони</button>
+              </div>
+              <button type="button" onClick={createTable}>+ Стол</button>
+            </div>
+          </div>
           {mode === 'plan' ? (
-            <div className="hall-table-wrap"><table className="hall-table hall-table--clickable"><thead><tr><th>Стол</th><th>Мест</th><th>Статус</th><th>Бронь</th><th>Гость</th><th>Время</th></tr></thead><tbody>{filteredTables.map((table) => { const booking = bookings.find((item) => item.tableId === table.id && !['cancelled', 'no_show'].includes(item.status)); return <tr className={table.id === selectedTable?.id ? 'hall-table-row--active' : ''} key={table.id} onClick={() => setSelectedTableId(table.id)}><td>{table.name}</td><td>{table.seats}</td><td><StatusBadge status={table.status} /></td><td>{booking ? 'Есть' : '—'}</td><td>{booking?.guestName ?? '—'}</td><td>{booking?.time ?? '—'}</td></tr> })}{!isLoading && filteredTables.length === 0 ? <tr><td colSpan={6}>Столов нет. Создайте первый стол.</td></tr> : null}</tbody></table></div>
+            <div className="hall-table-wrap"><table className="hall-table hall-table--clickable"><thead><tr><th>Стол</th><th>Мест</th><th>Статус</th><th>Бронь</th><th>Гость</th><th>Время</th></tr></thead><tbody>{filteredTables.map((table) => { const booking = bookings.find((item) => item.tableId === table.id && !['cancelled', 'no_show'].includes(item.status)); return <tr key={table.id} onClick={() => setSelectedTableId(table.id)}><td>{table.name}</td><td>{table.seats}</td><td><StatusBadge status={table.status} /></td><td>{booking ? 'Есть' : '—'}</td><td>{booking?.guestName ?? '—'}</td><td>{booking?.time ?? '—'}</td></tr> })}{!isLoading && filteredTables.length === 0 ? <tr><td colSpan={6}>Столов нет. Создайте первый стол.</td></tr> : null}</tbody></table></div>
+          ) : mode === 'schema' ? (
+            <>
+              <div
+                className="hall-schema"
+                ref={schemaRef}
+                style={{
+                  width: schemaEditMode ? schemaSize.w : (selectedHall?.schemaW ?? 'auto'),
+                  minHeight: schemaEditMode ? schemaSize.h : (selectedHall?.schemaH ?? 520),
+                }}
+              >
+                {/* Элементы схемы (перегородки, вход) */}
+                {(schemaEditMode ? schemaElements : (selectedHall?.schemaElements ?? [])).map(el => (
+                  <div
+                    key={el.id}
+                    className={`hall-schema-element hall-schema-element--${el.type}`}
+                    style={{ left: el.x, top: el.y, width: el.w, height: el.h }}
+                    onMouseDown={schemaEditMode ? (e) => startDrag(e, { kind: 'element', id: el.id }, el.x, el.y, el.w, el.h) : undefined}
+                  >
+                    <span className="hall-schema-element__label">{el.type === 'entrance' ? '🚪 Вход' : ''}</span>
+                    {schemaEditMode && (
+                      <>
+                        <button type="button" className="hall-schema-delete" onMouseDown={e => e.stopPropagation()} onClick={() => removeSchemaElement(el.id)}>✕</button>
+                        <div className="hall-schema-resize" onMouseDown={(e) => startDrag(e, { kind: 'resize-element', id: el.id }, el.x, el.y, el.w, el.h)} />
+                      </>
+                    )}
+                  </div>
+                ))}
+                {/* Столы */}
+                {selectedHallTables.map((rawTable) => {
+                  const table = schemaEditMode ? getTableState(rawTable) : rawTable
+                  const booking = bookings.find(b => b.tableId === table.id && !['cancelled', 'no_show'].includes(b.status))
+                  const x = table.x ?? 40; const y = table.y ?? 40
+                  const w = table.w ?? 100; const h = table.h ?? 70
+                  const isCircle = table.shape === 'circle'
+                  return (
+                    <div
+                      key={table.id}
+                      className={`hall-schema-table hall-schema-table--${table.status}${isCircle ? ' hall-schema-table--circle' : ''}`}
+                      style={{ left: x, top: y, width: w, height: h }}
+                      onMouseDown={schemaEditMode ? (e) => startDrag(e, { kind: 'table', id: table.id }, x, y, w, h) : undefined}
+                      onClick={!schemaEditMode ? () => setSelectedTableId(table.id) : undefined}
+                    >
+                      <span className="hall-schema-table__name">{table.name}</span>
+                      <span className="hall-schema-table__seats">{table.seats} мест</span>
+                      {booking && <span className="hall-schema-table__guest">{booking.guestName}</span>}
+                      {schemaEditMode && (
+                        <>
+                          <button
+                            type="button"
+                            className="hall-schema-shape-btn"
+                            onMouseDown={e => e.stopPropagation()}
+                            onClick={() => setEditTables(prev => ({ ...prev, [table.id]: { ...prev[table.id], shape: isCircle ? 'rect' : 'circle' } }))}
+                          >{isCircle ? '⬜' : '⭕'}</button>
+                          <div className="hall-schema-resize" onMouseDown={(e) => startDrag(e, { kind: 'resize-table', id: table.id }, x, y, w, h)} />
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+                {selectedHallTables.length === 0 && <p className="hall-schema__empty">Столов нет. Создайте первый стол.</p>}
+                {schemaEditMode && (
+                  <div
+                    className="hall-schema-canvas-resize"
+                    onMouseDown={(e) => {
+                      e.preventDefault(); e.stopPropagation()
+                      const startX = e.clientX; const startY = e.clientY
+                      const origW = schemaSize.w; const origH = schemaSize.h
+                      function onMove(ev: MouseEvent) {
+                        setSchemaSize({ w: Math.max(400, origW + ev.clientX - startX), h: Math.max(300, origH + ev.clientY - startY) })
+                      }
+                      function onUp() {
+                        window.removeEventListener('mousemove', onMove)
+                        window.removeEventListener('mouseup', onUp)
+                      }
+                      window.addEventListener('mousemove', onMove)
+                      window.addEventListener('mouseup', onUp)
+                    }}
+                  />
+                )}
+              </div>
+              {/* Нижняя панель схемы */}
+              <div className="hall-schema-toolbar">
+                {schemaEditMode ? (
+                  <>
+                    <button type="button" className="hall-schema-toolbar__btn" onClick={() => addSchemaElement('wall')}>+ Перегородка</button>
+                    <button type="button" className="hall-schema-toolbar__btn" onClick={() => addSchemaElement('entrance')}>+ Вход</button>
+                    <div style={{ flex: 1 }} />
+                    <button type="button" className="hall-schema-toolbar__save" onClick={() => void saveSchema()}>Сохранить схему</button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ flex: 1 }} />
+                    <button type="button" className="hall-schema-toolbar__edit" onClick={enterEditMode}>Редактировать схему</button>
+                  </>
+                )}
+              </div>
+            </>
           ) : (
             <section className="hall-bookings-list"><div className="hall-bookings-list__header"><h3>Брони на сегодня</h3><button type="button" onClick={() => openBookingModal()}>+ Создать бронь</button></div>{filteredBookings.map((booking) => <button className="hall-booking-row" type="button" key={booking.id} onClick={() => { setSelectedTableId(booking.tableId); setMode('plan') }}><span>{booking.time}</span><strong>{booking.guestName}</strong><span>{booking.guestsCount} гостя</span><span>{tables.find((table) => table.id === booking.tableId)?.name}</span><BookingStatusBadge status={booking.status} /></button>)}{filteredBookings.length === 0 ? <p className="hall-empty-text">Броней нет.</p> : null}</section>
           )}
-          <div className="hall-legend"><span><i className="hall-dot hall-dot--free" />Свободен</span><span><i className="hall-dot hall-dot--reserved" />Забронирован</span><span><i className="hall-dot hall-dot--arrived" />Пришли по брони</span><span><i className="hall-dot hall-dot--occupied" />Гости сели</span><span><i className="hall-dot hall-dot--disabled" />Недоступен</span></div>
+          <div className="hall-legend"><span><i className="hall-dot hall-dot--free" />Свободен</span><span><i className="hall-dot hall-dot--reserved" />Забронирован</span><span><i className="hall-dot hall-dot--arrived" />Пришли по брони</span><span><i className="hall-dot hall-dot--occupied" />Гости за столом</span><span><i className="hall-dot hall-dot--disabled" />Недоступен</span></div>
         </main>
 
         {selectedTable ? (
-          <aside className="hall-side-panel">
-            <div className="hall-side-panel__header">
-              <div><h2>{selectedTable.name}</h2><StatusBadge status={selectedTable.status} /></div>
-            </div>
-            <div className="hall-info-grid">
-              <div><span>Зал</span><strong>{selectedHall?.name}</strong></div>
-              <div><span>Посадочных мест</span><strong>{selectedTable.seats}</strong></div>
-            </div>
-            {selectedTableBookings.length === 0 ? (
-              <section className="hall-empty-booking">
-                <h3>На этот стол брони нет</h3>
-                <button type="button" onClick={() => openBookingModal(selectedTable.id)}>Создать бронь</button>
-              </section>
-            ) : (
-              <>
-                {selectedTableBookings.map((booking) => (
-                  <section className="hall-booking-card" key={booking.id}>
-                    <div className="hall-booking-card__top"><h3>{booking.time} · {booking.guestName}</h3><BookingStatusBadge status={booking.status} /></div>
-                    <dl>
-                      <div><dt>Телефон</dt><dd>{booking.phone}</dd></div>
-                      <div><dt>Количество гостей</dt><dd>{booking.guestsCount}</dd></div>
-                      {booking.comment ? <div><dt>Комментарий</dt><dd>{booking.comment}</dd></div> : null}
-                    </dl>
-                    <div className="hall-action-stack">
-                      {booking.status !== 'arrived' && booking.status !== 'seated' ? <button className="hall-arrived-button" type="button" onClick={() => void setBookingStatus(booking.id, 'arrived')}>Пришли по брони</button> : null}
-                      {booking.status !== 'seated' ? <button className="hall-seated-button" type="button" onClick={() => void setBookingStatus(booking.id, 'seated')}>Гости сели</button> : null}
-                      <button className="hall-muted-button" type="button" onClick={() => void setBookingStatus(booking.id, 'no_show')}>Не пришли</button>
-                      <button className="hall-cancel-button" type="button" onClick={() => void setBookingStatus(booking.id, 'cancelled')}>Отменить бронь</button>
-                    </div>
+          <div className="hall-modal-backdrop" onMouseDown={() => setSelectedTableId('')}>
+            <div className="hall-modal hall-modal--wide" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="hall-modal__header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <h3>{selectedTable.name}</h3>
+                  <StatusBadge status={selectedTable.status} />
+                </div>
+                <button type="button" className="hall-modal__close" onClick={() => setSelectedTableId('')}>✕</button>
+              </div>
+              <div className="hall-modal__body">
+                <div className="hall-info-grid">
+                  <div><span>Зал</span><strong>{selectedHall?.name}</strong></div>
+                  <div><span>Посадочных мест</span><strong>{selectedTable.seats}</strong></div>
+                </div>
+                {selectedTableBookings.length === 0 ? (
+                  <section className="hall-empty-booking">
+                    <h3>На этот стол брони нет</h3>
+                    <button type="button" onClick={() => openBookingModal(selectedTable.id)}>Создать бронь</button>
                   </section>
-                ))}
-                <button className="hall-add-booking-btn" type="button" onClick={() => openBookingModal(selectedTable.id)}>+ Добавить бронь</button>
-              </>
-            )}
-          </aside>
+                ) : (
+                  <>
+                    {selectedTableBookings.map((booking) => (
+                      <section className="hall-booking-card" key={booking.id}>
+                        <div className="hall-booking-card__top"><h3>{booking.time} · {booking.guestName}</h3><BookingStatusBadge status={booking.status} /></div>
+                        <dl>
+                          <div><dt>Телефон</dt><dd>{booking.phone}</dd></div>
+                          <div><dt>Количество гостей</dt><dd>{booking.guestsCount}</dd></div>
+                          {booking.comment ? <div><dt>Комментарий</dt><dd>{booking.comment}</dd></div> : null}
+                        </dl>
+                        <div className="hall-action-stack">
+                          {booking.status !== 'arrived' && booking.status !== 'seated' ? <button className="hall-arrived-button" type="button" onClick={() => void setBookingStatus(booking.id, 'arrived')}>Пришли по брони</button> : null}
+                          {booking.status !== 'seated' ? <button className="hall-seated-button" type="button" onClick={() => void setBookingStatus(booking.id, 'seated')}>Гости за столом</button> : null}
+                          <button className="hall-muted-button" type="button" onClick={() => void setBookingStatus(booking.id, 'no_show')}>Не пришли</button>
+                          <button className="hall-cancel-button" type="button" onClick={() => void setBookingStatus(booking.id, 'cancelled')}>Отменить бронь</button>
+                        </div>
+                      </section>
+                    ))}
+                    <button className="hall-add-booking-btn" type="button" onClick={() => openBookingModal(selectedTable.id)}>+ Добавить бронь</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
         ) : null}
       </div>
 

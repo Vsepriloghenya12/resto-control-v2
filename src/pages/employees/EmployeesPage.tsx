@@ -282,10 +282,11 @@ export function EmployeesPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [workModes, setWorkModes] = useState<Record<string, { start: string; end: string }>>(defaultWorkModes)
-  const [deptRates, setDeptRates] = useState<Record<string, { hourly: number; bonus: number }>>(() =>
-    Object.fromEntries(scheduleDepartments.map((d) => [d, { hourly: 0, bonus: 0 }]))
+  const [deptRates, setDeptRates] = useState<Record<string, { hourly: number; kpi: number }>>(() =>
+    Object.fromEntries(scheduleDepartments.map((d) => [d, { hourly: 0, kpi: 0 }]))
   )
-  const [empRates, setEmpRates] = useState<Record<string, { hourly: number; bonus: number }>>({})
+  const [empRates, setEmpRates] = useState<Record<string, { hourly: number; kpi: number }>>({})
+  const [empRevenue, setEmpRevenue] = useState<Record<string, number>>({})
 
   // positions reference
   const [positionsList, setPositionsList] = useState<Position[]>([])
@@ -991,9 +992,10 @@ export function EmployeesPage() {
       let deptHours = 0
       for (const emp of (employeesByDepartment[dept] ?? [])) {
         const hours = empHours[emp.id] ?? 0
-        const rate = empRates[emp.id] ?? deptRates[dept] ?? { hourly: 0, bonus: 0 }
+        const rate = empRates[emp.id] ?? deptRates[dept] ?? { hourly: 0, kpi: 0 }
+        const revenue = empRevenue[emp.id] ?? 0
         const base = hours * rate.hourly
-        deptFund += base * (1 + rate.bonus / 100)
+        deptFund += base + revenue * (rate.kpi / 100)
         deptHours += hours
       }
       deptTotals.push({ dept, fund: deptFund, hours: deptHours })
@@ -1025,12 +1027,12 @@ export function EmployeesPage() {
               <span className="employees-salary-dept__col--name">Подразделение</span>
               <span className="employees-salary-dept__col">Часов (план)</span>
               <span className="employees-salary-dept__col">Ставка, ₽/ч</span>
-              <span className="employees-salary-dept__col">Бонус, %</span>
+              <span className="employees-salary-dept__col">KPI, %</span>
               <span className="employees-salary-dept__col employees-salary-dept__col--right">Фонд</span>
             </div>
             {departments.map((dept) => {
               const row = deptTotals.find((r) => r.dept === dept)!
-              const rate = deptRates[dept] ?? { hourly: 0, bonus: 0 }
+              const rate = deptRates[dept] ?? { hourly: 0, kpi: 0 }
               return (
                 <div key={dept} className="employees-salary-dept__row">
                   <span className="employees-salary-dept__col--name">{dept}</span>
@@ -1049,8 +1051,8 @@ export function EmployeesPage() {
                     min="0"
                     max="100"
                     placeholder="0"
-                    value={rate.bonus || ''}
-                    onChange={(e) => setDeptRates((prev) => ({ ...prev, [dept]: { ...prev[dept], bonus: Number(e.target.value || 0) } }))}
+                    value={rate.kpi || ''}
+                    onChange={(e) => setDeptRates((prev) => ({ ...prev, [dept]: { ...prev[dept], kpi: Number(e.target.value || 0) } }))}
                   />
                   <span className="employees-salary-dept__col employees-salary-dept__col--right employees-salary-dept__fund">{fmtMoney(row.fund)}</span>
                 </div>
@@ -1066,17 +1068,18 @@ export function EmployeesPage() {
                 <span className="employees-salary-dept__col--name">Сотрудник</span>
                 <span className="employees-salary-dept__col">Часов (план)</span>
                 <span className="employees-salary-dept__col">Ставка, ₽/ч</span>
-                <span className="employees-salary-dept__col">Бонус, %</span>
+                <span className="employees-salary-dept__col">Выручка, ₽</span>
+                <span className="employees-salary-dept__col">KPI, %</span>
                 <span className="employees-salary-dept__col employees-salary-dept__col--right">Фонд</span>
               </div>
               {employees.map((emp) => {
                 const hours = empHours[emp.id] ?? 0
                 const dept = getDepartment(emp.position)
-                const deptRate = deptRates[dept] ?? { hourly: 0, bonus: 0 }
+                const deptRate = deptRates[dept] ?? { hourly: 0, kpi: 0 }
                 const override = empRates[emp.id]
                 const rate = override ?? deptRate
-                const base = hours * rate.hourly
-                const fund = base * (1 + rate.bonus / 100)
+                const revenue = empRevenue[emp.id] ?? 0
+                const fund = hours * rate.hourly + revenue * (rate.kpi / 100)
                 return (
                   <div key={emp.id} className={`employees-salary-dept__row${override ? ' employees-salary-dept__row--override' : ''}`}>
                     <span className="employees-salary-dept__col--name">
@@ -1093,33 +1096,33 @@ export function EmployeesPage() {
                       onChange={(e) => {
                         const val = e.target.value
                         setEmpRates((prev) => {
-                          const cur = prev[emp.id] ?? { hourly: deptRate.hourly, bonus: deptRate.bonus }
-                          if (val === '' && !cur.bonus) {
-                            const next = { ...prev }
-                            delete next[emp.id]
-                            return next
-                          }
+                          const cur = prev[emp.id] ?? { hourly: deptRate.hourly, kpi: deptRate.kpi }
+                          if (val === '' && !cur.kpi) { const next = { ...prev }; delete next[emp.id]; return next }
                           return { ...prev, [emp.id]: { ...cur, hourly: Number(val || 0) } }
                         })
                       }}
+                    />
+                    <input
+                      className="employees-salary-dept__input"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={revenue || ''}
+                      onChange={(e) => setEmpRevenue((prev) => ({ ...prev, [emp.id]: Number(e.target.value || 0) }))}
                     />
                     <input
                       className="employees-salary-dept__input employees-salary-dept__input--pct"
                       type="number"
                       min="0"
                       max="100"
-                      placeholder={String(deptRate.bonus || 0)}
-                      value={override?.bonus ?? ''}
+                      placeholder={String(deptRate.kpi || 0)}
+                      value={override?.kpi ?? ''}
                       onChange={(e) => {
                         const val = e.target.value
                         setEmpRates((prev) => {
-                          const cur = prev[emp.id] ?? { hourly: deptRate.hourly, bonus: deptRate.bonus }
-                          if (val === '' && !cur.hourly) {
-                            const next = { ...prev }
-                            delete next[emp.id]
-                            return next
-                          }
-                          return { ...prev, [emp.id]: { ...cur, bonus: Number(val || 0) } }
+                          const cur = prev[emp.id] ?? { hourly: deptRate.hourly, kpi: deptRate.kpi }
+                          if (val === '' && !cur.hourly) { const next = { ...prev }; delete next[emp.id]; return next }
+                          return { ...prev, [emp.id]: { ...cur, kpi: Number(val || 0) } }
                         })
                       }}
                     />
