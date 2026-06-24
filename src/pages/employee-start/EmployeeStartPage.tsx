@@ -1460,7 +1460,7 @@ export function EmployeeStartPage() {
 
                 {/* Сетка категорий */}
                 {orderSubStep === 'categories' && (
-                  <div className="employee-mobile__order-categories" style={{ padding: '12px 16px', flex: 1, overflowY: 'auto' }}>
+                  <div className="employee-mobile__order-categories" style={{ padding: '10px 14px', flex: 1, overflowY: 'auto' }}>
                     {ttkGroups.map((g) => {
                       const count = ttkItems.filter((it) => it.group === g.id || it.groupId === g.id || it.group === g.name).length
                       const inCartCount = orderCart.filter((ci) => {
@@ -1468,9 +1468,9 @@ export function EmployeeStartPage() {
                         return item && (item.group === g.id || item.groupId === g.id || item.group === g.name)
                       }).reduce((s, ci) => s + ci.quantity, 0)
                       return (
-                        <button key={g.id} type="button" className="employee-mobile__order-category" onClick={() => { setOrderCategoryId(g.id); setOrderSubStep('dishes') }}>
+                        <button key={g.id} type="button" className={`employee-mobile__order-category${inCartCount > 0 ? ' employee-mobile__order-category--in-cart' : ''}`} onClick={() => { setOrderCategoryId(g.id); setOrderSubStep('dishes') }}>
                           <strong>{g.name}</strong>
-                          <span>{count} {count === 1 ? 'позиция' : count < 5 ? 'позиции' : 'позиций'}{inCartCount > 0 ? ` · ${inCartCount} в корзине` : ''}</span>
+                          <span>{count} поз.{inCartCount > 0 ? ` · ${inCartCount} в корзине` : ''}</span>
                         </button>
                       )
                     })}
@@ -1480,14 +1480,14 @@ export function EmployeeStartPage() {
 
                 {/* Список блюд выбранной категории */}
                 {orderSubStep === 'dishes' && (
-                  <div className="employee-mobile__order-items" style={{ padding: '0 16px', flex: 1, overflowY: 'auto' }}>
+                  <div className="employee-mobile__order-items" style={{ padding: '0 14px', flex: 1, overflowY: 'auto' }}>
                     {categoryItems.map((item) => {
                       const inCart = orderCart.find((c) => c.itemId === item.id)
                       return (
-                        <div key={item.id} className="employee-mobile__order-item">
+                        <div key={item.id} className={`employee-mobile__order-item${inCart ? ' employee-mobile__order-item--in-cart' : ''}`}>
                           <div className="employee-mobile__order-item__info">
                             <strong>{item.name}</strong>
-                            <span>{item.price ? `${item.price} ₽` : '—'}{item.cookingTime ? ` · ${item.cookingTime}` : ''}</span>
+                            {(item.price || item.cookingTime) && <span>{item.price ? `${item.price} ₽` : ''}{item.cookingTime ? `${item.price ? ' · ' : ''}${item.cookingTime}` : ''}</span>}
                           </div>
                           <div className="employee-mobile__order-item__qty">
                             {inCart ? <>
@@ -1501,7 +1501,7 @@ export function EmployeeStartPage() {
                         </div>
                       )
                     })}
-                    {categoryItems.length === 0 && <p className="employee-mobile__empty" style={{ padding: 16 }}>Нет блюд в этой категории.</p>}
+                    {categoryItems.length === 0 && <p className="employee-mobile__empty" style={{ padding: '16px 0' }}>Нет блюд в этой категории.</p>}
                   </div>
                 )}
 
