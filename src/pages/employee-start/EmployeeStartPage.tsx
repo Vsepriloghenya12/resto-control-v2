@@ -319,6 +319,7 @@ export function EmployeeStartPage() {
   const [bookingSaving, setBookingSaving] = useState(false)
   const [orderModal, setOrderModal] = useState(false)
   const [orderStep, setOrderStep] = useState<'table' | 'order'>('table')
+  const [orderSubStep, setOrderSubStep] = useState<'categories' | 'dishes'>('categories')
   const [orderHallId, setOrderHallId] = useState('')
   const [orderDraft, setOrderDraft] = useState({ tableId: '', guestsCount: 2, comment: '' })
   const [orderSaving, setOrderSaving] = useState(false)
@@ -908,7 +909,7 @@ export function EmployeeStartPage() {
           </button>
         </section>
 
-        <button type="button" className="employee-mobile__accept-order-btn" onClick={() => { setOrderDraft({ tableId: '', guestsCount: 2, comment: '' }); setOrderStep('table'); setOrderHallId(halls[0]?.id || ''); setOrderCart([]); setOrderCartOpen(false); setOrderCategoryId(ttkGroups[0]?.id || ''); setOrderModal(true) }}>
+        <button type="button" className="employee-mobile__accept-order-btn" onClick={() => { setOrderDraft({ tableId: '', guestsCount: 2, comment: '' }); setOrderStep('table'); setOrderSubStep('categories'); setOrderHallId(halls[0]?.id || ''); setOrderCart([]); setOrderCartOpen(false); setOrderCategoryId(''); setOrderModal(true) }}>
           <ClipboardIcon />
           <span>Принять заказ</span>
         </button>
@@ -1426,62 +1427,79 @@ export function EmployeeStartPage() {
               <div className="employee-mobile__order-tables" style={{ padding: '0 16px' }}>
                 {hallTables.filter((t) => t.hallId === (orderHallId || halls[0]?.id)).map((table) => (
                   <button key={table.id} type="button" className={`employee-mobile__order-table employee-mobile__order-table--${table.status}`}
-                    onClick={() => { setOrderDraft((d) => ({ ...d, tableId: table.id, guestsCount: table.seats })); setOrderCategoryId(ttkGroups[0]?.id || 'all'); setOrderStep('order') }}>
+                    onClick={() => { setOrderDraft((d) => ({ ...d, tableId: table.id, guestsCount: table.seats })); setOrderCategoryId(''); setOrderSubStep('categories'); setOrderStep('order') }}>
                     <strong>{table.name}</strong>
                     <span>{table.seats} мест</span>
                     <small>{table.status === 'free' ? 'Свободен' : table.status === 'reserved' ? 'Бронь' : table.status === 'occupied' ? 'Занят' : table.status === 'arrived' ? 'Пришли' : 'Недоступен'}</small>
                   </button>
                 ))}
               </div>
-              <button type="button" className="employee-mobile__order-skip" style={{ margin: '0 16px 16px' }} onClick={() => { setOrderDraft((d) => ({ ...d, tableId: '' })); setOrderCategoryId(ttkGroups[0]?.id || 'all'); setOrderStep('order') }}>Продолжить без стола</button>
+              <button type="button" className="employee-mobile__order-skip" style={{ margin: '0 16px 16px' }} onClick={() => { setOrderDraft((d) => ({ ...d, tableId: '' })); setOrderCategoryId(''); setOrderSubStep('categories'); setOrderStep('order') }}>Продолжить без стола</button>
             </>}
 
-            {/* Шаг 2: меню + заказ на одном экране */}
+            {/* Шаг 2: категории → блюда */}
             {orderStep === 'order' && (() => {
               const selectedGroup = ttkGroups.find((g) => g.id === orderCategoryId)
-              const categoryItems = !orderCategoryId || orderCategoryId === 'all'
+              const categoryItems = !orderCategoryId
                 ? ttkItems
                 : ttkItems.filter((it) => it.group === orderCategoryId || it.groupId === orderCategoryId || it.group === selectedGroup?.name)
               const tableName = hallTables.find((t) => t.id === orderDraft.tableId)?.name || 'Без стола'
               return <>
                 <div className="order-modal__header">
-                  <button type="button" className="employee-mobile__order-back" onClick={() => setOrderStep('table')}><ChevronLeftIcon /></button>
-                  <strong>{tableName}</strong>
+                  <button type="button" className="employee-mobile__order-back" onClick={() => {
+                    if (orderSubStep === 'dishes') { setOrderSubStep('categories') }
+                    else { setOrderStep('table') }
+                  }}><ChevronLeftIcon /></button>
+                  <strong>{orderSubStep === 'dishes' && selectedGroup ? selectedGroup.name : tableName}</strong>
                   <button type="button" onClick={() => { setOrderModal(false); setOrderCart([]) }}>×</button>
                 </div>
 
-                {/* Категории */}
-                <div className="order-modal__cats">
-                  {ttkGroups.map((g) => (
-                    <button key={g.id} type="button" className={`order-modal__cat-tab${orderCategoryId === g.id ? ' is-active' : ''}`} onClick={() => setOrderCategoryId(g.id)}>{g.name}</button>
-                  ))}
-                  {ttkGroups.length === 0 && <button type="button" className="order-modal__cat-tab is-active">Все блюда</button>}
-                </div>
+                {/* Сетка категорий */}
+                {orderSubStep === 'categories' && (
+                  <div className="employee-mobile__order-categories" style={{ padding: '12px 16px', flex: 1, overflowY: 'auto' }}>
+                    {ttkGroups.map((g) => {
+                      const count = ttkItems.filter((it) => it.group === g.id || it.groupId === g.id || it.group === g.name).length
+                      const inCartCount = orderCart.filter((ci) => {
+                        const item = ttkItems.find((it) => it.id === ci.itemId)
+                        return item && (item.group === g.id || item.groupId === g.id || item.group === g.name)
+                      }).reduce((s, ci) => s + ci.quantity, 0)
+                      return (
+                        <button key={g.id} type="button" className="employee-mobile__order-category" onClick={() => { setOrderCategoryId(g.id); setOrderSubStep('dishes') }}>
+                          <strong>{g.name}</strong>
+                          <span>{count} {count === 1 ? 'позиция' : count < 5 ? 'позиции' : 'позиций'}{inCartCount > 0 ? ` · ${inCartCount} в корзине` : ''}</span>
+                        </button>
+                      )
+                    })}
+                    {ttkGroups.length === 0 && <p className="employee-mobile__empty">Нет категорий. Добавьте блюда в номенклатуру.</p>}
+                  </div>
+                )}
 
-                {/* Список блюд */}
-                <div className="order-modal__dishes">
-                  {categoryItems.map((item) => {
-                    const inCart = orderCart.find((c) => c.itemId === item.id)
-                    return (
-                      <div key={item.id} className="order-modal__dish">
-                        <div className="order-modal__dish__info">
-                          <strong>{item.name}</strong>
-                          <span>{item.price ? `${item.price} ₽` : '—'}{item.cookingTime ? ` · ${item.cookingTime}` : ''}</span>
+                {/* Список блюд выбранной категории */}
+                {orderSubStep === 'dishes' && (
+                  <div className="employee-mobile__order-items" style={{ padding: '0 16px', flex: 1, overflowY: 'auto' }}>
+                    {categoryItems.map((item) => {
+                      const inCart = orderCart.find((c) => c.itemId === item.id)
+                      return (
+                        <div key={item.id} className="employee-mobile__order-item">
+                          <div className="employee-mobile__order-item__info">
+                            <strong>{item.name}</strong>
+                            <span>{item.price ? `${item.price} ₽` : '—'}{item.cookingTime ? ` · ${item.cookingTime}` : ''}</span>
+                          </div>
+                          <div className="employee-mobile__order-item__qty">
+                            {inCart ? <>
+                              <button type="button" onClick={() => changeQty(item.id, -1)}>−</button>
+                              <span>{inCart.quantity}</span>
+                              <button type="button" onClick={() => changeQty(item.id, 1)}>+</button>
+                            </> : (
+                              <button type="button" className="employee-mobile__order-item__add" onClick={() => addToCart(item)}>+</button>
+                            )}
+                          </div>
                         </div>
-                        <div className="order-modal__dish__qty">
-                          {inCart ? <>
-                            <button type="button" onClick={() => changeQty(item.id, -1)}>−</button>
-                            <span>{inCart.quantity}</span>
-                            <button type="button" onClick={() => changeQty(item.id, 1)}>+</button>
-                          </> : (
-                            <button type="button" className="order-modal__dish__add" onClick={() => addToCart(item)}>+</button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {categoryItems.length === 0 && <p className="employee-mobile__empty" style={{ padding: 16 }}>Нет блюд в этой категории.</p>}
-                </div>
+                      )
+                    })}
+                    {categoryItems.length === 0 && <p className="employee-mobile__empty" style={{ padding: 16 }}>Нет блюд в этой категории.</p>}
+                  </div>
+                )}
 
                 {/* Нижняя панель — корзина */}
                 <div className="order-modal__cart-panel">
