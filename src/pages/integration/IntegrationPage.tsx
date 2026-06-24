@@ -152,8 +152,8 @@ export function IntegrationPage() {
   const isConnected = st === 'ok'
   const isTesting = st === 'testing'
 
-  const hostPlaceholder = active === 'iiko' ? 'myrest.iiko.it или 192.168.1.1:443' : 'myrest.quickresto.ru'
-  const loginPlaceholder = active === 'iiko' ? 'admin' : 'owner@myrest.ru'
+  const hostPlaceholder = 'Хост или IP-адрес'
+  const loginPlaceholder = 'Логин'
 
   return (
     <div className="int-page">
@@ -210,33 +210,17 @@ export function IntegrationPage() {
           <div className="int-card">
             {/* Табы систем */}
             <div className="int-tabs">
-              {SYSTEMS.map((s) => (
+              {SYSTEMS.map((s, i) => (
                 <button
                   key={s.key}
                   type="button"
                   className={`int-tab${active === s.key ? ' int-tab--active' : ''}`}
-                  style={active === s.key ? { '--tab-color': s.color } as React.CSSProperties : undefined}
                   onClick={() => setActive(s.key)}
                 >
-                  <span className="int-tab__logo">{s.logo}</span>
-                  <span className="int-tab__name">{s.name}</span>
+                  <span className="int-tab__name">Система {i + 1}</span>
                   {status[s.key] === 'ok' && <span className="int-tab__dot" />}
                 </button>
               ))}
-            </div>
-
-            {/* Карточка системы */}
-            <div className="int-system-header">
-              <div className="int-system-logo">
-                {sys.logo}
-              </div>
-              <div>
-                <strong>{sys.name}</strong>
-                <span>{sys.tagline}</span>
-              </div>
-              <div className={`int-status-badge int-status-badge--${isConnected ? 'ok' : st === 'error' ? 'error' : 'idle'}`}>
-                {isConnected ? '● Подключено' : st === 'error' ? '● Ошибка' : '○ Не настроено'}
-              </div>
             </div>
 
             <div className="int-divider" />
@@ -313,7 +297,7 @@ export function IntegrationPage() {
             {isConnected && (
               <div className="int-connected-note">
                 <span className="int-connected-note__dot" />
-                Подключение активно. Номенклатуру можно синхронизировать в разделе <strong>Номенклатура → ↓ iiko</strong>.
+                Подключение активно. Номенклатуру можно синхронизировать в разделе <strong>Номенклатура</strong>.
               </div>
             )}
           </div>
