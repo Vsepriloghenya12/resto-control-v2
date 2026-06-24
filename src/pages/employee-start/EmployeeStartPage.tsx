@@ -268,8 +268,18 @@ function SwipeableCartItem({ item, onDelete, onComment, onQty }: {
 
   return (
     <div className="order-swipe-wrap">
-      <div className="order-swipe-bg order-swipe-bg--left"><span>✕ Удалить</span></div>
-      <div className="order-swipe-bg order-swipe-bg--right"><span>✎ Коммент</span></div>
+      <div className="order-swipe-bg order-swipe-bg--left">
+        <span className="order-swipe-bg__action">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          <span>Удалить</span>
+        </span>
+      </div>
+      <div className="order-swipe-bg order-swipe-bg--right">
+        <span className="order-swipe-bg__action">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Коммент</span>
+        </span>
+      </div>
       <div
         className="order-swipe-item"
         style={{ transform: `translateX(${swipeX}px)`, transition: swipeX === 0 ? 'transform 0.2s' : 'none' }}
