@@ -291,36 +291,51 @@ export function TtkPage() {
   return (
     <section className="ttk-page">
       {notice ? <div className="ttk-notice">{notice}</div> : null}
-      <aside className="ttk-groups-panel">
-        <div className="ttk-groups-panel__header">
-          <h2>Группы</h2>
-          <div className="ttk-groups-panel__actions">
-            <button className="ttk-ref-btn" type="button" onClick={() => setRefOpen(true)}>Справочники</button>
-            <button className="ttk-ref-btn" type="button" onClick={() => void openIikoSync()}>↓ iiko</button>
-            <button className="ttk-ref-btn ttk-ref-btn--primary" type="button" onClick={() => setAddingGroup(true)}>+ Добавить группу</button>
+
+      <div className="ttk-page-header">
+        <button className="ttk-ref-btn" type="button" onClick={() => setRefOpen(true)}>Справочники</button>
+        <button className="ttk-ref-btn" type="button" onClick={() => void openIikoSync()}>↓ iiko</button>
+      </div>
+
+      <div className="ttk-main-area">
+        <aside className="ttk-sb">
+          <div className="ttk-sb__header">Группы</div>
+          <nav className="ttk-sb__nav">
+            {groups.length === 0 ? (
+              <p className="ttk-sb__empty">Добавьте первую группу</p>
+            ) : null}
+            {groups.map((group) => (
+              <div
+                key={group.id}
+                className={`ttk-sb__item${group.id === selectedGroupId ? ' ttk-sb__item--on' : ''}`}
+                onClick={() => { setSelectedGroupId(group.id); setSelectedItemId(items.find((item) => getItemGroup(item) === group.id)?.id || '') }}
+              >
+                <span className="ttk-sb__name">{group.name}</span>
+                <span className="ttk-sb__cnt">{items.filter((item) => getItemGroup(item) === group.id).length}</span>
+                <button className="ttk-sb__del" type="button" title="Удалить" onClick={(e) => { e.stopPropagation(); void deleteGroup() }}>✕</button>
+              </div>
+            ))}
+          </nav>
+          <div className="ttk-sb__foot">
+            {addingGroup ? (
+              <div className="ttk-sb__form">
+                <input
+                  ref={newGroupInputRef}
+                  className="ttk-sb__inp"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="Название группы"
+                  onKeyDown={(e) => { if (e.key === 'Enter') confirmAddGroup(); if (e.key === 'Escape') { setAddingGroup(false); setNewGroupName('') } }}
+                />
+                <button className="ttk-sb__ok" type="button" onClick={confirmAddGroup}>ОК</button>
+              </div>
+            ) : (
+              <button type="button" className="ttk-sb__add" onClick={() => setAddingGroup(true)}>
+                + Добавить группу
+              </button>
+            )}
           </div>
-        </div>
-        <div className="ttk-groups-list">
-          {groups.length === 0 && !addingGroup ? (
-            <p className="ttk-groups-empty">Создайте первую группу — нажмите&nbsp;«+»</p>
-          ) : null}
-          {groups.map((group) => (
-            <div key={group.id} className={`ttk-group-row${group.id === selectedGroupId ? ' ttk-group-row--active' : ''}`}
-              onClick={() => { setSelectedGroupId(group.id); setSelectedItemId(items.find((item) => getItemGroup(item) === group.id)?.id || '') }}>
-              <span className="ttk-group-row__name">{group.name}</span>
-              <span className="ttk-group-row__count">{items.filter((item) => getItemGroup(item) === group.id).length} позиций</span>
-              <button className="ttk-delete-group-btn" type="button" title="Удалить группу" onClick={(e) => { e.stopPropagation(); void deleteGroup() }}>✕</button>
-            </div>
-          ))}
-          {addingGroup ? (
-            <div className="ttk-group-add-row">
-              <input ref={newGroupInputRef} className="ttk-group-add-input" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="Название группы" onKeyDown={(e) => { if (e.key === 'Enter') confirmAddGroup(); if (e.key === 'Escape') { setAddingGroup(false); setNewGroupName('') } }} />
-              <button className="ttk-primary-button" type="button" onClick={confirmAddGroup}>ОК</button>
-            </div>
-          ) : null}
-        </div>
-      </aside>
+        </aside>
 
       <div className="ttk-content-grid">
         <main className="ttk-list-panel">
@@ -329,12 +344,33 @@ export function TtkPage() {
           ) : (
             <>
               <div className="ttk-list-toolbar">
+                <input className="ttk-search-input" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Поиск по названию..." />
                 <button className="ttk-primary-button" type="button" onClick={() => void createItem()}>+ Позиция</button>
               </div>
-              <div className="ttk-table-wrap"><table className="ttk-table ttk-table--clickable"><thead><tr><th>Фото</th><th>Наименование</th><th>Ед.</th><th>Цена</th><th>Тэг</th><th>Скидки</th><th>Онлайн</th><th>На вынос</th></tr></thead><tbody>{filteredItems.map((item) => <tr className={item.id === selectedItem?.id ? 'ttk-row--active' : ''} key={item.id} onClick={() => { setSelectedItemId(item.id); setEditModalOpen(true) }}><td><span className="ttk-photo-cell">{item.photoLabel || '🍽'}</span></td><td><strong>{item.name}</strong></td><td>{item.unit}</td><td>{Number(item.price || 0).toLocaleString('ru-RU')} ₽</td><td>{item.tag || '—'}</td><td>{item.discounts ? 'Да' : 'Нет'}</td><td>{item.online ? 'Да' : 'Нет'}</td><td>{item.takeaway ? 'Да' : 'Нет'}</td></tr>)}{filteredItems.length === 0 ? <tr><td colSpan={8}>В этой группе пока нет позиций.</td></tr> : null}</tbody></table></div>
+              <div className="ttk-table-wrap">
+                <table className="ttk-table ttk-table--clickable">
+                  <thead><tr><th>Фото</th><th>Наименование</th><th>Ед.</th><th>Цена</th><th>Тэг</th><th>Скидки</th><th>Онлайн</th><th>На вынос</th></tr></thead>
+                  <tbody>
+                    {filteredItems.map((item) => (
+                      <tr className={item.id === selectedItem?.id ? 'ttk-row--active' : ''} key={item.id} onClick={() => { setSelectedItemId(item.id); setEditModalOpen(true) }}>
+                        <td><span className="ttk-photo-cell">{item.photoLabel || '🍽'}</span></td>
+                        <td><strong>{item.name}</strong></td>
+                        <td>{item.unit}</td>
+                        <td>{Number(item.price || 0).toLocaleString('ru-RU')} ₽</td>
+                        <td>{item.tag || '—'}</td>
+                        <td>{item.discounts ? 'Да' : 'Нет'}</td>
+                        <td>{item.online ? 'Да' : 'Нет'}</td>
+                        <td>{item.takeaway ? 'Да' : 'Нет'}</td>
+                      </tr>
+                    ))}
+                    {filteredItems.length === 0 ? <tr><td colSpan={8}>В этой группе пока нет позиций.</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </main>
+      </div>
 
       </div>
 
