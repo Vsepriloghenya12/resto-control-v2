@@ -374,6 +374,7 @@ export function EmployeeStartPage() {
   const [waiterPicker, setWaiterPicker] = useState<null | 'seated' | 'walkIn'>(null)
   const [invModal, setInvModal] = useState<{ assignment: InventoryAssignment; products: InvProduct[]; counts: Record<string, string>; firstEmptyId: string | null } | null>(null)
   const [invSaving, setInvSaving] = useState(false)
+  const [invFocusedId, setInvFocusedId] = useState<string | null>(null)
   const invInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const [orderModal, setOrderModal] = useState(false)
   const [orderStep, setOrderStep] = useState<'table' | 'order'>('table')
@@ -1550,7 +1551,7 @@ export function EmployeeStartPage() {
       ) : null}
 
       {invModal ? (
-        <div className="employee-mobile__sheet-backdrop" onClick={() => !invSaving && setInvModal(null)}>
+        <div className="employee-mobile__sheet-backdrop" onClick={() => { if (!invSaving) { setInvModal(null); setInvFocusedId(null) } }}>
           <div className="employee-mobile__sheet employee-mobile__inv-sheet" onClick={e => e.stopPropagation()}>
             <div className="employee-mobile__sheet-handle" />
             <div className="employee-mobile__hall-sheet-title">
@@ -1558,40 +1559,74 @@ export function EmployeeStartPage() {
                 <strong>{invModal.assignment.title}</strong>
                 <p>{invModal.assignment.section} · {invModal.assignment.dueDate}</p>
               </div>
-              <button type="button" onClick={() => setInvModal(null)}>×</button>
+              <button type="button" onClick={() => { setInvModal(null); setInvFocusedId(null) }}>×</button>
             </div>
             {invModal.assignment.assignedBy && <div className="employee-mobile__inv-meta">Назначил: {invModal.assignment.assignedBy}</div>}
             {invModal.firstEmptyId && <div className="employee-mobile__inv-warning">⚠ Заполните все поля. 0 — тоже значение.</div>}
             <div className="employee-mobile__inv-list">
               {invModal.products.length === 0 && <p className="employee-mobile__empty">Позиции для этого подразделения не найдены. Добавьте их в разделе «Инвентаризация».</p>}
               {invModal.products.map(p => (
-                <div key={p.id} className={`employee-mobile__inv-row${invModal.firstEmptyId === p.id ? ' employee-mobile__inv-row--error' : ''}`}>
+                <div key={p.id} className={`employee-mobile__inv-row${invModal.firstEmptyId === p.id ? ' employee-mobile__inv-row--error' : ''}${invFocusedId === p.id ? ' employee-mobile__inv-row--focused' : ''}`}>
                   <span className="employee-mobile__inv-row__name">{p.name}</span>
                   <span className="employee-mobile__inv-row__unit">{p.unit}</span>
-                  <div className="employee-mobile__inv-input-wrap">
-                    <input
-                      ref={el => { invInputRefs.current[p.id] = el }}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={invModal.counts[p.id]}
-                      onChange={e => { const v = e.target.value.replace(/[^0-9+.,]/g, '').replace(/,/g, '.'); setInvModal(prev => { if (!prev) return prev; const counts = { ...prev.counts, [p.id]: v }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts, firstEmptyId: prev.firstEmptyId === p.id && v !== '' ? null : prev.firstEmptyId } }) }}
-                      className="employee-mobile__inv-input"
-                    />
-                    <button
-                      type="button"
-                      className="employee-mobile__inv-plus"
-                      onPointerDown={e => { e.preventDefault(); setInvModal(prev => { if (!prev) return prev; const cur = prev.counts[p.id]; const v = cur && !cur.endsWith('+') ? cur + '+' : cur; const counts = { ...prev.counts, [p.id]: v }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts } }) }}
-                    >+</button>
-                  </div>
+                  <button
+                    type="button"
+                    className={`employee-mobile__inv-input${invFocusedId === p.id ? ' is-active' : ''}`}
+                    onClick={() => setInvFocusedId(p.id)}
+                  >
+                    {invModal.counts[p.id] || <span className="employee-mobile__inv-placeholder">0</span>}
+                  </button>
                 </div>
               ))}
             </div>
-            <div className="employee-mobile__inv-footer">
-              <button type="button" className="employee-mobile__hall-actions-purple" disabled={invSaving} onClick={() => { void submitInventoryCounts() }}>
-                {invSaving ? 'Отправляю...' : 'Отправить подсчёт'}
-              </button>
-            </div>
+            {invFocusedId ? (
+              <div className="employee-mobile__numpad">
+                <div className="employee-mobile__numpad-display">
+                  <span className="employee-mobile__numpad-label">
+                    {invModal.products.find(p => p.id === invFocusedId)?.name}
+                  </span>
+                  <span className="employee-mobile__numpad-value">
+                    {invModal.counts[invFocusedId] || <span style={{ opacity: 0.4 }}>0</span>}
+                  </span>
+                </div>
+                <div className="employee-mobile__numpad-grid">
+                  {['7','8','9','4','5','6','1','2','3','.','0','+'].map(k => (
+                    <button key={k} type="button" className={`employee-mobile__numpad-key${k === '+' ? ' employee-mobile__numpad-key--plus' : ''}`}
+                      onPointerDown={e => { e.preventDefault(); setInvModal(prev => {
+                        if (!prev || !invFocusedId) return prev
+                        const cur = prev.counts[invFocusedId] ?? ''
+                        let v = cur
+                        if (k === '+') { v = cur && !cur.endsWith('+') ? cur + '+' : cur }
+                        else if (k === '.' && (cur.endsWith('.') || /\+[^+]*\.[^+]*$/.test(cur))) { v = cur }
+                        else { v = cur + k }
+                        const counts = { ...prev.counts, [invFocusedId]: v }
+                        saveInvDraft(prev.assignment.id, counts)
+                        return { ...prev, counts, firstEmptyId: prev.firstEmptyId === invFocusedId && v !== '' ? null : prev.firstEmptyId }
+                      })}}
+                    >{k}</button>
+                  ))}
+                  <button type="button" className="employee-mobile__numpad-key employee-mobile__numpad-key--back"
+                    onPointerDown={e => { e.preventDefault(); setInvModal(prev => {
+                      if (!prev || !invFocusedId) return prev
+                      const cur = prev.counts[invFocusedId] ?? ''
+                      const v = cur.slice(0, -1)
+                      const counts = { ...prev.counts, [invFocusedId]: v }
+                      saveInvDraft(prev.assignment.id, counts)
+                      return { ...prev, counts }
+                    })}}
+                  >⌫</button>
+                  <button type="button" className="employee-mobile__numpad-key employee-mobile__numpad-key--done"
+                    onPointerDown={e => { e.preventDefault(); setInvFocusedId(null) }}
+                  >Готово</button>
+                </div>
+              </div>
+            ) : (
+              <div className="employee-mobile__inv-footer">
+                <button type="button" className="employee-mobile__hall-actions-purple" disabled={invSaving} onClick={() => { void submitInventoryCounts() }}>
+                  {invSaving ? 'Отправляю...' : 'Отправить подсчёт'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ) : null}
