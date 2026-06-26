@@ -613,11 +613,23 @@ export function EmployeeStartPage() {
     }
   }
 
+  function invDraftKey(assignmentId: string) { return `inv_draft_${assignmentId}` }
+  function saveInvDraft(assignmentId: string, counts: Record<string, string>) {
+    try { localStorage.setItem(invDraftKey(assignmentId), JSON.stringify(counts)) } catch {}
+  }
+  function loadInvDraft(assignmentId: string): Record<string, string> | null {
+    try { const s = localStorage.getItem(invDraftKey(assignmentId)); return s ? JSON.parse(s) as Record<string, string> : null } catch { return null }
+  }
+  function clearInvDraft(assignmentId: string) {
+    try { localStorage.removeItem(invDraftKey(assignmentId)) } catch {}
+  }
+
   async function openInventoryCounting(item: InventoryAssignment) {
     const result = await api.list<InvProduct>('inventory-products')
     const sectionProducts = result.items.filter(p => p.active !== false && (p.section === item.section || p.section === item.section?.toLowerCase()))
+    const draft = loadInvDraft(item.id)
     const counts: Record<string, string> = {}
-    sectionProducts.forEach(p => { counts[p.id] = '' })
+    sectionProducts.forEach(p => { counts[p.id] = draft?.[p.id] ?? '' })
     setInvModal({ assignment: item, products: sectionProducts, counts, firstEmptyId: null })
     setDetail(null)
   }
@@ -651,6 +663,7 @@ export function EmployeeStartPage() {
     const results: Record<string, number> = {}
     invModal.products.forEach(p => { results[p.id] = parseFloat(invModal.counts[p.id] || '0') || 0 })
     await api.update('inventory-assignments', invModal.assignment.id, { status: 'submitted', submittedAt: new Date().toISOString(), results, rowsCount: invModal.products.length })
+    clearInvDraft(invModal.assignment.id)
     setInvSaving(false)
     setInvModal(null)
     showNotice('Инвентаризация сдана.')
@@ -1532,7 +1545,7 @@ export function EmployeeStartPage() {
                     step="0.01"
                     placeholder="0 это тоже значение"
                     value={invModal.counts[p.id]}
-                    onChange={e => setInvModal(prev => prev ? { ...prev, counts: { ...prev.counts, [p.id]: e.target.value }, firstEmptyId: prev.firstEmptyId === p.id && e.target.value !== '' ? null : prev.firstEmptyId } : prev)}
+                    onChange={e => setInvModal(prev => { if (!prev) return prev; const counts = { ...prev.counts, [p.id]: e.target.value }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts, firstEmptyId: prev.firstEmptyId === p.id && e.target.value !== '' ? null : prev.firstEmptyId } })}
                     className="employee-mobile__inv-input"
                   />
                 </div>
