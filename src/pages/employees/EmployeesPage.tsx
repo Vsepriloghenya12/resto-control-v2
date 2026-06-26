@@ -1219,13 +1219,13 @@ export function EmployeesPage() {
               <button type="button" className="employees-modal__close" onClick={closeCreateModal} aria-label="Закрыть">×</button>
             </div>
             <div className="employees-modal__body">
-              <label><span>Имя сотрудника</span><input autoFocus value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
-              <label><span>Телефон или email</span><input value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
+              <label><span>Имя сотрудника</span><input autoFocus autoComplete="off" value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} placeholder="Введите имя сотрудника" /></label>
+              <label><span>Телефон или email</span><input autoComplete="off" value={form.login} onChange={(e) => setForm((v) => ({ ...v, login: e.target.value }))} placeholder="Введите телефон или email" /></label>
               <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--rc-text)' }}>Временный пароль</span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <input style={{ flex: 1, paddingRight: '40px', width: '100%', boxSizing: 'border-box' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} />
+                  <input style={{ flex: 1, paddingRight: '40px', width: '100%', boxSizing: 'border-box' }} autoComplete="new-password" value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Придумайте пароль" type={showEmployeePassword ? 'text' : 'password'} />
                   <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#8e929c', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
                 </span>
               </div>

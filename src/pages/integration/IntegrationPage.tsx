@@ -203,7 +203,7 @@ export function IntegrationPage() {
                 <label className="int-field__label">Логин</label>
                 <div className="int-field__wrap">
                   <UserIcon className="int-field__icon" />
-                  <input className="int-input" type="text" placeholder="Логин" value={conn.login} onChange={(e) => setField('login', e.target.value)} autoComplete="off" />
+                  <input className="int-input" type="text" placeholder="Логин" value={conn.login} onChange={(e) => setField('login', e.target.value)} autoComplete="new-password" />
                 </div>
               </div>
 
@@ -252,7 +252,7 @@ function PasswordInput({ value, onChange }: { value: string; onChange: (v: strin
         placeholder="••••••••"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        autoComplete="current-password"
+        autoComplete="new-password"
       />
       <button type="button" className="int-field__eye" onClick={() => setShow((s) => !s)} tabIndex={-1}>
         {show ? <EyeOffIcon /> : <EyeIcon />}
