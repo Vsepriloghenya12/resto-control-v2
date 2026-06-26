@@ -1616,8 +1616,14 @@ export function EmployeeStartPage() {
                     })}}
                   >⌫</button>
                   <button type="button" className="employee-mobile__numpad-key employee-mobile__numpad-key--done"
-                    onPointerDown={e => { e.preventDefault(); setInvFocusedId(null) }}
-                  >Готово</button>
+                    onPointerDown={e => {
+                      e.preventDefault()
+                      if (!invModal || !invFocusedId) { setInvFocusedId(null); return }
+                      const idx = invModal.products.findIndex(p => p.id === invFocusedId)
+                      const next = invModal.products.slice(idx + 1).find(p => !invModal.counts[p.id])
+                      setInvFocusedId(next?.id ?? null)
+                    }}
+                  >Далее →</button>
                 </div>
               </div>
             ) : (

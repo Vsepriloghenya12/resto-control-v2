@@ -141,6 +141,25 @@
 .inv-table tr:last-child td { border-bottom: none; }
 .inv-table tr:hover td { background: #fafafa; }
 
+.inv-status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.inv-status-badge--assigned {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.inv-status-badge--counted {
+  background: #dcfce7;
+  color: #16a34a;
+}
+[data-theme="dark"] .inv-status-badge--assigned { background: #1e293b; color: #94a3b8; }
+[data-theme="dark"] .inv-status-badge--counted { background: #14532d; color: #86efac; }
+
 /* Buttons */
 .inv-done-btn {
   padding: 4px 12px;
@@ -439,23 +458,24 @@
 .inv-section-emp-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   margin-top: 6px;
-  max-height: 260px;
+  max-height: 220px;
   overflow-y: auto;
   border: 1px solid var(--rc-border);
   border-radius: 8px;
-  padding: 4px;
+  padding: 3px;
 }
 
 .inv-section-emp-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 5px;
   cursor: pointer;
   transition: background 0.12s;
+  min-height: 30px;
 }
 
 .inv-section-emp-row:hover { background: var(--rc-hover); }
@@ -463,8 +483,8 @@
 [data-theme="dark"] .inv-section-emp-row.is-checked { background: #2d1f4a; }
 
 .inv-section-emp-name {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 600;
   flex: 1;
 }
 
@@ -488,8 +508,7 @@
 
 /* Add product modal */
 .inv-add-modal {
-  width: 100%;
-  max-width: 640px;
+  width: min(700px, 100%);
   background: var(--rc-card);
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(0,0,0,0.2);
@@ -497,18 +516,18 @@
 }
 .inv-add-modal__header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 22px 16px;
+  padding: 22px 28px 18px;
   border-bottom: 1px solid rgba(0,0,0,0.07);
 }
-.inv-add-modal__header strong { font-size: 17px; font-weight: 800; color: var(--rc-text); }
+.inv-add-modal__header strong { font-size: 18px; font-weight: 800; color: var(--rc-text); }
 .inv-add-modal__body {
-  padding: 20px 22px;
-  display: flex; flex-direction: column; gap: 16px;
+  padding: 22px 28px;
+  display: flex; flex-direction: column; gap: 18px;
 }
-.inv-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.inv-add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .inv-add-modal__footer {
   display: flex; gap: 10px;
-  padding: 14px 22px 20px;
+  padding: 16px 28px 22px;
   border-top: 1px solid rgba(0,0,0,0.07);
 }
 
@@ -540,8 +559,7 @@
 }
 
 .inv-iiko-modal {
-  width: 100%;
-  max-width: 780px;
+  width: min(860px, 100%);
   max-height: 88vh;
   background: var(--rc-card);
   border-radius: 20px;
@@ -768,7 +786,7 @@
   background: var(--rc-card);
   border-radius: 18px;
   width: 100%;
-  max-width: 720px;
+  max-width: 800px;
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0,0,0,.18);

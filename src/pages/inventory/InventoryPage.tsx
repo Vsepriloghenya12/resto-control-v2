@@ -37,8 +37,9 @@ function downloadCsv(filename: string, rows: string[][]) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-function statusLabel(status: string) {
+function statusLabel(status: string, submissions?: InvSubmission[]) {
   if (status === 'submitted' || status === 'completed') return 'Завершена'
+  if (submissions && submissions.length > 0) return 'Посчитана'
   if (status === 'assigned') return 'Назначена'
   return status || '—'
 }
@@ -497,7 +498,7 @@ export function InventoryPage() {
               {active.length === 0
                 ? <p className="inv-empty">Нет активных инвентаризаций</p>
                 : <table className="inv-table">
-                    <thead><tr><th>Бланк</th><th>Подразделение</th><th>Ответственный</th><th>Дата</th><th></th></tr></thead>
+                    <thead><tr><th>Бланк</th><th>Подразделение</th><th>Ответственный</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
                     <tbody>
                       {active.map(a => (
                         <tr key={a.id}>
@@ -505,7 +506,8 @@ export function InventoryPage() {
                           <td>{a.section}</td>
                           <td>{a.assignee || a.assignedPosition || <span className="inv-cell-dim">Всё подразделение</span>}</td>
                           <td>{a.dueDate || a.date || '—'}</td>
-                          <td><button type="button" className="inv-done-btn" onClick={() => void completeAssignment(a.id)}>Сдано</button></td>
+                          <td><span className={`inv-status-badge inv-status-badge--${a.submissions && a.submissions.length > 0 ? 'counted' : 'assigned'}`}>{statusLabel(a.status, a.submissions)}</span></td>
+                          <td><button type="button" className="inv-done-btn" onClick={() => void completeAssignment(a.id)}>Завершить</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1052,7 +1054,7 @@ export function InventoryPage() {
               <div className="inv-doc-meta-row"><span>Ответственный</span><strong>{docModal.assignee || docModal.assignedPosition || 'Всё подразделение'}</strong></div>
               <div className="inv-doc-meta-row"><span>Бланк</span><strong>{docModal.title || docModal.template || '—'}</strong></div>
               <div className="inv-doc-meta-row"><span>Позиций</span><strong>{docModal.rowsCount || 0}</strong></div>
-              <div className="inv-doc-meta-row"><span>Статус</span><strong>{statusLabel(docModal.status)}</strong></div>
+              <div className="inv-doc-meta-row"><span>Статус</span><strong>{statusLabel(docModal.status, docModal.submissions)}</strong></div>
             </div>
             {docModal.submissions && docModal.submissions.length > 0 && (
               <div className="inv-doc-modal__results">
