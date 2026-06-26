@@ -585,8 +585,10 @@ export function EmployeeStartPage() {
     void loadHallPlan().catch(() => undefined)
     void loadOrders()
     void loadAttestations()
-    const poll = setInterval(() => { void loadData().catch(() => undefined) }, 60_000)
-    return () => clearInterval(poll)
+    const poll = setInterval(() => { void loadData().catch(() => undefined) }, 30_000)
+    const onVisible = () => { if (document.visibilityState === 'visible') void loadData().catch(() => undefined) }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearInterval(poll); document.removeEventListener('visibilitychange', onVisible) }
   }, [])
 
   function taskDetail(task: Task): DetailState {
@@ -677,10 +679,17 @@ export function EmployeeStartPage() {
     })
     await api.update('inventory-assignments', invModal.assignment.id, { status: 'submitted', submittedAt: new Date().toISOString(), results, rowsCount: invModal.products.length })
     clearInvDraft(invModal.assignment.id)
+    // Optimistically mark as submitted in local state so notification disappears immediately
+    setSummary(prev => prev ? {
+      ...prev,
+      inventoryAssignments: (prev.inventoryAssignments || []).map(a =>
+        a.id === invModal.assignment.id ? { ...a, status: 'submitted' } : a
+      )
+    } : prev)
     setInvSaving(false)
     setInvModal(null)
     showNotice('Инвентаризация сдана.')
-    await loadData()
+    void loadData().catch(() => undefined)
   }
 
   function knowledgeDetail(item: Knowledge): DetailState {
