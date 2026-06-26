@@ -489,7 +489,7 @@
 /* Add product modal */
 .inv-add-modal {
   width: 100%;
-  max-width: 480px;
+  max-width: 640px;
   background: var(--rc-card);
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(0,0,0,0.2);
@@ -541,7 +541,7 @@
 
 .inv-iiko-modal {
   width: 100%;
-  max-width: 620px;
+  max-width: 780px;
   max-height: 88vh;
   background: var(--rc-card);
   border-radius: 20px;
@@ -768,7 +768,7 @@
   background: var(--rc-card);
   border-radius: 18px;
   width: 100%;
-  max-width: 560px;
+  max-width: 720px;
   max-height: 85vh;
   overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0,0,0,.18);
