@@ -121,6 +121,14 @@ export function InventoryPage() {
   const [assignSection, setAssignSection] = useState<string>('bar')
   const [assignee, setAssignee] = useState('')
   const [assigneeId, setAssigneeId] = useState('')
+
+  const sectionEmployees = useMemo(() => {
+    const title = getSectionTitle(assignSection).toLowerCase()
+    return employees.filter(e => {
+      const pos = e.position.toLowerCase()
+      return pos.includes(title) || title.includes(pos)
+    })
+  }, [employees, assignSection])
   const [assignDate, setAssignDate] = useState(new Date().toISOString().slice(0, 10))
   const [assignTitle, setAssignTitle] = useState('Вечерняя инвентаризация')
 
@@ -450,7 +458,7 @@ export function InventoryPage() {
                     const isCustom = customSections.includes(s.id)
                     return (
                       <span key={s.id} className="inv-section-btn-wrap">
-                        <button type="button" className={`inv-section-btn${assignSection === s.id ? ' is-active' : ''}`} onClick={() => setAssignSection(s.id)}>{s.title}</button>
+                        <button type="button" className={`inv-section-btn${assignSection === s.id ? ' is-active' : ''}`} onClick={() => { setAssignSection(s.id); setAssigneeId(''); setAssignee('') }}>{s.title}</button>
                         <button type="button" className="inv-section-inline-edit" title="Переименовать" onClick={() => { setEditSectionName(s.id); setEditSectionValue(s.title) }}>✎</button>
                         <button type="button" className="inv-section-inline-del" title="Удалить" onClick={() => { if (window.confirm(`Удалить группу «${s.title}»?`)) { if (isCustom) { setCustomSections(prev => prev.filter(n => n !== s.id)) } else { setHiddenPresets(prev => [...prev, s.id as SectionKey]) } if (assignSection === s.id) setAssignSection(allSections.find(x => x.id !== s.id)?.id ?? 'bar') } }}>✕</button>
                       </span>
@@ -469,8 +477,11 @@ export function InventoryPage() {
                 <span>Ответственный <em className="inv-field__opt">необязательно</em></span>
                 <select value={assigneeId} onChange={e => { setAssigneeId(e.target.value); setAssignee('') }} className="inv-select">
                   <option value="">— Всё подразделение —</option>
-                  {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name} · {emp.position}</option>)}
+                  {(sectionEmployees.length > 0 ? sectionEmployees : employees).map(emp => <option key={emp.id} value={emp.id}>{emp.name} · {emp.position}</option>)}
                 </select>
+                {sectionEmployees.length === 0 && employees.length > 0 && (
+                  <span className="inv-field__hint">Сотрудники с должностью «{getSectionTitle(assignSection)}» не найдены — показаны все</span>
+                )}
               </label>
 
               <label className="inv-field">
