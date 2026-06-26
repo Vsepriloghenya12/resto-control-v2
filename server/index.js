@@ -23,7 +23,7 @@ const SERVICE_OWNER_NAME = String(process.env.SERVICE_OWNER_NAME || 'Владе�
 let pgPool = null
 let memoryState = null
 
-const jsonHeaders = { 'Content-Type': 'application/json; charset=utf-8' }
+const jsonHeaders = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
 const safeMethods = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 function nowIso() {

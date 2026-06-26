@@ -499,7 +499,7 @@ export function EmployeeStartPage() {
   }, [summary?.bookings, userInventory, userTasks])
 
   async function loadData() {
-    const nextSummary = await apiRequest<DashboardSummary>('/api/dashboard/summary')
+    const nextSummary = await apiRequest<DashboardSummary>('/api/dashboard/summary', { cache: 'no-store' })
     setSummary(nextSummary)
     const currentEmployee = nextSummary.employees?.find((item) => item.userId === session?.user.id || item.name === session?.user.name)
     if (currentEmployee?.shiftStatus) setShiftOpen(currentEmployee.shiftStatus === 'open')
