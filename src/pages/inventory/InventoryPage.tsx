@@ -91,10 +91,12 @@ export function InventoryPage() {
   const [customSections, setCustomSections] = useState<string[]>([])
   const [hiddenPresets, setHiddenPresets] = useState<SectionKey[]>([])
   const [renamedPresets, setRenamedPresets] = useState<Partial<Record<SectionKey, string>>>({})
+  const [sectionEmps, setSectionEmps] = useState<Record<string, string[]>>({})
   const [addSectionOpen, setAddSectionOpen] = useState(false)
   const [newSectionName, setNewSectionName] = useState('')
   const [editSectionName, setEditSectionName] = useState<string | null>(null)
   const [editSectionValue, setEditSectionValue] = useState('')
+  const [editSectionEmps, setEditSectionEmps] = useState<string[]>([])
   const [docModal, setDocModal] = useState<InventoryAssignment | null>(null)
 
   useEffect(() => {
@@ -123,12 +125,10 @@ export function InventoryPage() {
   const [assigneeId, setAssigneeId] = useState('')
 
   const sectionEmployees = useMemo(() => {
-    const title = getSectionTitle(assignSection).toLowerCase()
-    return employees.filter(e => {
-      const pos = e.position.toLowerCase()
-      return pos.includes(title) || title.includes(pos)
-    })
-  }, [employees, assignSection])
+    const ids = sectionEmps[assignSection]
+    if (ids && ids.length > 0) return employees.filter(e => ids.includes(e.id))
+    return employees
+  }, [employees, assignSection, sectionEmps])
   const [assignDate, setAssignDate] = useState(new Date().toISOString().slice(0, 10))
   const [assignTitle, setAssignTitle] = useState('Вечерняя инвентаризация')
 
@@ -459,7 +459,7 @@ export function InventoryPage() {
                     return (
                       <span key={s.id} className="inv-section-btn-wrap">
                         <button type="button" className={`inv-section-btn${assignSection === s.id ? ' is-active' : ''}`} onClick={() => { setAssignSection(s.id); setAssigneeId(''); setAssignee('') }}>{s.title}</button>
-                        <button type="button" className="inv-section-inline-edit" title="Переименовать" onClick={() => { setEditSectionName(s.id); setEditSectionValue(s.title) }}>✎</button>
+                        <button type="button" className="inv-section-inline-edit" title="Переименовать" onClick={() => { setEditSectionName(s.id); setEditSectionValue(s.title); setEditSectionEmps(sectionEmps[s.id] ?? []) }}>✎</button>
                         <button type="button" className="inv-section-inline-del" title="Удалить" onClick={() => { if (window.confirm(`Удалить группу «${s.title}»?`)) { if (isCustom) { setCustomSections(prev => prev.filter(n => n !== s.id)) } else { setHiddenPresets(prev => [...prev, s.id as SectionKey]) } if (assignSection === s.id) setAssignSection(allSections.find(x => x.id !== s.id)?.id ?? 'bar') } }}>✕</button>
                       </span>
                     )
@@ -477,11 +477,8 @@ export function InventoryPage() {
                 <span>Ответственный <em className="inv-field__opt">необязательно</em></span>
                 <select value={assigneeId} onChange={e => { setAssigneeId(e.target.value); setAssignee('') }} className="inv-select">
                   <option value="">— Всё подразделение —</option>
-                  {(sectionEmployees.length > 0 ? sectionEmployees : employees).map(emp => <option key={emp.id} value={emp.id}>{emp.name} · {emp.position}</option>)}
+                  {sectionEmployees.map(emp => <option key={emp.id} value={emp.id}>{emp.name} · {emp.position}</option>)}
                 </select>
-                {sectionEmployees.length === 0 && employees.length > 0 && (
-                  <span className="inv-field__hint">Сотрудники с должностью «{getSectionTitle(assignSection)}» не найдены — показаны все</span>
-                )}
               </label>
 
               <label className="inv-field">
@@ -631,7 +628,7 @@ export function InventoryPage() {
                     <span className="inv-blank-btn__cnt">{count} позиций</span>
                   </button>
                   <div className="inv-blank-btn__actions">
-                    <button type="button" title="Переименовать" onClick={e => { e.stopPropagation(); setEditSectionName(s.id); setEditSectionValue(s.title) }}>✎</button>
+                    <button type="button" title="Переименовать" onClick={e => { e.stopPropagation(); setEditSectionName(s.id); setEditSectionValue(s.title); setEditSectionEmps(sectionEmps[s.id] ?? []) }}>✎</button>
                     <button type="button" title="Удалить группу" onClick={e => { e.stopPropagation(); if (window.confirm(`Удалить группу «${s.title}»? Позиции останутся в базе.`)) { if (isCustom) { setCustomSections(prev => prev.filter(n => n !== s.id)) } else { setHiddenPresets(prev => [...prev, s.id as SectionKey]) } if (nomBlank === s.id) setNomBlank(allSections.find(x => x.id !== s.id)?.id ?? 'bar') } }}>✕</button>
                   </div>
                 </div>
@@ -938,58 +935,75 @@ export function InventoryPage() {
         </div>
       )}
       {/* Переименовать группу */}
-      {editSectionName !== null && (
-        <div className="inv-iiko-backdrop" onMouseDown={() => setEditSectionName(null)}>
-          <div className="inv-add-modal" style={{ maxWidth: 400 }} onMouseDown={e => e.stopPropagation()}>
-            <div className="inv-add-modal__header">
-              <strong>Переименовать группу</strong>
-              <button type="button" className="inv-iiko-close" onClick={() => setEditSectionName(null)}>✕</button>
-            </div>
-            <div className="inv-add-modal__body">
-              <label className="inv-field">
-                <span>Новое название *</span>
-                <input value={editSectionValue} onChange={e => setEditSectionValue(e.target.value)} autoFocus
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && editSectionValue.trim() && editSectionName !== null) {
-                      const sectionId = editSectionName
-                      const newName = editSectionValue.trim()
-                      const isCustom = customSections.includes(sectionId)
-                      if (isCustom) {
-                        setCustomSections(prev => prev.map(n => n === sectionId ? newName : n))
-                        setProducts(prev => prev.map(p => p.section === sectionId ? { ...p, section: newName } : p))
-                        if (nomBlank === sectionId) setNomBlank(newName)
-                        if (assignSection === sectionId) setAssignSection(newName)
-                      } else {
-                        setRenamedPresets(prev => ({ ...prev, [sectionId]: newName }))
-                      }
-                      setEditSectionName(null)
-                    }
-                  }}
-                />
-              </label>
-            </div>
-            <div className="inv-add-modal__footer">
-              <button type="button" className="inv-iiko-cancel" onClick={() => setEditSectionName(null)}>Отмена</button>
-              <button type="button" className="inv-iiko-import" disabled={!editSectionValue.trim()} onClick={() => {
-                const sectionId = editSectionName!
-                const newName = editSectionValue.trim()
-                const isCustom = customSections.includes(sectionId)
-                if (isCustom) {
-                  setCustomSections(prev => prev.map(n => n === sectionId ? newName : n))
-                  setProducts(prev => prev.map(p => p.section === sectionId ? { ...p, section: newName } : p))
-                  if (nomBlank === sectionId) setNomBlank(newName)
-                  if (assignSection === sectionId) setAssignSection(newName)
-                } else {
-                  setRenamedPresets(prev => ({ ...prev, [sectionId]: newName }))
-                }
-                setEditSectionName(null)
-              }}>
-                Переименовать
-              </button>
+      {editSectionName !== null && (() => {
+        const doSave = () => {
+          const sectionId = editSectionName!
+          const newName = editSectionValue.trim()
+          const isCustom = customSections.includes(sectionId)
+          if (isCustom) {
+            setCustomSections(prev => prev.map(n => n === sectionId ? newName : n))
+            setProducts(prev => prev.map(p => p.section === sectionId ? { ...p, section: newName } : p))
+            if (nomBlank === sectionId) setNomBlank(newName)
+            if (assignSection === sectionId) setAssignSection(newName)
+            setSectionEmps(prev => {
+              const next = { ...prev }
+              if (prev[sectionId]) { next[newName] = prev[sectionId]; delete next[sectionId] }
+              next[newName] = editSectionEmps
+              return next
+            })
+          } else {
+            setRenamedPresets(prev => ({ ...prev, [sectionId]: newName }))
+            setSectionEmps(prev => ({ ...prev, [sectionId]: editSectionEmps }))
+          }
+          setEditSectionName(null)
+        }
+        return (
+          <div className="inv-iiko-backdrop" onMouseDown={() => setEditSectionName(null)}>
+            <div className="inv-add-modal" style={{ maxWidth: 460 }} onMouseDown={e => e.stopPropagation()}>
+              <div className="inv-add-modal__header">
+                <strong>Редактировать группу</strong>
+                <button type="button" className="inv-iiko-close" onClick={() => setEditSectionName(null)}>✕</button>
+              </div>
+              <div className="inv-add-modal__body">
+                <label className="inv-field">
+                  <span>Название *</span>
+                  <input value={editSectionValue} onChange={e => setEditSectionValue(e.target.value)} autoFocus
+                    onKeyDown={e => { if (e.key === 'Enter' && editSectionValue.trim()) doSave() }}
+                  />
+                </label>
+                <div className="inv-field">
+                  <span>Сотрудники группы</span>
+                  {employees.length === 0
+                    ? <p className="inv-empty" style={{ marginTop: 6 }}>Сотрудники не найдены</p>
+                    : <div className="inv-section-emp-list">
+                        {employees.map(emp => {
+                          const checked = editSectionEmps.includes(emp.id)
+                          return (
+                            <label key={emp.id} className={`inv-section-emp-row${checked ? ' is-checked' : ''}`}>
+                              <input type="checkbox" checked={checked}
+                                onChange={() => setEditSectionEmps(prev =>
+                                  prev.includes(emp.id) ? prev.filter(id => id !== emp.id) : [...prev, emp.id]
+                                )}
+                              />
+                              <span className="inv-section-emp-name">{emp.name}</span>
+                              <span className="inv-section-emp-pos">{emp.position}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                  }
+                </div>
+              </div>
+              <div className="inv-add-modal__footer">
+                <button type="button" className="inv-iiko-cancel" onClick={() => setEditSectionName(null)}>Отмена</button>
+                <button type="button" className="inv-iiko-import" disabled={!editSectionValue.trim()} onClick={doSave}>
+                  Сохранить
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Создать свою группу */}
       {addSectionOpen && (
