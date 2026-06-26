@@ -1562,15 +1562,22 @@ export function EmployeeStartPage() {
                 <div key={p.id} className={`employee-mobile__inv-row${invModal.firstEmptyId === p.id ? ' employee-mobile__inv-row--error' : ''}`}>
                   <span className="employee-mobile__inv-row__name">{p.name}</span>
                   <span className="employee-mobile__inv-row__unit">{p.unit}</span>
-                  <input
-                    ref={el => { invInputRefs.current[p.id] = el }}
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0"
-                    value={invModal.counts[p.id]}
-                    onChange={e => { const v = e.target.value.replace(/[^0-9+.,]/g, '').replace(/,/g, '.'); setInvModal(prev => { if (!prev) return prev; const counts = { ...prev.counts, [p.id]: v }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts, firstEmptyId: prev.firstEmptyId === p.id && v !== '' ? null : prev.firstEmptyId } }) }}
-                    className="employee-mobile__inv-input"
-                  />
+                  <div className="employee-mobile__inv-input-wrap">
+                    <input
+                      ref={el => { invInputRefs.current[p.id] = el }}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0"
+                      value={invModal.counts[p.id]}
+                      onChange={e => { const v = e.target.value.replace(/[^0-9+.,]/g, '').replace(/,/g, '.'); setInvModal(prev => { if (!prev) return prev; const counts = { ...prev.counts, [p.id]: v }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts, firstEmptyId: prev.firstEmptyId === p.id && v !== '' ? null : prev.firstEmptyId } }) }}
+                      className="employee-mobile__inv-input"
+                    />
+                    <button
+                      type="button"
+                      className="employee-mobile__inv-plus"
+                      onPointerDown={e => { e.preventDefault(); setInvModal(prev => { if (!prev) return prev; const cur = prev.counts[p.id]; const v = cur && !cur.endsWith('+') ? cur + '+' : cur; const counts = { ...prev.counts, [p.id]: v }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts } }) }}
+                    >+</button>
+                  </div>
                 </div>
               ))}
             </div>

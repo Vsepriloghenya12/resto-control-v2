@@ -2267,8 +2267,14 @@
   white-space: nowrap;
 }
 
+.employee-mobile__inv-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .employee-mobile__inv-input {
-  width: 90px;
+  width: 70px;
   padding: 6px 8px;
   border: 1.5px solid var(--rc-border);
   border-radius: 8px;
@@ -2277,11 +2283,30 @@
   background: var(--rc-card);
   color: var(--rc-text);
   text-align: right;
+  min-width: 0;
 }
 
 .employee-mobile__inv-input::placeholder {
   color: var(--rc-muted-2);
   font-size: 11px;
+}
+
+.employee-mobile__inv-plus {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--rc-border);
+  border-radius: 8px;
+  background: var(--rc-card);
+  color: var(--rc-text);
+  font-size: 18px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .employee-mobile__inv-input:focus {
