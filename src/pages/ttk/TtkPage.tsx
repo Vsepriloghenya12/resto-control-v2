@@ -274,7 +274,7 @@ export function TtkPage() {
       count++
     }
     setIikoModalStep('closed')
-    showNotice(`Импортировано ${count} позиций из iiko.`)
+    showNotice(`Импортировано ${count} позиций.`)
     if (count > 0 && !selectedGroupId) {
       setSelectedGroupId(toImport[0].group)
     }
@@ -456,7 +456,7 @@ export function TtkPage() {
         <div className="ttk-modal-backdrop" onMouseDown={() => setIikoModalStep('closed')}>
           <div className="ttk-modal" style={{ maxWidth: 520 }} onMouseDown={(e) => e.stopPropagation()}>
             <div className="ttk-modal__header">
-              <h3>{iikoModalStep === 'preview' ? `Импорт из iiko — ${iikoPreviewItems.length} позиций` : iikoModalStep === 'importing' ? 'Импортирую...' : 'Подключение к iiko'}</h3>
+              <h3>{iikoModalStep === 'preview' ? `Импорт — ${iikoPreviewItems.length} позиций` : iikoModalStep === 'importing' ? 'Импортирую...' : connectedSystem ? `Подключение к ${connectedSystem}` : 'Настройка импорта'}</h3>
               <button type="button" className="ttk-modal__close" onClick={() => setIikoModalStep('closed')}>✕</button>
             </div>
             <div className="ttk-modal__body">
@@ -464,7 +464,7 @@ export function TtkPage() {
                 <>
                   <div className="ttk-iiko-form">
                     <label>
-                      <span>Хост iiko (например: myrest.iiko.it или 192.168.1.1:443)</span>
+                      <span>Хост (например: myrest.iiko.it или 192.168.1.1:443)</span>
                       <input value={iikoHost} onChange={(e) => setIikoHost(e.target.value)} placeholder="myrest.iiko.it" />
                     </label>
                     <label>

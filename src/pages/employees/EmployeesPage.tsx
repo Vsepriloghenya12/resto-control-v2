@@ -1242,11 +1242,11 @@ export function EmployeesPage() {
         <div className="employees-modal-backdrop" role="presentation" onMouseDown={() => setIikoImportOpen(false)}>
           <div className="employees-modal" role="dialog" aria-modal="true" style={{ maxWidth: 600, display: 'flex', flexDirection: 'column', maxHeight: '90vh' }} onMouseDown={(e) => e.stopPropagation()}>
             <div className="employees-modal__header">
-              <h3>Импорт сотрудников из iiko</h3>
+              <h3>Импорт сотрудников{connectedSystem ? ` из ${connectedSystem}` : ''}</h3>
               <button type="button" className="employees-modal__close" onClick={() => setIikoImportOpen(false)}>×</button>
             </div>
 
-            {iikoImportLoading && <p style={{ padding: '24px 20px', color: '#6b7280', textAlign: 'center' }}>Загружаю сотрудников из iiko...</p>}
+            {iikoImportLoading && <p style={{ padding: '24px 20px', color: '#6b7280', textAlign: 'center' }}>Загружаю сотрудников{connectedSystem ? ` из ${connectedSystem}` : ''}...</p>}
             {iikoImportError && <p style={{ padding: '12px 20px', color: '#ef4444' }}>{iikoImportError}</p>}
             {!iikoImportLoading && iikoImportItems.length === 0 && !iikoImportError && <p style={{ padding: '24px 20px', color: '#6b7280' }}>Сотрудники не найдены</p>}
 
@@ -1261,7 +1261,7 @@ export function EmployeesPage() {
                 <label htmlFor="iiko-check-all" style={{ fontSize: 13, color: '#374151', cursor: 'pointer', userSelect: 'none' }}>
                   Выбрать всех · <span style={{ color: '#6b7280' }}>{iikoImportChecked.size} / {iikoImportItems.length}</span>
                 </label>
-                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>Временный пароль: <strong>iiko123</strong></span>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af' }}>Временный пароль: <strong>123456</strong></span>
               </div>
 
               <div style={{ overflowY: 'auto', flex: '1 1 auto', minHeight: 0 }}>

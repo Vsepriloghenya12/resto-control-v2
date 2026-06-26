@@ -567,7 +567,7 @@ export function InventoryPage() {
               <h3>{getSectionTitle(nomBlank)} <span className="inv-card__count">{nomVisible.length} позиций</span></h3>
               <div className="inv-card__actions">
                 <button type="button" className="inv-add-btn" onClick={() => openAddProduct()}>+ Добавить вручную</button>
-                <button type="button" className="inv-iiko-load-btn" onClick={() => void openIikoImport()}>↓ Из iiko</button>
+                <button type="button" className="inv-iiko-load-btn" onClick={() => void openIikoImport()}>↓ Из {intSystemName || 'кассы'}</button>
               </div>
             </div>
 
