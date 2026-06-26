@@ -585,6 +585,8 @@ export function EmployeeStartPage() {
     void loadHallPlan().catch(() => undefined)
     void loadOrders()
     void loadAttestations()
+    const poll = setInterval(() => { void loadData().catch(() => undefined) }, 60_000)
+    return () => clearInterval(poll)
   }, [])
 
   function taskDetail(task: Task): DetailState {
