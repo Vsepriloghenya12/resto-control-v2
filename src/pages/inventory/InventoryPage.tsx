@@ -523,11 +523,13 @@ export function InventoryPage() {
                         <td>{r.assignedBy || <span className="inv-cell-dim">—</span>}</td>
                         <td>{r.dueDate || r.date || '—'}</td>
                         <td>{r.rowsCount || 0}</td>
-                        <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
-                          {r.results && Object.keys(r.results).length > 0 && (
-                            <button type="button" className="inv-dl-btn" onClick={() => downloadRevision(r, products)} title="Скачать CSV">↓</button>
-                          )}
-                          <button type="button" className="inv-dl-btn inv-dl-btn--del" onClick={() => void deleteAssignment(r.id)} title="Удалить" style={{ marginLeft: 4 }}>✕</button>
+                        <td onClick={e => e.stopPropagation()}>
+                          <div className="inv-row-actions">
+                            {r.results && Object.keys(r.results).length > 0 && (
+                              <button type="button" className="inv-dl-btn" onClick={() => downloadRevision(r, products)} title="Скачать CSV">↓</button>
+                            )}
+                            <button type="button" className="inv-dl-btn inv-dl-btn--del" onClick={() => void deleteAssignment(r.id)} title="Удалить">✕</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
