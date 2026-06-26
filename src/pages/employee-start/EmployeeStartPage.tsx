@@ -5,6 +5,9 @@ import { api, apiRequest } from '../../shared/api/client'
 import {
   AlertCircleIcon,
   BellIcon,
+  InstallIcon,
+  IosShareIcon,
+  IosAddIcon,
   BookIcon,
   BoxIcon,
   CalendarIcon,
@@ -305,9 +308,41 @@ function SwipeableCartItem({ item, onDelete, onComment, onQty }: {
   )
 }
 
+type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
+
+function usePwaInstall() {
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [installed, setInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true)
+  const [showIosHint, setShowIosHint] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setPrompt(e as BeforeInstallPromptEvent) }
+    window.addEventListener('beforeinstallprompt', handler)
+    window.addEventListener('appinstalled', () => setInstalled(true))
+    return () => { window.removeEventListener('beforeinstallprompt', handler) }
+  }, [])
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !(navigator as { standalone?: boolean }).standalone
+  const canInstall = !installed && (prompt !== null || isIos)
+
+  async function install() {
+    if (prompt) {
+      await prompt.prompt()
+      const { outcome } = await prompt.userChoice
+      if (outcome === 'accepted') setInstalled(true)
+      setPrompt(null)
+    } else if (isIos) {
+      setShowIosHint(true)
+    }
+  }
+
+  return { canInstall, install, showIosHint, setShowIosHint, isIos }
+}
+
 export function EmployeeStartPage() {
   const { session, logout } = useSession()
   const [activeTab, setActiveTab] = useState<MobileTab>('overview')
+  const { canInstall, install, showIosHint, setShowIosHint, isIos } = usePwaInstall()
   const [shiftOpen, setShiftOpen] = useState(true)
   const [showNotifications, setShowNotifications] = useState(false)
   const [showRequestModal, setShowRequestModal] = useState(false)
@@ -1380,11 +1415,24 @@ export function EmployeeStartPage() {
           <p className="employee-mobile__header-sub">{canGoBack ? (detail?.subtitle || employee.restaurantName) : `${employee.position} · ${employee.restaurantName}`}</p>
         </div>
         <div className="employee-mobile__header-actions">
+          {!canGoBack && canInstall ? <button type="button" className="employee-mobile__install-btn" onClick={() => void install()} aria-label="Установить приложение"><InstallIcon /><span>Установить</span></button> : null}
           {!canGoBack ? <button type="button" className="employee-mobile__header-request-btn" onClick={() => setShowRequestModal(true)} aria-label="Тех. заявка"><PlusIcon /></button> : null}
           {!canGoBack ? <button type="button" onClick={() => setShowNotifications(true)} aria-label="Уведомления"><BellIcon />{notifications.length ? <b>{notifications.length}</b> : null}</button> : null}
           {!canGoBack ? <button type="button" onClick={() => { if (window.confirm('Выйти из аккаунта?')) logout() }} aria-label="Выйти"><LogoutIcon /></button> : null}
         </div>
       </header>
+      {showIosHint && (
+        <div className="employee-mobile__ios-hint" onClick={() => setShowIosHint(false)}>
+          <div className="employee-mobile__ios-hint__box" onClick={(e) => e.stopPropagation()}>
+            <div className="employee-mobile__ios-hint__title">Установить приложение</div>
+            <p className="employee-mobile__ios-hint__text">
+              Нажмите <strong>«Поделиться»</strong> <IosShareIcon /> внизу браузера,<br />
+              затем выберите <strong>«На экран «Домой»»</strong> <IosAddIcon />
+            </p>
+            <button type="button" className="employee-mobile__ios-hint__close" onClick={() => setShowIosHint(false)}>Понятно</button>
+          </div>
+        </div>
+      )}
 
       {notice ? <div className="employee-mobile__notice">{notice}</div> : null}
 
