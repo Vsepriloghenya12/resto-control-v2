@@ -1373,10 +1373,12 @@ export function EmployeesPage() {
               <label><span>Должность</span><select value={form.position} onChange={(e) => setForm((v) => ({ ...v, position: e.target.value }))}><option value="" disabled>Выберите должность</option>{positionNames.map((item) => <option key={item}>{item}</option>)}</select></label>
               <label><span>Закрытие смены</span><select value={form.shiftCloseMethod} onChange={(e) => setForm((v) => ({ ...v, shiftCloseMethod: e.target.value as ShiftCloseMethod }))}><option value="checklist">По чек-листу закрытия</option><option value="button">По кнопке «Закрыть смену»</option><option value="schedule">По графику (автоматически)</option></select></label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--rc-text)' }}>Новый пароль <small style={{ fontWeight: 400, color: 'var(--rc-muted)' }}>(оставьте пустым чтобы не менять)</small></span>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--rc-text)' }}>
+                  Пароль <small style={{ fontWeight: 400, color: 'var(--rc-muted)' }}>(оставьте пустым чтобы не менять)</small>
+                </span>
                 <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input style={{ flex: 1, paddingRight: '40px', width: '100%', boxSizing: 'border-box' }} value={form.password} onChange={(e) => setForm((v) => ({ ...v, password: e.target.value }))} placeholder="Введите новый пароль" type={showEmployeePassword ? 'text' : 'password'} />
-                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
+                  <button type="button" onClick={() => setShowEmployeePassword((v) => !v)} style={{ position: 'absolute', right: '10px', zIndex: 2, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--rc-muted)', display: 'flex', alignItems: 'center' }}><EyeIcon style={{ width: '20px', height: '20px' }} /></button>
                 </span>
               </div>
 {error ? <p className="employees-error">{error}</p> : null}

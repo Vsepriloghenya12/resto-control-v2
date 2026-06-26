@@ -1082,6 +1082,14 @@ async function handleCollections(req, res, state, pathname, auth) {
       const chatId = url.searchParams.get('chatId')
       if (chatId) result = result.filter((item) => item.chatId === chatId)
     }
+    if (name === 'employees') {
+      result = result.map((emp) => {
+        const u = state.users.find((u) => u.id === emp.userId)
+        const pt = emp.passwordText || (u && u.passwordText) || undefined
+        if (pt !== undefined) return { ...emp, passwordText: pt }
+        return emp
+      })
+    }
     send(res, 200, { items: result })
     return true
   }
