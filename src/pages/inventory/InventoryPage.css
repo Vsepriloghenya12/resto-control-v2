@@ -451,9 +451,9 @@
 .inv-section-emp-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 5px;
   cursor: pointer;
   transition: background 0.12s;
 }
@@ -463,13 +463,13 @@
 [data-theme="dark"] .inv-section-emp-row.is-checked { background: #2d1f4a; }
 
 .inv-section-emp-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   flex: 1;
 }
 
 .inv-section-emp-pos {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--rc-muted);
 }
 
