@@ -2308,3 +2308,14 @@
 .employee-mobile__inv-footer button:disabled {
   opacity: 0.6;
 }
+.employee-mobile__inv-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 14px;
+  font-weight: 600;
+}

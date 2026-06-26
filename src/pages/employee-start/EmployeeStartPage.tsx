@@ -647,21 +647,32 @@ export function EmployeeStartPage() {
           <span>Срок: {item.dueDate || 'не указан'}</span>
         </div>
       ),
-      actions: <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => { void openInventoryCounting(item) }}>Начать подсчёт</button>,
+      actions: item.status === 'submitted' || item.status === 'completed'
+        ? <span className="employee-mobile__inv-done">✓ Инвентаризация сдана</span>
+        : <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => { void openInventoryCounting(item) }}>Начать подсчёт</button>,
     }
+  }
+
+  function evalExpr(s: string): number {
+    const parts = s.replace(/\s/g, '').split('+')
+    return parts.reduce((sum, p) => sum + (parseFloat(p) || 0), 0)
   }
 
   async function submitInventoryCounts() {
     if (!invModal) return
-    const emptyId = invModal.products.find(p => invModal.counts[p.id] === '')?.id ?? null
+    const emptyId = invModal.products.find(p => invModal.counts[p.id].trim() === '')?.id ?? null
     if (emptyId) {
       setInvModal(prev => prev ? { ...prev, firstEmptyId: emptyId } : prev)
       setTimeout(() => { invInputRefs.current[emptyId]?.focus(); invInputRefs.current[emptyId]?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, 50)
       return
     }
     setInvSaving(true)
+    const existing = (invModal.assignment as InventoryAssignment & { results?: Record<string, number> }).results || {}
     const results: Record<string, number> = {}
-    invModal.products.forEach(p => { results[p.id] = parseFloat(invModal.counts[p.id] || '0') || 0 })
+    invModal.products.forEach(p => {
+      const myVal = evalExpr(invModal.counts[p.id])
+      results[p.id] = (existing[p.id] || 0) + myVal
+    })
     await api.update('inventory-assignments', invModal.assignment.id, { status: 'submitted', submittedAt: new Date().toISOString(), results, rowsCount: invModal.products.length })
     clearInvDraft(invModal.assignment.id)
     setInvSaving(false)
@@ -1540,12 +1551,11 @@ export function EmployeeStartPage() {
                   <span className="employee-mobile__inv-row__unit">{p.unit}</span>
                   <input
                     ref={el => { invInputRefs.current[p.id] = el }}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0 это тоже значение"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0"
                     value={invModal.counts[p.id]}
-                    onChange={e => setInvModal(prev => { if (!prev) return prev; const counts = { ...prev.counts, [p.id]: e.target.value }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts, firstEmptyId: prev.firstEmptyId === p.id && e.target.value !== '' ? null : prev.firstEmptyId } })}
+                    onChange={e => { const v = e.target.value.replace(/[^0-9+.,]/g, '').replace(/,/g, '.'); setInvModal(prev => { if (!prev) return prev; const counts = { ...prev.counts, [p.id]: v }; saveInvDraft(prev.assignment.id, counts); return { ...prev, counts, firstEmptyId: prev.firstEmptyId === p.id && v !== '' ? null : prev.firstEmptyId } }) }}
                     className="employee-mobile__inv-input"
                   />
                 </div>

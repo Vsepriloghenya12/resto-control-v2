@@ -24,12 +24,25 @@ function getSectionTitle(id: string): string {
 }
 
 function downloadCsv(filename: string, rows: string[][]) {
-  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
+  const csv = '﻿' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = filename; a.click()
   URL.revokeObjectURL(url)
+}
+
+function downloadRevision(r: InventoryAssignment, products: InventoryProduct[]) {
+  const date = r.dueDate || r.date || r.submittedAt?.slice(0, 10) || 'без-даты'
+  const section = r.section || 'подразделение'
+  const filename = `инвентаризация_${section}_${date}.csv`.replace(/\s/g, '_')
+  const rows: string[][] = [['Позиция', 'Количество', 'Ед. изм.']]
+  if (r.results && Object.keys(r.results).length > 0) {
+    products.filter(p => r.results![p.id] !== undefined).forEach(p => {
+      rows.push([p.name, String(r.results![p.id]), p.unit || ''])
+    })
+  }
+  downloadCsv(filename, rows)
 }
 
 function detectSystemName(host: string): string {
@@ -463,7 +476,7 @@ export function InventoryPage() {
             {submitted.length === 0
               ? <p className="inv-empty">Сданных инвентаризаций пока нет</p>
               : <table className="inv-table">
-                  <thead><tr><th>Бланк</th><th>Подразделение</th><th>Ответственный</th><th>Назначил</th><th>Дата</th><th>Позиций</th></tr></thead>
+                  <thead><tr><th>Бланк</th><th>Подразделение</th><th>Ответственный</th><th>Назначил</th><th>Дата</th><th>Позиций</th><th></th></tr></thead>
                   <tbody>
                     {submitted.map(r => (
                       <tr key={r.id} className="inv-table__row--clickable" onClick={() => setDocModal(r)}>
@@ -473,6 +486,11 @@ export function InventoryPage() {
                         <td>{r.assignedBy || <span className="inv-cell-dim">—</span>}</td>
                         <td>{r.dueDate || r.date || '—'}</td>
                         <td>{r.rowsCount || 0}</td>
+                        <td onClick={e => e.stopPropagation()}>
+                          {r.results && Object.keys(r.results).length > 0 && (
+                            <button type="button" className="inv-dl-btn" onClick={() => downloadRevision(r, products)} title="Скачать CSV">↓</button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -944,7 +962,12 @@ export function InventoryPage() {
                 <strong>Инвентаризация</strong>
                 <span>{docModal.section}</span>
               </div>
-              <button type="button" className="inv-iiko-close" onClick={() => setDocModal(null)}>✕</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {docModal.results && Object.keys(docModal.results).length > 0 && (
+                  <button type="button" className="inv-csv-btn" onClick={() => downloadRevision(docModal, products)}>↓ CSV</button>
+                )}
+                <button type="button" className="inv-iiko-close" onClick={() => setDocModal(null)}>✕</button>
+              </div>
             </div>
             <div className="inv-doc-modal__meta">
               <div className="inv-doc-meta-row"><span>Дата</span><strong>{docModal.dueDate || docModal.date || '—'}</strong></div>

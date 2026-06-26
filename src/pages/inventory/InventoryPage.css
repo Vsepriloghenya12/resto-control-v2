@@ -182,6 +182,21 @@
 }
 .inv-csv-btn:hover { background: var(--rc-card-2); }
 
+.inv-dl-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--rc-border);
+  border-radius: 6px;
+  background: var(--rc-card);
+  color: var(--rc-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.inv-dl-btn:hover { background: var(--rc-hover); color: var(--rc-text); }
+
 /* Section buttons */
 .inv-section-btns {
   display: flex;
