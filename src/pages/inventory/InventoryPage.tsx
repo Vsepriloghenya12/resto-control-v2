@@ -6,7 +6,8 @@ import { useSession } from '../../app/providers/SessionProvider'
 type MainTab = 'assign' | 'submitted' | 'nomenclature'
 type SectionKey = 'bar' | 'kitchen' | 'household' | 'dishes'
 type InventoryProduct = { id: string; name: string; unit: string; category: string; section: string; minBalance?: number; active?: boolean; updatedAt?: string }
-type InventoryAssignment = { id: string; title?: string; template?: string; section: string; assignedPosition?: string; assignee?: string; assigneeId?: string; assignedBy?: string; dueDate?: string; date?: string; status: string; rowsCount?: number; results?: Record<string, number>; submittedAt?: string }
+type InvSubmission = { employeeId: string; employeeName: string; submittedAt: string }
+type InventoryAssignment = { id: string; title?: string; template?: string; section: string; assignedPosition?: string; assignee?: string; assigneeId?: string; assignedBy?: string; dueDate?: string; date?: string; status: string; rowsCount?: number; results?: Record<string, number>; submittedAt?: string; submissions?: InvSubmission[] }
 type MenuItem = { id: string; name: string; unit: string; category: string; price?: number; description?: string; output?: string; active?: boolean }
 type NomSubTab = 'products' | 'menu'
 type Employee = { id: string; name: string; position: string; status?: string }
@@ -36,12 +37,18 @@ function downloadCsv(filename: string, rows: string[][]) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+function statusLabel(status: string) {
+  if (status === 'submitted' || status === 'completed') return 'Завершена'
+  if (status === 'assigned') return 'Назначена'
+  return status || '—'
+}
+
 function downloadRevision(r: InventoryAssignment, products: InventoryProduct[]) {
   const date = r.dueDate || r.date || r.submittedAt?.slice(0, 10) || '—'
   const section = r.section || 'подразделение'
   const filename = `инвентаризация_${section}_${date}.csv`.replace(/[\s/\\:*?"<>|]/g, '_')
-  const submittedAt = r.submittedAt
-    ? new Date(r.submittedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const fmt = (iso?: string) => iso
+    ? new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—'
   const rows: string[][] = [
     ['Бланк', r.title || r.template || '—'],
@@ -49,12 +56,16 @@ function downloadRevision(r: InventoryAssignment, products: InventoryProduct[]) 
     ['Назначил', r.assignedBy || '—'],
     ['Ответственный', r.assignee || r.assignedPosition || 'Всё подразделение'],
     ['Дата проведения', date],
-    ['Сдана', submittedAt],
-    ['Статус', r.status || '—'],
+    ['Статус', statusLabel(r.status)],
     ['Позиций', String(r.rowsCount || 0)],
     [],
-    ['Позиция', 'Количество', 'Ед. изм.'],
   ]
+  if (r.submissions && r.submissions.length > 0) {
+    rows.push(['Кто сдал подсчёт', 'Время сдачи', ''])
+    r.submissions.forEach(s => rows.push([s.employeeName, fmt(s.submittedAt), '']))
+    rows.push([])
+  }
+  rows.push(['Позиция', 'Количество', 'Ед. изм.'])
   if (r.results && Object.keys(r.results).length > 0) {
     products.filter(p => r.results![p.id] !== undefined).forEach(p => {
       rows.push([p.name, String(r.results![p.id]), p.unit || ''])
@@ -333,7 +344,7 @@ export function InventoryPage() {
   const threeMonthsAgo = Date.now() - 90 * 24 * 60 * 60 * 1000
   const active = assignments.filter(a => a.status !== 'completed' && a.status !== 'submitted')
   const submitted = assignments
-    .filter(a => a.status === 'completed' || a.status === 'submitted')
+    .filter(a => a.status === 'completed' || a.status === 'submitted' || (a.submissions && a.submissions.length > 0))
     .filter(a => {
       const ts = a.submittedAt || a.dueDate || a.date
       return !ts || new Date(ts).getTime() > threeMonthsAgo
@@ -1016,8 +1027,24 @@ export function InventoryPage() {
               <div className="inv-doc-meta-row"><span>Ответственный</span><strong>{docModal.assignee || docModal.assignedPosition || 'Всё подразделение'}</strong></div>
               <div className="inv-doc-meta-row"><span>Бланк</span><strong>{docModal.title || docModal.template || '—'}</strong></div>
               <div className="inv-doc-meta-row"><span>Позиций</span><strong>{docModal.rowsCount || 0}</strong></div>
-              {docModal.submittedAt && <div className="inv-doc-meta-row"><span>Сдана</span><strong>{new Date(docModal.submittedAt).toLocaleString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></div>}
+              <div className="inv-doc-meta-row"><span>Статус</span><strong>{statusLabel(docModal.status)}</strong></div>
             </div>
+            {docModal.submissions && docModal.submissions.length > 0 && (
+              <div className="inv-doc-modal__results">
+                <h4>Сдали подсчёт</h4>
+                <table className="inv-table">
+                  <thead><tr><th>Сотрудник</th><th>Время</th></tr></thead>
+                  <tbody>
+                    {docModal.submissions.map((s, i) => (
+                      <tr key={i}>
+                        <td>{s.employeeName}</td>
+                        <td>{new Date(s.submittedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             {docModal.results && Object.keys(docModal.results).length > 0 && (
               <div className="inv-doc-modal__results">
                 <h4>Результаты подсчёта</h4>

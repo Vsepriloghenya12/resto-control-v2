@@ -61,7 +61,8 @@ type HallFilter = 'all' | HallStatus
 
 type Task = { id: string; title: string; description?: string; status?: string; assignedPosition?: string; dueTime?: string; dueDate?: string; requiresPhoto?: boolean }
 type Checklist = { id: string; title: string; position?: string; active?: boolean; startTime?: string; endTime?: string; items?: Array<{ id: string; title: string; required?: boolean; requiresCompletionPhoto?: boolean }> }
-type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; assignedBy?: string; dueDate?: string; rowsCount?: number }
+type InvSubmission = { employeeId: string; employeeName: string; submittedAt: string }
+type InventoryAssignment = { id: string; title: string; section?: string; status?: string; assignedPosition?: string; assignedBy?: string; dueDate?: string; rowsCount?: number; results?: Record<string, number>; submissions?: InvSubmission[] }
 type InvProduct = { id: string; name: string; unit: string; section: string; active?: boolean }
 type Knowledge = { id: string; title: string; section?: string; type?: string; description?: string; status?: string }
 type TtkItem = { id: string; name: string; group?: string; groupId?: string; unit?: string; price?: number; tag?: string; description?: string; cookingTime?: string; output?: string; online?: boolean; takeaway?: boolean; stopList?: boolean; inStopList?: boolean; isStopped?: boolean; status?: string }
@@ -462,10 +463,13 @@ export function EmployeeStartPage() {
 
   const userInventory = useMemo(() => {
     const assignments = summary?.inventoryAssignments || []
-    const active = (item: InventoryAssignment) => item.status === 'assigned' || item.status === 'active' || !item.status
-    if (employee.isManager) return assignments.filter(active)
-    return assignments.filter((item) => samePosition(item.assignedPosition, employee.position) && active(item))
-  }, [employee.isManager, employee.position, summary?.inventoryAssignments])
+    const myId = employee.id
+    const notDone = (item: InventoryAssignment) =>
+      (item.status === 'assigned' || item.status === 'active' || !item.status) &&
+      !item.submissions?.some(s => s.employeeId === myId)
+    if (employee.isManager) return assignments.filter(item => item.status === 'assigned' || item.status === 'active' || !item.status)
+    return assignments.filter((item) => samePosition(item.assignedPosition, employee.position) && notDone(item))
+  }, [employee.id, employee.isManager, employee.position, summary?.inventoryAssignments])
 
 
   const currentEmployee = useMemo(() => {
@@ -652,8 +656,8 @@ export function EmployeeStartPage() {
           <span>Срок: {item.dueDate || 'не указан'}</span>
         </div>
       ),
-      actions: item.status === 'submitted' || item.status === 'completed'
-        ? <span className="employee-mobile__inv-done">✓ Инвентаризация сдана</span>
+      actions: item.submissions?.some(s => s.employeeId === employee.id)
+        ? <span className="employee-mobile__inv-done">✓ Вы уже сдали подсчёт</span>
         : <button type="button" className="employee-mobile__hall-actions-purple" onClick={() => { void openInventoryCounting(item) }}>Начать подсчёт</button>,
     }
   }
@@ -678,13 +682,15 @@ export function EmployeeStartPage() {
       const myVal = evalExpr(invModal.counts[p.id])
       results[p.id] = (existing[p.id] || 0) + myVal
     })
-    await api.update('inventory-assignments', invModal.assignment.id, { status: 'submitted', submittedAt: new Date().toISOString(), results, rowsCount: invModal.products.length })
+    const mySubmission: InvSubmission = { employeeId: employee.id, employeeName: employee.name, submittedAt: new Date().toISOString() }
+    const submissions = [...(invModal.assignment.submissions || []).filter(s => s.employeeId !== employee.id), mySubmission]
+    await api.update('inventory-assignments', invModal.assignment.id, { results, rowsCount: invModal.products.length, submissions })
     clearInvDraft(invModal.assignment.id)
-    // Optimistically mark as submitted in local state so notification disappears immediately
+    // Optimistically add submission so notification disappears immediately for this employee
     setSummary(prev => prev ? {
       ...prev,
       inventoryAssignments: (prev.inventoryAssignments || []).map(a =>
-        a.id === invModal.assignment.id ? { ...a, status: 'submitted' } : a
+        a.id === invModal.assignment.id ? { ...a, results, submissions } : a
       )
     } : prev)
     setInvSaving(false)
