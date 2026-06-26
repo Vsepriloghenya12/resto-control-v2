@@ -37,14 +37,30 @@ function downloadCsv(filename: string, rows: string[][]) {
 }
 
 function downloadRevision(r: InventoryAssignment, products: InventoryProduct[]) {
-  const date = r.dueDate || r.date || r.submittedAt?.slice(0, 10) || 'без-даты'
+  const date = r.dueDate || r.date || r.submittedAt?.slice(0, 10) || '—'
   const section = r.section || 'подразделение'
-  const filename = `инвентаризация_${section}_${date}.csv`.replace(/\s/g, '_')
-  const rows: string[][] = [['Позиция', 'Количество', 'Ед. изм.']]
+  const filename = `инвентаризация_${section}_${date}.csv`.replace(/[\s/\\:*?"<>|]/g, '_')
+  const submittedAt = r.submittedAt
+    ? new Date(r.submittedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '—'
+  const rows: string[][] = [
+    ['Бланк', r.title || r.template || '—'],
+    ['Подразделение / Место', section],
+    ['Назначил', r.assignedBy || '—'],
+    ['Ответственный', r.assignee || r.assignedPosition || 'Всё подразделение'],
+    ['Дата проведения', date],
+    ['Сдана', submittedAt],
+    ['Статус', r.status || '—'],
+    ['Позиций', String(r.rowsCount || 0)],
+    [],
+    ['Позиция', 'Количество', 'Ед. изм.'],
+  ]
   if (r.results && Object.keys(r.results).length > 0) {
     products.filter(p => r.results![p.id] !== undefined).forEach(p => {
       rows.push([p.name, String(r.results![p.id]), p.unit || ''])
     })
+  } else {
+    rows.push(['Данные не внесены', '', ''])
   }
   downloadCsv(filename, rows)
 }
