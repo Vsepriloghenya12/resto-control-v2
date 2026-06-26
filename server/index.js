@@ -1099,7 +1099,7 @@ async function handleCollections(req, res, state, pathname, auth) {
     if (name === 'employees') {
       const login = normalizeLogin(body.login)
       const password = String(body.password || '')
-      if (!String(body.name || '').trim() || !login || !String(body.position || '').trim() || password.length < 4) {
+      if (!String(body.name || '').trim() || !login || !String(body.position || '').trim() || password.length < 1) {
         throw httpError(400, 'Заполните имя, телефон/email, должность и временный пароль.')
       }
       if (state.users.some((user) => user.login === login)) {
@@ -1107,7 +1107,7 @@ async function handleCollections(req, res, state, pathname, auth) {
       }
       const createdAt = nowIso()
       const employeeRole = roleFromPosition(body.position)
-      const user = { id: id('user'), name: String(body.name).trim(), login, passwordHash: hashPassword(password), roleHint: employeeRole, createdAt, updatedAt: createdAt }
+      const user = { id: id('user'), name: String(body.name).trim(), login, passwordHash: hashPassword(password), passwordText: password, roleHint: employeeRole, createdAt, updatedAt: createdAt }
       const membership = { id: id('membership'), userId: user.id, restaurantId: targetRestaurantId, role: employeeRole, position: body.position, status: 'active', createdAt, updatedAt: createdAt }
       const employee = {
         id: id('employee'),
@@ -1119,6 +1119,7 @@ async function handleCollections(req, res, state, pathname, auth) {
         status: body.status || 'active',
         shiftStatus: body.shiftStatus || 'closed',
         attestationPercent: Number(body.attestationPercent || 0),
+        passwordText: password,
         createdAt,
         updatedAt: createdAt,
       }
@@ -1185,8 +1186,10 @@ async function handleCollections(req, res, state, pathname, auth) {
         if (user) {
           if (rest.login) user.login = normalizeLogin(rest.login)
           if (rest.name) user.name = String(rest.name).trim()
-          if (password && String(password).trim().length >= 4) {
+          if (password && String(password).trim().length >= 1) {
             user.passwordHash = hashPassword(String(password).trim())
+            user.passwordText = String(password).trim()
+            item.passwordText = String(password).trim()
           }
           user.updatedAt = nowIso()
         }

@@ -413,13 +413,16 @@
     padding: 0;
     display: block;
     min-height: 100dvh;
-    overflow: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
     background:
       radial-gradient(circle at 50% 9%, rgba(255, 255, 255, 1), rgba(246, 247, 249, 0.96) 50%, #f5f6f8 100%);
   }
 
   .auth-shell {
     min-height: 100dvh;
+    height: auto;
     display: block;
     width: 100%;
     border: 0;
@@ -434,11 +437,13 @@
 
   .auth-panel {
     min-height: 100dvh;
+    height: auto;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    padding: max(40px, env(safe-area-inset-top)) 22px max(28px, env(safe-area-inset-bottom));
+    padding: max(40px, env(safe-area-inset-top)) 22px max(env(safe-area-inset-bottom, 28px), 28px);
     background: transparent;
+    box-sizing: border-box;
   }
 
   .auth-mobile-header {
@@ -565,6 +570,27 @@
 
   .auth-card {
     padding: 24px 18px 28px;
+  }
+}
+
+/* Small-height phones (iPhone SE, small Android) — compress header so button is reachable */
+@media (max-width: 960px) and (max-height: 700px) {
+  .auth-mobile-header {
+    margin-top: 36px;
+    margin-bottom: 28px;
+  }
+
+  .auth-mobile-header h1 {
+    font-size: clamp(32px, 9vw, 44px);
+  }
+
+  .auth-mobile-header p {
+    margin-top: 12px;
+    font-size: clamp(15px, 3.8vw, 20px);
+  }
+
+  .auth-form {
+    gap: 20px;
   }
 }
 

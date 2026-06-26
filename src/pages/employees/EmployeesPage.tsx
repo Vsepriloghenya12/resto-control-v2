@@ -19,6 +19,7 @@ type Employee = {
   shiftStatus?: ShiftStatus
   shiftCloseMethod?: ShiftCloseMethod
   attestationPercent?: number
+  passwordText?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -510,7 +511,7 @@ export function EmployeesPage() {
       name: employee.name,
       login: employee.login,
       position: employee.position,
-      password: '',
+      password: employee.passwordText || '',
       shiftStatus: employee.shiftStatus || 'closed',
       shiftCloseMethod: employee.shiftCloseMethod || 'button',
       attestationPercent: employee.attestationPercent || 0,
@@ -532,7 +533,7 @@ export function EmployeesPage() {
       return
     }
 
-    if (!selectedId && !form.password.trim()) {
+    if (!selectedId && !form.password) {
       setError('Для нового сотрудника нужен временный пароль.')
       return
     }
