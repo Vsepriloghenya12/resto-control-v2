@@ -80,6 +80,8 @@ export function TtkPage() {
   const [newTag, setNewTag] = useState('')
   const [newOutput, setNewOutput] = useState('')
 
+  const [connectedSystem, setConnectedSystem] = useState('')
+
   // iiko sync
   const [iikoModalStep, setIikoModalStep] = useState<'closed' | 'settings' | 'preview' | 'importing'>('closed')
   const [iikoHost, setIikoHost] = useState('')
@@ -101,7 +103,19 @@ export function TtkPage() {
     }
   }
 
-  useEffect(() => { void loadItems() }, [])
+  useEffect(() => {
+    void loadItems()
+    fetch('/api/restaurant', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((r) => {
+        if (!r) return
+        const host: string = r.iikoHost || r.qrHost || ''
+        const h = host.toLowerCase()
+        if (h.includes('iiko')) setConnectedSystem('iiko')
+        else if (h.includes('quickresto') || h.includes('syrve')) setConnectedSystem('Quick Resto')
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (addingGroup) newGroupInputRef.current?.focus()
@@ -294,7 +308,7 @@ export function TtkPage() {
 
       <div className="ttk-page-header">
         <button className="ttk-ref-btn" type="button" onClick={() => setRefOpen(true)}>Справочники</button>
-        <button className="ttk-ref-btn" type="button" onClick={() => void openIikoSync()}>↓ iiko</button>
+        <button className="ttk-ref-btn" type="button" onClick={() => void openIikoSync()}>↓ {connectedSystem || 'Импорт'}</button>
       </div>
 
       <div className="ttk-main-area">

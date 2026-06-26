@@ -328,6 +328,8 @@ export function EmployeesPage() {
     setPositionsList(prev => prev.filter(p => p.id !== id))
   }
 
+  const [connectedSystem, setConnectedSystem] = useState('')
+
   // iiko import
   type IikoEmployee = { iikoId: string; name: string; role: string; phone: string }
   const [iikoImportOpen, setIikoImportOpen] = useState(false)
@@ -437,7 +439,19 @@ export function EmployeesPage() {
     }
   }
 
-  useEffect(() => { void loadEmployees(); void loadSchedule(); void loadPositions() }, [])
+  useEffect(() => {
+    void loadEmployees(); void loadSchedule(); void loadPositions()
+    fetch('/api/restaurant', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((r) => {
+        if (!r) return
+        const host: string = r.iikoHost || r.qrHost || ''
+        const h = host.toLowerCase()
+        if (h.includes('iiko')) setConnectedSystem('iiko')
+        else if (h.includes('quickresto') || h.includes('syrve')) setConnectedSystem('Quick Resto')
+      })
+      .catch(() => {})
+  }, [])
   useEffect(() => { void loadSchedule() }, [scheduleMonth])
 
   const filteredEmployees = useMemo(() => {
@@ -1163,7 +1177,7 @@ export function EmployeesPage() {
               <span>Статус:</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
             </label>
-            <button className="employees-reset-button" type="button" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setIikoImportOpen(true); void loadIikoEmployees() }}>↓ iiko</button>
+            <button className="employees-reset-button" type="button" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setIikoImportOpen(true); void loadIikoEmployees() }}>↓ {connectedSystem || 'Импорт'}</button>
             <button className="employees-reset-button" type="button" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => setPositionsOpen(true)}>Должности</button>
             <button className="employees-primary-button" type="button" onClick={startCreate}>+ Сотрудник</button>
           </div>
