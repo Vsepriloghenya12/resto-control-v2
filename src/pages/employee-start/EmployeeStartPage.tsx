@@ -1045,6 +1045,14 @@ export function EmployeeStartPage() {
   function renderOverview() {
     return (
       <>
+        {/* DEBUG – remove after fix */}
+        <div style={{ fontSize: 11, background: '#fff3cd', padding: '6px 10px', margin: '8px', borderRadius: 8, lineHeight: 1.5 }}>
+          <strong>Моя должность:</strong> «{employee.position}»<br />
+          <strong>Все назначения ({summary?.inventoryAssignments?.length ?? 0}):</strong>{' '}
+          {(summary?.inventoryAssignments || []).map(a => `[${a.status} | pos:«${a.assignedPosition ?? ''}»]`).join(' ')}
+          <br />
+          <strong>Мои назначения:</strong> {userInventory.length}
+        </div>
         <section className="employee-mobile__shift-card employee-mobile__shift-card--compact">
           <div className="employee-mobile__shift-status">
             <div className={shiftOpen ? 'employee-mobile__shift-icon employee-mobile__shift-icon--open' : 'employee-mobile__shift-icon'}><ClockIcon /></div>
