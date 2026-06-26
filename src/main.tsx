@@ -3,6 +3,12 @@ import ReactDOM from 'react-dom/client'
 import { App } from './app/App'
 import './shared/styles/global.css'
 
+// Capture beforeinstallprompt before React mounts
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  ;(window as typeof window & { __pwaPrompt?: Event }).__pwaPrompt = e
+})
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <App />

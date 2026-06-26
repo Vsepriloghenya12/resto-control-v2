@@ -311,11 +311,16 @@ function SwipeableCartItem({ item, onDelete, onComment, onQty }: {
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
 
 function usePwaInstall() {
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(() => {
+    const w = window as typeof window & { __pwaPrompt?: BeforeInstallPromptEvent }
+    return w.__pwaPrompt ?? null
+  })
   const [installed, setInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true)
   const [showIosHint, setShowIosHint] = useState(false)
 
   useEffect(() => {
+    const w = window as typeof window & { __pwaPrompt?: BeforeInstallPromptEvent }
+    if (w.__pwaPrompt && !prompt) setPrompt(w.__pwaPrompt)
     const handler = (e: Event) => { e.preventDefault(); setPrompt(e as BeforeInstallPromptEvent) }
     window.addEventListener('beforeinstallprompt', handler)
     window.addEventListener('appinstalled', () => setInstalled(true))
