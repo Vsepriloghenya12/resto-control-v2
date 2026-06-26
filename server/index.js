@@ -224,6 +224,12 @@ function ensureStateShape(state) {
     if (!Array.isArray(state[key])) state[key] = []
   }
   state.sessions = state.sessions.filter((item) => item?.expiresAt && new Date(item.expiresAt).getTime() > Date.now())
+  const threeMonthsAgo = Date.now() - 90 * 24 * 60 * 60 * 1000
+  state.inventoryAssignments = state.inventoryAssignments.filter((item) => {
+    if (item.status !== 'submitted' && item.status !== 'completed') return true
+    const ts = item.submittedAt || item.dueDate || item.date || item.createdAt
+    return !ts || new Date(ts).getTime() > threeMonthsAgo
+  })
   state.meta = { version: 1, ...(state.meta || {}), updatedAt: state.meta?.updatedAt || nowIso() }
   return state
 }

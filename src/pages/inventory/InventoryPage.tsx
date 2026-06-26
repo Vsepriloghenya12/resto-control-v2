@@ -324,8 +324,25 @@ export function InventoryPage() {
     setAssignments(prev => prev.map(a => a.id === id ? updated : a))
   }
 
+  async function deleteAssignment(id: string) {
+    if (!window.confirm('Удалить эту инвентаризацию?')) return
+    await api.remove('inventory-assignments', id)
+    setAssignments(prev => prev.filter(a => a.id !== id))
+  }
+
+  const threeMonthsAgo = Date.now() - 90 * 24 * 60 * 60 * 1000
   const active = assignments.filter(a => a.status !== 'completed' && a.status !== 'submitted')
-  const submitted = assignments.filter(a => a.status === 'completed' || a.status === 'submitted')
+  const submitted = assignments
+    .filter(a => a.status === 'completed' || a.status === 'submitted')
+    .filter(a => {
+      const ts = a.submittedAt || a.dueDate || a.date
+      return !ts || new Date(ts).getTime() > threeMonthsAgo
+    })
+    .sort((a, b) => {
+      const ta = new Date(a.submittedAt || a.dueDate || a.date || 0).getTime()
+      const tb = new Date(b.submittedAt || b.dueDate || b.date || 0).getTime()
+      return tb - ta
+    })
 
 
   async function deleteProduct(id: string) {
@@ -506,10 +523,11 @@ export function InventoryPage() {
                         <td>{r.assignedBy || <span className="inv-cell-dim">—</span>}</td>
                         <td>{r.dueDate || r.date || '—'}</td>
                         <td>{r.rowsCount || 0}</td>
-                        <td onClick={e => e.stopPropagation()}>
+                        <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap' }}>
                           {r.results && Object.keys(r.results).length > 0 && (
                             <button type="button" className="inv-dl-btn" onClick={() => downloadRevision(r, products)} title="Скачать CSV">↓</button>
                           )}
+                          <button type="button" className="inv-dl-btn inv-dl-btn--del" onClick={() => void deleteAssignment(r.id)} title="Удалить" style={{ marginLeft: 4 }}>✕</button>
                         </td>
                       </tr>
                     ))}

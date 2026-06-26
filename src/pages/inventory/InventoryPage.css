@@ -196,6 +196,7 @@
   justify-content: center;
 }
 .inv-dl-btn:hover { background: var(--rc-hover); color: var(--rc-text); }
+.inv-dl-btn--del:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
 
 /* Section buttons */
 .inv-section-btns {
