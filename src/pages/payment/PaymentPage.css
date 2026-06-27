@@ -11,8 +11,8 @@
 
 .payment-summary-grid {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
-  gap: 14px;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 12px;
 }
 
 .payment-summary-card,
@@ -22,92 +22,117 @@
 .payment-documents-card,
 .payment-tariffs-card {
   border: 1px solid var(--rc-border);
-  border-radius: 12px;
+  border-radius: var(--rc-r-lg);
   background: var(--rc-card);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+  box-shadow: var(--rc-shadow-xs);
 }
 
+/* ── Summary cards ── */
 .payment-summary-card {
-  min-height: 118px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px;
+  min-height: 130px;
 }
 
 .payment-summary-card--main {
-  border-color: #fed7aa;
-  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 65%);
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-color: var(--rc-orange-border);
+  background: linear-gradient(140deg, #fff8f2 0%, #ffffff 60%);
 }
 
+.payment-summary-card--main > div {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Label row */
 .payment-summary-card span,
 .payment-card-header p,
 .payment-card-actions span,
 .payment-side-card li span,
 .payment-document span {
   color: var(--rc-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
 }
 
+/* Main value */
 .payment-summary-card strong {
   display: block;
-  margin-top: 7px;
+  margin-top: 10px;
   color: var(--rc-text);
-  font-size: 22px;
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
+/* Sub-text */
 .payment-summary-card p {
-  margin: 8px 0 0;
-  max-width: 360px;
-  color: #52637a;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.45;
+  margin: 6px 0 0;
+  color: var(--rc-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
+/* Badge (e.g. «Оплачено до...») */
 .payment-summary-card b {
-  flex: 0 0 auto;
-  min-height: 30px;
+  margin-top: auto;
+  align-self: flex-start;
+  padding-top: 14px;
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 0 12px;
-  color: #b45309;
-  background: #ffedd5;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: var(--rc-orange);
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .payment-support-button {
-  width: fit-content;
-  min-height: 34px;
-  margin-top: 10px;
-  border: 1px solid #bfdbfe;
-  border-radius: 9px;
-  padding: 0 12px;
+  margin-top: auto;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--rc-blue-border);
+  border-radius: var(--rc-r);
   background: var(--rc-blue-soft);
-  color: #1d4ed8;
+  color: var(--rc-blue);
   font-family: inherit;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.payment-support-button:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 
 .payment-trial-pill {
-  min-height: 30px;
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 0 12px;
-  background: #fff7ed;
-  color: #c2410c;
-  font-size: 12px;
-  font-weight: 900;
+  height: 24px;
+  border-radius: 20px;
+  padding: 0 10px;
+  background: var(--rc-orange-soft);
+  border: 1px solid var(--rc-orange-border);
+  color: var(--rc-orange);
+  font-size: 11px;
+  font-weight: 800;
   white-space: nowrap;
 }
 
