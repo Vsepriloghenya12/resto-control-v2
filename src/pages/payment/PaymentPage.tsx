@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from '../../app/providers/SessionProvider'
 import { api, apiRequest } from '../../shared/api/client'
+import { LoopsPricingSlider } from '../../components/ui/pricing-slider-loops'
 import './PaymentPage.css'
 
 type InvoiceStatus = 'issued' | 'payment_reported' | 'payment_document_attached' | 'paid' | 'payment_rejected'
-type Tariff = { id: string; title: string; employees: string; price: string; period: string; note: string; featured?: boolean }
+type Tariff = { id: string; title: string; employees: string; price: string; period?: string; note: string; featured?: boolean }
 type Invoice = { id: string; invoiceNumber?: string; number?: string; plan: string; period: string; amount: number | string; issuedAt: string; status: InvoiceStatus; closingDocument?: string }
 
 const tariffs: Tariff[] = [
@@ -24,28 +25,6 @@ const invoiceStatusLabels: Record<InvoiceStatus, string> = {
 
 function StatusBadge({ status }: { status: InvoiceStatus }) { return <span className={`payment-status payment-status--${status}`}>{invoiceStatusLabels[status]}</span> }
 function ToggleButton({ active, children, onClick }: { active?: boolean; children: string; onClick: () => void }) { return <button className={active ? 'payment-toggle payment-toggle--active' : 'payment-toggle'} type="button" onClick={onClick}>{children}</button> }
-function TariffCard({ tariff, selected, onSelect }: { tariff: Tariff; selected?: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      className={['ptc', tariff.featured && 'ptc--hero', selected && 'ptc--selected'].filter(Boolean).join(' ')}
-      onClick={onSelect}
-    >
-      {tariff.featured && <span className="ptc__popular">★ Популярный</span>}
-      {selected && !tariff.featured && <span className="ptc__current-badge">✓ Текущий</span>}
-      <div>
-        <span className="ptc__name">{tariff.title}</span>
-        <span className="ptc__staff">{tariff.employees}</span>
-      </div>
-      <div className="ptc__price">
-        <b>{tariff.price}</b>
-        {tariff.period && <em>{tariff.period}</em>}
-      </div>
-      <p className="ptc__note">{tariff.note}</p>
-      <span className="ptc__cta">{selected ? '✓ Текущий тариф' : 'Выбрать тариф'}</span>
-    </button>
-  )
-}
 
 export function PaymentPage() {
   const { session } = useSession()
@@ -53,41 +32,9 @@ export function PaymentPage() {
   const [restaurant, setRestaurant] = useState(session?.restaurant)
   const [message, setMessage] = useState('')
   const [supportOpen, setSupportOpen] = useState(false)
-  const [carouselIdx, setCarouselIdx] = useState(1)
-  const [cardsVisible, setCardsVisible] = useState(3)
-  const [stepPx, setStepPx] = useState(0)
-  const viewportRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef(0)
   const [requisites, setRequisites] = useState({
     legalType: session?.restaurant.legalType || 'ИП', legalName: session?.restaurant.legalName || '', inn: session?.restaurant.inn || '', kpp: session?.restaurant.kpp || '', ogrn: session?.restaurant.ogrn || '', legalAddress: session?.restaurant.legalAddress || '', bankName: session?.restaurant.bankName || '', bik: session?.restaurant.bik || '', account: session?.restaurant.account || '', corrAccount: session?.restaurant.corrAccount || '', contactEmail: session?.restaurant.contactEmail || '', contactPhone: session?.restaurant.contactPhone || '', edo: session?.restaurant.edo || '',
   })
-
-  useLayoutEffect(() => {
-    const el = viewportRef.current
-    if (!el) return
-    const update = () => {
-      const w = el.offsetWidth
-      const cards = w >= 860 ? 3 : w >= 560 ? 2 : 1
-      const cardW = (w - 16 * (cards - 1)) / cards
-      setStepPx(cardW + 16)
-      setCardsVisible(cards)
-    }
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  useEffect(() => {
-    setCarouselIdx(i => Math.min(i, tariffs.length - cardsVisible))
-  }, [cardsVisible])
-
-  function handleTouchStart(e: React.TouchEvent) { touchStartX.current = e.touches[0].clientX }
-  function handleTouchEnd(e: React.TouchEvent) {
-    const diff = touchStartX.current - e.changedTouches[0].clientX
-    if (diff > 50) setCarouselIdx(i => Math.min(tariffs.length - cardsVisible, i + 1))
-    else if (diff < -50) setCarouselIdx(i => Math.max(0, i - 1))
-  }
 
   async function loadPayments() {
     const result = await api.list<Invoice>('payments')
@@ -144,24 +91,7 @@ export function PaymentPage() {
           <div><h2>Тарифы</h2><p>Стоимость зависит от размера команды.</p></div>
           <span className="payment-trial-pill">Пробный период 14 дней при регистрации</span>
         </div>
-        <div className="ptariff-wrap">
-          <button className="ptariff-arrow" type="button" onClick={() => setCarouselIdx(i => Math.max(0, i - 1))} disabled={carouselIdx === 0} aria-label="Назад">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          <div className="ptariff-viewport" ref={viewportRef} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-            <div className="ptariff-track" style={{ transform: `translateX(${-carouselIdx * stepPx}px)`, transition: stepPx ? 'transform 380ms cubic-bezier(0.4,0,0.2,1)' : 'none' }}>
-              {tariffs.map(tariff => <TariffCard key={tariff.id} tariff={tariff} selected={tariff.id === restaurant?.plan} onSelect={() => selectTariff(tariff)} />)}
-            </div>
-          </div>
-          <button className="ptariff-arrow" type="button" onClick={() => setCarouselIdx(i => Math.min(tariffs.length - cardsVisible, i + 1))} disabled={carouselIdx >= tariffs.length - cardsVisible} aria-label="Вперёд">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-        </div>
-        <div className="ptariff-dots">
-          {Array.from({ length: tariffs.length - cardsVisible + 1 }, (_, i) => (
-            <button key={i} className={`ptariff-dot${carouselIdx === i ? ' ptariff-dot--active' : ''}`} type="button" onClick={() => setCarouselIdx(i)} aria-label={`Слайд ${i + 1}`} />
-          ))}
-        </div>
+        <LoopsPricingSlider tariffs={tariffs} selectedId={restaurant?.plan ?? 'standard'} onSelect={selectTariff} />
       </section>
 
       <div className="payment-layout"><section className="payment-requisites-card"><div className="payment-card-header"><div><h2>Реквизиты ресторана</h2><p>По ним владелец сервиса выставляет счёт и закрывающие документы.</p></div><div className="payment-toggle-group"><ToggleButton active={requisites.legalType === 'ИП'} onClick={() => setRequisites((v) => ({ ...v, legalType: 'ИП' }))}>ИП</ToggleButton><ToggleButton active={requisites.legalType === 'ООО'} onClick={() => setRequisites((v) => ({ ...v, legalType: 'ООО' }))}>ООО</ToggleButton></div></div>
