@@ -375,6 +375,7 @@ export function EmployeeStartPage() {
   const [invModal, setInvModal] = useState<{ assignment: InventoryAssignment; products: InvProduct[]; counts: Record<string, string>; firstEmptyId: string | null } | null>(null)
   const [invSaving, setInvSaving] = useState(false)
   const [invFocusedId, setInvFocusedId] = useState<string | null>(null)
+  const [invSearch, setInvSearch] = useState('')
   const invInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const [orderModal, setOrderModal] = useState(false)
   const [orderStep, setOrderStep] = useState<'table' | 'order'>('table')
@@ -640,6 +641,7 @@ export function EmployeeStartPage() {
     const draft = loadInvDraft(item.id)
     const counts: Record<string, string> = {}
     sectionProducts.forEach(p => { counts[p.id] = draft?.[p.id] ?? '' })
+    setInvSearch('')
     setInvModal({ assignment: item, products: sectionProducts, counts, firstEmptyId: null })
     setDetail(null)
   }
@@ -1559,13 +1561,23 @@ export function EmployeeStartPage() {
                 <strong>{invModal.assignment.title}</strong>
                 <p>{invModal.assignment.section} · {invModal.assignment.dueDate}</p>
               </div>
-              <button type="button" onClick={() => { setInvModal(null); setInvFocusedId(null) }}>×</button>
+              <button type="button" onClick={() => { setInvModal(null); setInvFocusedId(null); setInvSearch('') }}>×</button>
             </div>
             {invModal.assignment.assignedBy && <div className="employee-mobile__inv-meta">Назначил: {invModal.assignment.assignedBy}</div>}
+            <div className="employee-mobile__inv-search-wrap">
+              <input
+                className="employee-mobile__inv-search"
+                type="search"
+                placeholder="Поиск по позициям..."
+                value={invSearch}
+                onChange={e => setInvSearch(e.target.value)}
+                onFocus={() => setInvFocusedId(null)}
+              />
+            </div>
             {invModal.firstEmptyId && <div className="employee-mobile__inv-warning">⚠ Заполните все поля. 0 — тоже значение.</div>}
             <div className="employee-mobile__inv-list">
               {invModal.products.length === 0 && <p className="employee-mobile__empty">Позиции для этого подразделения не найдены. Добавьте их в разделе «Инвентаризация».</p>}
-              {invModal.products.map(p => (
+              {invModal.products.filter(p => p.name.toLowerCase().includes(invSearch.toLowerCase())).map(p => (
                 <div key={p.id} className={`employee-mobile__inv-row${invModal.firstEmptyId === p.id ? ' employee-mobile__inv-row--error' : ''}${invFocusedId === p.id ? ' employee-mobile__inv-row--focused' : ''}`}>
                   <span className="employee-mobile__inv-row__name">{p.name}</span>
                   <span className="employee-mobile__inv-row__unit">{p.unit}</span>
@@ -1588,6 +1600,12 @@ export function EmployeeStartPage() {
                   <span className="employee-mobile__numpad-value">
                     {invModal.counts[invFocusedId] || <span style={{ opacity: 0.4 }}>0</span>}
                   </span>
+                  <button
+                    type="button"
+                    className="employee-mobile__numpad-close"
+                    onPointerDown={e => { e.preventDefault(); setInvFocusedId(null) }}
+                    aria-label="Закрыть клавиатуру"
+                  >↓</button>
                 </div>
                 <div className="employee-mobile__numpad-grid">
                   {['7','8','9','4','5','6','1','2','3','.','0','+'].map(k => (
