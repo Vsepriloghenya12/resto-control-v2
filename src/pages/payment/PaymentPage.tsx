@@ -79,7 +79,6 @@ export function PaymentPage() {
 
   return (
     <section className="payment-page">
-      {message ? <div className="payment-summary-card"><p>{message}</p></div> : null}
       <section className="payment-summary-grid">
         <article className="payment-summary-card payment-summary-card--main"><div><span>Тариф</span><strong>{currentTariff.title}</strong><p>{daysLeft !== null ? `Доступ активен. До окончания ${daysLeft} дней.` : 'Доступ активен.'}</p></div><b>Оплачено до {paidUntil}</b></article>
         <article className="payment-summary-card"><span>Последний счёт</span><strong>{latestInvoice ? `№ ${latestInvoice.invoiceNumber || latestInvoice.number}` : '—'}</strong><p>{latestInvoice ? `${latestInvoice.amount} ₽ · ${invoiceStatusLabels[latestInvoice.status]}` : 'Счётов пока нет'}</p></article>

@@ -26,7 +26,17 @@ type PlatformRestaurant = {
   trialEndsAt?: string
   invoicesCount?: number
   checklistRuns?: number
+  checklistRunsCount?: number
+  checklistsCount?: number
+  tasksCount?: number
+  tasksOpenCount?: number
+  bookingsCount?: number
+  inventoryAssignmentsCount?: number
+  ttkCount?: number
+  knowledgeCount?: number
+  attestationsCount?: number
   pendingPayments?: number
+  hasSupportAccess?: boolean
   owner?: { id: string; name: string; login: string } | null
   payments?: Invoice[]
   latestInvoice?: Invoice
@@ -169,6 +179,7 @@ function RestaurantsTab({
   onExtend,
   onToggleBlock,
   onDelete,
+  onEnter,
 }: {
   restaurants: PlatformRestaurant[]
   selectedId: string
@@ -181,6 +192,7 @@ function RestaurantsTab({
   onExtend: (restaurant: PlatformRestaurant) => void
   onToggleBlock: (restaurant: PlatformRestaurant) => void
   onDelete: (restaurant: PlatformRestaurant) => void
+  onEnter: (restaurant: PlatformRestaurant) => void
 }) {
   const actionCount = restaurants.filter((restaurant) => (restaurant.pendingPayments || 0) > 0 || getRestaurantStatus(restaurant) === 'expired').length
   const activeCount = restaurants.filter((restaurant) => getRestaurantStatus(restaurant) === 'active').length
@@ -247,10 +259,58 @@ function RestaurantsTab({
                   <div><span>Статус</span><strong>{statusLabels[getRestaurantStatus(selected)] || getRestaurantStatus(selected)}</strong></div>
                   <div><span>Тариф</span><strong>{selected.plan || 'trial'}</strong></div>
                   <div><span>Доступ до</span><strong>{formatDate(getAccessUntil(selected))}</strong></div>
-                  <div><span>Сотрудников</span><strong>{getEmployeeCount(selected)}</strong></div>
                   <div><span>Телефон</span><strong>{selected.contactPhone || selected.phone || 'не указан'}</strong></div>
                   <div><span>Email</span><strong>{selected.contactEmail || selected.email || selected.owner?.login || 'не указан'}</strong></div>
+                  <div><span>Город</span><strong>{selected.city || 'не указан'}</strong></div>
                 </div>
+                <div className="service-owner-details-metrics">
+                  <div className="service-owner-details-metric">
+                    <strong>{getEmployeeCount(selected)}</strong>
+                    <span>Сотрудников</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.checklistsCount ?? 0}</strong>
+                    <span>Чек-листов</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.tasksOpenCount ?? 0}<small>/{selected.tasksCount ?? 0}</small></strong>
+                    <span>Задач открыто</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.bookingsCount ?? 0}</strong>
+                    <span>Броней</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.inventoryAssignmentsCount ?? 0}</strong>
+                    <span>Инвентаризаций</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.ttkCount ?? 0}</strong>
+                    <span>ТТК</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.knowledgeCount ?? 0}</strong>
+                    <span>База знаний</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.attestationsCount ?? 0}</strong>
+                    <span>Аттестаций</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.checklistRunsCount ?? selected.checklistRuns ?? 0}</strong>
+                    <span>Запусков ЧЛ</span>
+                  </div>
+                  <div className="service-owner-details-metric">
+                    <strong>{selected.invoicesCount ?? 0}</strong>
+                    <span>Счетов</span>
+                  </div>
+                </div>
+                {selected.hasSupportAccess && (
+                  <button type="button" className="service-owner-enter-btn" onClick={() => onEnter(selected)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="15" height="15"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    Войти в ресторан
+                  </button>
+                )}
                 <div className="service-owner-row-actions service-owner-row-actions--panel">
                   <button type="button" onClick={() => onExtend(selected)}>+30 дней</button>
                   <button type="button" onClick={() => onIssueInvoice(selected)}>Выставить счёт</button>
@@ -618,6 +678,15 @@ export function ServiceOwnerPage() {
     }
   }
 
+  async function handleEnterRestaurant(restaurant: PlatformRestaurant) {
+    try {
+      await apiRequest(`/api/service-owner/restaurants/${restaurant.id}/enter`, { method: 'POST' })
+      window.location.href = '/'
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Не удалось войти в ресторан.')
+    }
+  }
+
   async function handleInvoiceStatus(invoice: Invoice, status: InvoiceStatus) {
     try {
       await api.update<Invoice>('payments', invoice.id, { status, paidAt: status === 'paid' ? new Date().toISOString() : undefined })
@@ -658,7 +727,7 @@ export function ServiceOwnerPage() {
             <button className="service-owner-logout" type="button" onClick={logout} aria-label="Выйти"><LogoutIcon /></button>
           </div>
         </header>
-        {tab === 'restaurants' && <RestaurantsTab restaurants={overview.restaurants} selectedId={selectedRestaurantId} setSelectedId={setSelectedRestaurantId} search={search} isLoading={isLoading} message={message} onCreate={() => setTab('create')} onIssueInvoice={handleIssueInvoice} onExtend={handleExtendRestaurant} onToggleBlock={handleToggleBlockRestaurant} onDelete={handleDeleteRestaurant} />}
+        {tab === 'restaurants' && <RestaurantsTab restaurants={overview.restaurants} selectedId={selectedRestaurantId} setSelectedId={setSelectedRestaurantId} search={search} isLoading={isLoading} message={message} onCreate={() => setTab('create')} onIssueInvoice={handleIssueInvoice} onExtend={handleExtendRestaurant} onToggleBlock={handleToggleBlockRestaurant} onDelete={handleDeleteRestaurant} onEnter={handleEnterRestaurant} />}
         {tab === 'payments' && <PaymentsTab payments={overview.payments} restaurants={overview.restaurants} search={search} message={message} onInvoiceStatus={handleInvoiceStatus} onIssueInvoice={handleIssueInvoice} />}
         {tab === 'requisites' && <RequisitesTab message={message} setMessage={setMessage} />}
         {tab === 'support' && <SupportTab restaurants={overview.restaurants} />}

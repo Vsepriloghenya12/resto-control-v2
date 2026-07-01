@@ -838,6 +838,9 @@ export function OwnerDashboardPage({ onThemeToggle, theme }: { onThemeToggle?: (
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [supportOpen, setSupportOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [supportAccessGranted, setSupportAccessGranted] = useState(false)
+  const [supportAccessModal, setSupportAccessModal] = useState(false)
+  const [supportAccessLoading, setSupportAccessLoading] = useState(false)
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [summaryError, setSummaryError] = useState('')
   const [restaurants, setRestaurants] = useState<Array<Restaurant & { isCurrent?: boolean }>>([])
@@ -885,7 +888,35 @@ export function OwnerDashboardPage({ onThemeToggle, theme }: { onThemeToggle?: (
     } catch { /* ignore */ }
   }
 
-  useEffect(() => { void loadSummary(); void loadRestaurants(); void loadUnreadSupport() }, [])
+  async function loadSupportAccessStatus() {
+    try {
+      const result = await apiRequest<{ hasAccess: boolean }>('/api/support-access/status')
+      setSupportAccessGranted(result.hasAccess)
+    } catch { /* ignore */ }
+  }
+
+  async function grantSupportAccess() {
+    setSupportAccessLoading(true)
+    try {
+      await apiRequest('/api/support-access/grant', { method: 'POST' })
+      setSupportAccessGranted(true)
+      setSupportAccessModal(true)
+    } finally {
+      setSupportAccessLoading(false)
+    }
+  }
+
+  async function revokeSupportAccess() {
+    setSupportAccessLoading(true)
+    try {
+      await apiRequest('/api/support-access/revoke', { method: 'POST' })
+      setSupportAccessGranted(false)
+    } finally {
+      setSupportAccessLoading(false)
+    }
+  }
+
+  useEffect(() => { void loadSummary(); void loadRestaurants(); void loadUnreadSupport(); void loadSupportAccessStatus() }, [])
   useEffect(() => {
     if (section === 'dashboard') {
       void loadSummary()
@@ -1005,43 +1036,6 @@ export function OwnerDashboardPage({ onThemeToggle, theme }: { onThemeToggle?: (
           {section === 'dashboard' && paymentAccess ? <PaymentAccessBadge paidUntil={paymentAccess.paidUntil} daysLeft={paymentAccess.daysLeft} onClick={() => openSection('payment')} /> : null}
 
           <div className="owner-topbar__actions">
-            <form className="owner-search" onSubmit={handleGlobalSearch}>
-              <button className="owner-search__submit" type="submit" aria-label="Найти"><SearchIcon /></button>
-              <input
-                ref={searchRef}
-                value={globalSearch}
-                onChange={(event) => setGlobalSearch(event.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                placeholder={searchPlaceholder}
-              />
-              {globalSearch ? (
-                <button type="button" className="owner-search__clear" onClick={() => { setGlobalSearch(''); searchRef.current?.focus() }}>✕</button>
-              ) : null}
-              {searchFocused && searchResults.length > 0 ? (
-                <div className="owner-search__dropdown">
-                  {Object.entries(
-                    searchResults.reduce<Record<string, SearchResult[]>>((acc, r) => {
-                      if (!acc[r.group]) acc[r.group] = []
-                      acc[r.group].push(r)
-                      return acc
-                    }, {})
-                  ).map(([group, items]) => (
-                    <div key={group} className="owner-search__group">
-                      <span className="owner-search__group-label">{group}</span>
-                      {items.map((r) => (
-                        <button key={r.id} type="button" className="owner-search__result" onClick={() => { openSection(r.section); setGlobalSearch('') }}>
-                          <span className="owner-search__result-label">{r.label}</span>
-                          <span className="owner-search__result-hint">{r.hint}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : searchFocused && globalSearch.trim() ? (
-                <div className="owner-search__dropdown owner-search__dropdown--empty">Ничего не найдено</div>
-              ) : null}
-            </form>
             <div className="owner-notifications-wrap">
               <button className="owner-icon-button" type="button" aria-label="Уведомления" onClick={() => setNotificationsOpen((value) => !value)}>
                 <BellIcon />
@@ -1078,9 +1072,25 @@ export function OwnerDashboardPage({ onThemeToggle, theme }: { onThemeToggle?: (
                 }
               </button>
             )}
+            {supportAccessGranted
+              ? <button className="owner-support-access-btn owner-support-access-btn--active" type="button" onClick={revokeSupportAccess} disabled={supportAccessLoading}>Закрыть доступ</button>
+              : <button className="owner-support-access-btn" type="button" onClick={grantSupportAccess} disabled={supportAccessLoading}>Предоставить доступ</button>
+            }
             <button className="owner-logout" type="button" onClick={logout} aria-label="Выйти"><LogoutIcon /></button>
           </div>
         </header>
+
+        {supportAccessModal && (
+          <div className="owner-support-access-modal-overlay" onClick={() => setSupportAccessModal(false)}>
+            <div className="owner-support-access-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="owner-support-access-modal__icon">🔒</div>
+              <h3>Доступ предоставлен</h3>
+              <p>Технические специалисты получили доступ к вашему ресторану для оказания помощи.</p>
+              <p className="owner-support-access-modal__note">Ваши пароли недоступны технической поддержке — после закрытия доступа менять их не нужно.</p>
+              <button className="owner-support-access-modal__close" type="button" onClick={() => setSupportAccessModal(false)}>Понятно</button>
+            </div>
+          </div>
+        )}
 
         {section === 'dashboard' ? <RestaurantHeader restaurants={restaurants.length ? restaurants : (summary?.restaurant ? [summary.restaurant] : session?.restaurant ? [session.restaurant] : [])} currentRestaurantId={(summary?.restaurant || session?.restaurant)?.id} onSwitch={switchRestaurant} onAdd={() => setAddRestaurantOpen(true)} /> : null}
         {summaryError ? <div className="owner-action-notice" role="status">{summaryError}</div> : null}

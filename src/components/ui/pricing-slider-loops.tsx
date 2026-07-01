@@ -19,81 +19,62 @@ interface LoopsPricingSliderProps {
 
 export function LoopsPricingSlider({ tariffs, selectedId, onSelect }: LoopsPricingSliderProps) {
   const selectedIdx = Math.max(0, tariffs.findIndex(t => t.id === selectedId))
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  const [sliderIdx, setSliderIdx] = useState(selectedIdx)
 
-  const displayIdx = hoverIdx ?? selectedIdx
-  const tier = tariffs[displayIdx]
+  const tier = tariffs[sliderIdx]
   const isEnterprise = tier.price === 'Индивидуально'
+  const isCurrent = tier.id === selectedId
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const idx = Number(e.target.value)
-    onSelect?.(tariffs[idx])
-  }
+  const fillPct = (sliderIdx / (tariffs.length - 1)) * 100
 
   return (
     <div className="lps">
-      <div className="lps__display">
-        <div className="lps__tier-info">
-          <div className="lps__tier-header">
-            <span className="lps__tier-name">{tier.title}</span>
-            {tier.featured && <span className="lps__badge lps__badge--popular">★ Популярный</span>}
-            {tier.id === selectedId && !tier.featured && <span className="lps__badge lps__badge--current">✓ Текущий</span>}
-          </div>
-          <p className="lps__tier-staff">{tier.employees}</p>
-          <p className="lps__tier-note">{tier.note}</p>
+      <div className="lps__left">
+        <p className="lps__left-label">Выберите размер команды</p>
+        <p className="lps__left-count">{tier.employees}</p>
+
+        <div className="lps__slider-wrap">
+          <input
+            className="lps__range"
+            type="range"
+            min={0}
+            max={tariffs.length - 1}
+            step={1}
+            value={sliderIdx}
+            onChange={e => setSliderIdx(Number(e.target.value))}
+            style={{ '--lps-fill': `${fillPct}%` } as React.CSSProperties}
+            aria-label="Выбор тарифа"
+          />
         </div>
-        <div className="lps__price-block">
-          {isEnterprise ? (
-            <span className="lps__price-main">Индивидуально</span>
-          ) : (
-            <>
-              <span className="lps__price-main">{tier.price}</span>
-              {tier.period && <span className="lps__price-period">{tier.period}</span>}
-            </>
-          )}
-          <button
-            className="lps__select-btn"
-            type="button"
-            onClick={() => onSelect?.(tier)}
-            disabled={tier.id === selectedId}
-          >
-            {tier.id === selectedId ? '✓ Текущий тариф' : 'Выбрать тариф'}
-          </button>
-        </div>
+
+        {tier.id === tariffs[tariffs.length - 1].id && (
+          <p className="lps__left-custom">
+            Нужно больше?{' '}
+            <button type="button" className="lps__contact-link" onClick={() => onSelect?.(tariffs[tariffs.length - 1])}>
+              Свяжитесь с нами →
+            </button>
+          </p>
+        )}
       </div>
 
-      <div className="lps__slider-wrap">
-        <input
-          className="lps__range"
-          type="range"
-          min={0}
-          max={tariffs.length - 1}
-          step={1}
-          value={selectedIdx}
-          onChange={handleChange}
-          onMouseMove={e => {
-            const input = e.currentTarget
-            const rect = input.getBoundingClientRect()
-            const ratio = (e.clientX - rect.left) / rect.width
-            setHoverIdx(Math.round(ratio * (tariffs.length - 1)))
-          }}
-          onMouseLeave={() => setHoverIdx(null)}
-          aria-label="Выбор тарифа"
-        />
-        <div className="lps__ticks">
-          {tariffs.map((t, i) => (
-            <button
-              key={t.id}
-              type="button"
-              className={['lps__tick', i === selectedIdx && 'lps__tick--active', i === hoverIdx && 'lps__tick--hover'].filter(Boolean).join(' ')}
-              onMouseEnter={() => setHoverIdx(i)}
-              onMouseLeave={() => setHoverIdx(null)}
-              onClick={() => onSelect?.(t)}
-            >
-              <span className="lps__tick-label">{t.employees.replace('до ', '').replace(' сотрудников', ' чел.').replace('+ сотрудников', '+')}</span>
-            </button>
-          ))}
-        </div>
+      <div className="lps__right">
+        <p className="lps__right-label">Ваш тариф</p>
+        {isEnterprise ? (
+          <p className="lps__right-price">Индивидуально</p>
+        ) : (
+          <p className="lps__right-price">
+            {tier.price}
+            {tier.period && <span className="lps__right-period">{tier.period}</span>}
+          </p>
+        )}
+        <p className="lps__right-note">{tier.note}</p>
+        <button
+          className="lps__select-btn"
+          type="button"
+          onClick={() => onSelect?.(tier)}
+        >
+          {isCurrent ? '✓ Текущий тариф' : 'Выбрать тариф'}
+        </button>
       </div>
     </div>
   )

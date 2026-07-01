@@ -4,6 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import nodemailer from 'nodemailer'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -19,6 +20,32 @@ const ENABLE_DEMO_DATA = process.env.ENABLE_DEMO_DATA === 'true' || (!IS_PRODUCT
 const SERVICE_OWNER_EMAIL = normalizeLogin(process.env.SERVICE_OWNER_EMAIL || 'admin@resto.local')
 const SERVICE_OWNER_PASSWORD = String(process.env.SERVICE_OWNER_PASSWORD || (IS_PRODUCTION ? '' : 'admin123'))
 const SERVICE_OWNER_NAME = String(process.env.SERVICE_OWNER_NAME || 'Владелец сервиса')
+const SMTP_HOST = process.env.SMTP_HOST || ''
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587)
+const SMTP_USER = process.env.SMTP_USER || ''
+const SMTP_PASS = process.env.SMTP_PASS || ''
+const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER
+const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`
+
+const passwordResetTokens = new Map() // token → { userId, expiresAt }
+
+function createMailTransport() {
+  if (!SMTP_HOST || !SMTP_USER) return null
+  return nodemailer.createTransport({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465, auth: { user: SMTP_USER, pass: SMTP_PASS } })
+}
+
+async function sendResetEmail(to, token) {
+  const transport = createMailTransport()
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`
+  const text = `Вы запросили сброс пароля.\n\nСсылка для сброса (действительна 1 час):\n${resetUrl}\n\nЕсли вы не запрашивали сброс — проигнорируйте это письмо.`
+  const html = `<p>Вы запросили сброс пароля.</p><p><a href="${resetUrl}">Сбросить пароль</a></p><p>Ссылка действительна 1 час.</p><p>Если вы не запрашивали сброс — проигнорируйте это письмо.</p>`
+  if (transport) {
+    await transport.sendMail({ from: SMTP_FROM, to, subject: 'Сброс пароля — Ресто Контроль', text, html })
+  } else {
+    // Dev fallback: print to console
+    console.log(`[DEV] Password reset for ${to}: ${resetUrl}`)
+  }
+}
 
 let pgPool = null
 let memoryState = null
@@ -583,7 +610,7 @@ function roleFromPosition(position) {
 
 
 function canWriteCollection(name, method, itemId, action, role) {
-  if (['service_owner', 'owner', 'manager'].includes(role)) return true
+  if (['service_owner', 'owner', 'manager', 'support'].includes(role)) return true
   if (!['senior', 'employee'].includes(role)) return false
 
   if (name === 'push-subscriptions' && method === 'POST' && !itemId) return true
@@ -710,6 +737,38 @@ async function handleAuth(req, res, state, pathname, auth) {
     return true
   }
 
+  if (pathname === '/api/auth/forgot-password' && req.method === 'POST') {
+    const body = await readBody(req)
+    const login = normalizeLogin(body.email || body.login)
+    if (!login) throw httpError(400, 'Введите email.')
+    const user = state.users.find((u) => u.login === login)
+    // Always return success to avoid user enumeration
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex')
+      passwordResetTokens.set(token, { userId: user.id, expiresAt: Date.now() + 60 * 60 * 1000 })
+      await sendResetEmail(login, token)
+    }
+    send(res, 200, { ok: true, message: 'Если аккаунт существует, письмо со ссылкой будет отправлено.' })
+    return true
+  }
+
+  if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
+    const body = await readBody(req)
+    const token = String(body.token || '')
+    const password = String(body.password || '')
+    if (!token || password.length < 6) throw httpError(400, 'Неверный токен или пароль (минимум 6 символов).')
+    const entry = passwordResetTokens.get(token)
+    if (!entry || entry.expiresAt < Date.now()) throw httpError(400, 'Ссылка недействительна или истекла.')
+    const user = state.users.find((u) => u.id === entry.userId)
+    if (!user) throw httpError(400, 'Пользователь не найден.')
+    user.passwordHash = hashPassword(password)
+    user.updatedAt = nowIso()
+    passwordResetTokens.delete(token)
+    await saveState(state)
+    send(res, 200, { ok: true, message: 'Пароль успешно изменён. Войдите с новым паролем.' })
+    return true
+  }
+
   return false
 }
 
@@ -759,6 +818,21 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
           pendingPayments,
           latestInvoice,
           payments,
+          checklistsCount: (state.checklists || []).filter((item) => item.restaurantId === restaurant.id).length,
+          tasksCount: (state.tasks || []).filter((item) => item.restaurantId === restaurant.id).length,
+          tasksOpenCount: (state.tasks || []).filter((item) => item.restaurantId === restaurant.id && !['done','cancelled'].includes(String(item.status || ''))).length,
+          bookingsCount: (state.bookings || []).filter((item) => item.restaurantId === restaurant.id).length,
+          inventoryAssignmentsCount: (state.inventoryAssignments || []).filter((item) => item.restaurantId === restaurant.id).length,
+          ttkCount: (state.ttk || []).filter((item) => item.restaurantId === restaurant.id).length,
+          knowledgeCount: (state.knowledgeBase || []).filter((item) => item.restaurantId === restaurant.id).length,
+          attestationsCount: (state.attestations || []).filter((item) => item.restaurantId === restaurant.id).length,
+          checklistRunsCount: (state.checklistRuns || []).filter((item) => item.restaurantId === restaurant.id).length,
+          hasSupportAccess: (() => {
+            const serviceUser = state.users.find((u) => u.roleHint === 'service_owner')
+            return serviceUser
+              ? state.memberships.some((m) => m.userId === serviceUser.id && m.restaurantId === restaurant.id && m.role === 'support' && m.status === 'active')
+              : false
+          })(),
         }
       })
   }
@@ -833,6 +907,19 @@ async function handleServiceOwner(req, res, state, pathname, auth) {
     restaurant.updatedAt = nowIso()
     await saveState(state)
     send(res, 200, restaurant)
+    return true
+  }
+
+  const restaurantEnter = pathname.match(/^\/api\/service-owner\/restaurants\/([^/]+)\/enter$/)
+  if (restaurantEnter && req.method === 'POST') {
+    const restaurantId = restaurantEnter[1]
+    const serviceUser = state.users.find((u) => u.id === payload.user.id)
+    if (!serviceUser) throw httpError(404, 'Пользователь не найден.')
+    const supportMembership = state.memberships.find((m) => m.userId === serviceUser.id && m.restaurantId === restaurantId && m.role === 'support' && m.status === 'active')
+    if (!supportMembership) throw httpError(403, 'Доступ не предоставлен.')
+    const session = createSession(state, serviceUser, supportMembership, true)
+    await saveState(state)
+    send(res, 200, sessionPayload(state, session), { 'Set-Cookie': cookieHeader(session) })
     return true
   }
 
@@ -1322,6 +1409,54 @@ async function handleRestaurant(req, res, state, pathname, auth) {
   return false
 }
 
+async function handleSupportAccess(req, res, state, pathname, auth) {
+  if (!pathname.startsWith('/api/support-access')) return false
+
+  const payload = requireRole(auth, ['owner', 'manager', 'service_owner'])
+  const restaurantId = payload.restaurant.id
+
+  if (pathname === '/api/support-access/status' && req.method === 'GET') {
+    const serviceUser = state.users.find((u) => u.roleHint === 'service_owner')
+    const hasAccess = serviceUser
+      ? state.memberships.some((m) => m.userId === serviceUser.id && m.restaurantId === restaurantId && m.role === 'support' && m.status === 'active')
+      : false
+    send(res, 200, { hasAccess })
+    return true
+  }
+
+  if (pathname === '/api/support-access/grant' && req.method === 'POST') {
+    const serviceUser = state.users.find((u) => u.roleHint === 'service_owner')
+    if (!serviceUser) throw httpError(404, 'Владелец сервиса не найден.')
+    const existing = state.memberships.find((m) => m.userId === serviceUser.id && m.restaurantId === restaurantId && m.role === 'support')
+    if (existing) {
+      existing.status = 'active'
+      existing.updatedAt = nowIso()
+    } else {
+      const createdAt = nowIso()
+      state.memberships.push({ id: id('membership'), userId: serviceUser.id, restaurantId, role: 'support', position: 'Тех. поддержка', status: 'active', createdAt, updatedAt: createdAt })
+    }
+    await saveState(state)
+    send(res, 200, { hasAccess: true })
+    return true
+  }
+
+  if (pathname === '/api/support-access/revoke' && req.method === 'POST') {
+    const serviceUser = state.users.find((u) => u.roleHint === 'service_owner')
+    if (!serviceUser) throw httpError(404, 'Владелец сервиса не найден.')
+    for (const m of state.memberships) {
+      if (m.userId === serviceUser.id && m.restaurantId === restaurantId && m.role === 'support') {
+        m.status = 'inactive'
+        m.updatedAt = nowIso()
+      }
+    }
+    await saveState(state)
+    send(res, 200, { hasAccess: false })
+    return true
+  }
+
+  return false
+}
+
 async function handleDashboard(req, res, state, pathname, auth) {
   if (pathname !== '/api/dashboard/summary' || req.method !== 'GET') return false
   const payload = requireAuth(auth)
@@ -1749,6 +1884,7 @@ async function handleRequest(req, res) {
     if (await handleServiceOwner(req, res, state, pathname, auth)) return
     if (await handleMyRestaurants(req, res, state, pathname, auth)) return
     if (await handleRestaurant(req, res, state, pathname, auth)) return
+    if (await handleSupportAccess(req, res, state, pathname, auth)) return
     if (await handleDashboard(req, res, state, pathname, auth)) return
     if (await handleMobile(req, res, state, pathname, auth)) return
     if (await handleIiko(req, res, state, pathname, auth)) return

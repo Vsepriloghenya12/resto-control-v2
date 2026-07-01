@@ -344,6 +344,24 @@
   border: 1px solid #c8efd7;
 }
 
+.auth-forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--rc-accent, #1a3a5c);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.auth-forgot-link:hover {
+  opacity: 1;
+}
+
 .auth-mobile-header,
 .employee-access-note {
   display: none;

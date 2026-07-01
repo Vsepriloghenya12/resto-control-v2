@@ -38,7 +38,7 @@ function AppContent({ onThemeToggle, theme }: { onThemeToggle: () => void; theme
     return <ServiceOwnerPage />
   }
 
-  if (session.membership.role === 'manager') {
+  if (session.membership.role === 'manager' || session.membership.role === 'support') {
     return isMobile ? <EmployeeStartPage /> : <OwnerDashboardPage onThemeToggle={onThemeToggle} theme={theme} />
   }
 
