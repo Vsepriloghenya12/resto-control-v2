@@ -4,18 +4,18 @@ import { Button } from '../../shared/ui/Button'
 import { Input } from '../../shared/ui/Input'
 import { EyeIcon, LockIcon, MailIcon } from '../../shared/ui/Icon'
 
-type LoginView = 'login' | 'forgot' | 'forgot-sent' | 'reset' | 'reset-done'
+type ResetStep = 'email' | 'code' | 'password' | 'done'
 
-function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; initialToken?: string }) {
+function ForgotPasswordFlow({ onBack }: { onBack: () => void }) {
+  const [step, setStep] = useState<ResetStep>('email')
   const [email, setEmail] = useState('')
-  const [token, setToken] = useState(initialToken || '')
+  const [code, setCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [view, setView] = useState<'forgot' | 'forgot-sent' | 'reset' | 'reset-done'>(initialToken ? 'reset' : 'forgot')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleForgot(e: FormEvent) {
+  async function handleSendCode(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (!email.trim()) { setError('Введите email.'); return }
@@ -26,11 +26,9 @@ function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; init
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Ошибка при отправке.')
-      }
-      setView('forgot-sent')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Ошибка при отправке.')
+      setStep('code')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при отправке.')
     } finally {
@@ -38,7 +36,28 @@ function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; init
     }
   }
 
-  async function handleReset(e: FormEvent) {
+  async function handleVerifyCode(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (code.trim().length !== 6) { setError('Введите 6-значный код из письма.'); return }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/verify-reset-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Неверный код.')
+      setStep('password')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Неверный код.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleResetPassword(e: FormEvent) {
     e.preventDefault()
     setError(null)
     if (newPassword.length < 6) { setError('Пароль должен быть не менее 6 символов.'); return }
@@ -48,11 +67,11 @@ function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; init
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password: newPassword }),
+        body: JSON.stringify({ code: code.trim(), password: newPassword }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Ошибка при сбросе.')
-      setView('reset-done')
+      setStep('done')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при сбросе.')
     } finally {
@@ -60,34 +79,19 @@ function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; init
     }
   }
 
-  if (view === 'forgot-sent') {
+  if (step === 'done') {
     return (
       <div className="auth-form">
-        <div className="auth-message auth-message--success">
-          Если аккаунт с таким email существует, письмо со ссылкой для сброса пароля было отправлено. Проверьте почту.
-        </div>
-        <Button type="button" fullWidth onClick={onBack}>Вернуться к входу</Button>
-      </div>
-    )
-  }
-
-  if (view === 'reset-done') {
-    return (
-      <div className="auth-form">
-        <div className="auth-message auth-message--success">
-          Пароль успешно изменён. Войдите с новым паролем.
-        </div>
+        <p className="auth-message auth-message--success">Пароль успешно изменён. Войдите с новым паролем.</p>
         <Button type="button" fullWidth onClick={onBack}>Войти</Button>
       </div>
     )
   }
 
-  if (view === 'reset') {
+  if (step === 'password') {
     return (
-      <form className="auth-form" onSubmit={handleReset}>
-        <p style={{ marginBottom: 8, color: 'var(--rc-text-secondary, #888)', fontSize: 14 }}>
-          Введите новый пароль.
-        </p>
+      <form className="auth-form" onSubmit={handleResetPassword}>
+        <p className="auth-forgot-hint">Придумайте новый пароль.</p>
         <Input
           id="new-password"
           label="Новый пароль"
@@ -113,10 +117,39 @@ function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; init
     )
   }
 
+  if (step === 'code') {
+    return (
+      <form className="auth-form" onSubmit={handleVerifyCode}>
+        <p className="auth-forgot-hint">
+          Код отправлен на <strong>{email}</strong>. Проверьте папку «Входящие» или «Спам».
+        </p>
+        <div className="auth-code-input-wrap">
+          <input
+            className="auth-code-input"
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="_ _ _ _ _ _"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            autoFocus
+          />
+        </div>
+        {error ? <p className="auth-message auth-message--error">{error}</p> : null}
+        <Button type="submit" fullWidth disabled={loading || code.length !== 6}>
+          {loading ? 'Проверка...' : 'Подтвердить код'}
+        </Button>
+        <button type="button" className="auth-forgot-link" onClick={() => { setStep('email'); setCode(''); setError(null) }}>
+          Изменить email
+        </button>
+      </form>
+    )
+  }
+
   return (
-    <form className="auth-form" onSubmit={handleForgot}>
-      <p style={{ marginBottom: 8, color: 'var(--rc-text-secondary, #888)', fontSize: 14 }}>
-        Введите email, указанный при регистрации. Мы отправим ссылку для сброса пароля.
+    <form className="auth-form" onSubmit={handleSendCode}>
+      <p className="auth-forgot-hint">
+        Введите email, указанный при регистрации. Мы отправим 6-значный код.
       </p>
       <Input
         id="forgot-email"
@@ -128,7 +161,7 @@ function ForgotPasswordForm({ onBack, initialToken }: { onBack: () => void; init
         onChange={(e) => setEmail(e.target.value)}
       />
       {error ? <p className="auth-message auth-message--error">{error}</p> : null}
-      <Button type="submit" fullWidth disabled={loading}>{loading ? 'Отправка...' : 'Отправить ссылку'}</Button>
+      <Button type="submit" fullWidth disabled={loading}>{loading ? 'Отправка...' : 'Получить код'}</Button>
       <button type="button" className="auth-forgot-link" onClick={onBack}>Вернуться к входу</button>
     </form>
   )
@@ -140,8 +173,7 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const urlToken = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('token') : null
-  const [view, setView] = useState<LoginView>(() => urlToken ? 'reset' : 'login')
+  const [showForgot, setShowForgot] = useState(false)
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -161,18 +193,8 @@ export function LoginForm() {
     }
   }
 
-  if (view === 'forgot' || view === 'forgot-sent' || view === 'reset' || view === 'reset-done') {
-    return (
-      <ForgotPasswordForm
-        onBack={() => {
-          setView('login')
-          if (urlToken && window.history) {
-            window.history.replaceState({}, '', window.location.pathname)
-          }
-        }}
-        initialToken={view === 'reset' ? (urlToken || undefined) : undefined}
-      />
-    )
+  if (showForgot) {
+    return <ForgotPasswordFlow onBack={() => setShowForgot(false)} />
   }
 
   return (
@@ -209,7 +231,7 @@ export function LoginForm() {
           />
           <span>Запомнить меня</span>
         </label>
-        <button type="button" className="auth-forgot-link" onClick={() => setView('forgot')}>
+        <button type="button" className="auth-forgot-link" onClick={() => setShowForgot(true)}>
           Забыли пароль?
         </button>
       </div>

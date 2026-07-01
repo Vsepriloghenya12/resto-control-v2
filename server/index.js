@@ -27,23 +27,26 @@ const SMTP_PASS = process.env.SMTP_PASS || ''
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER
 const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`
 
-const passwordResetTokens = new Map() // token → { userId, expiresAt }
+const passwordResetCodes = new Map() // code → { userId, expiresAt }
 
 function createMailTransport() {
   if (!SMTP_HOST || !SMTP_USER) return null
   return nodemailer.createTransport({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465, auth: { user: SMTP_USER, pass: SMTP_PASS } })
 }
 
-async function sendResetEmail(to, token) {
+async function sendResetEmail(to, code) {
   const transport = createMailTransport()
-  const resetUrl = `${APP_URL}/reset-password?token=${token}`
-  const text = `Вы запросили сброс пароля.\n\nСсылка для сброса (действительна 1 час):\n${resetUrl}\n\nЕсли вы не запрашивали сброс — проигнорируйте это письмо.`
-  const html = `<p>Вы запросили сброс пароля.</p><p><a href="${resetUrl}">Сбросить пароль</a></p><p>Ссылка действительна 1 час.</p><p>Если вы не запрашивали сброс — проигнорируйте это письмо.</p>`
+  const text = `Ваш код для сброса пароля:\n\n${code}\n\nКод действителен 15 минут.\nЕсли вы не запрашивали сброс — проигнорируйте это письмо.`
+  const html = `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:32px 24px">
+  <h2 style="margin:0 0 8px;font-size:20px;color:#111">Сброс пароля</h2>
+  <p style="margin:0 0 24px;color:#555;font-size:15px">Введите этот код в приложении Ресто Контроль:</p>
+  <div style="background:#f4f6fa;border-radius:12px;padding:20px 32px;text-align:center;letter-spacing:8px;font-size:36px;font-weight:700;color:#1a3a5c;font-family:monospace">${code}</div>
+  <p style="margin:20px 0 0;color:#888;font-size:13px">Код действителен 15 минут. Если вы не запрашивали сброс — проигнорируйте это письмо.</p>
+</div>`
   if (transport) {
-    await transport.sendMail({ from: SMTP_FROM, to, subject: 'Сброс пароля — Ресто Контроль', text, html })
+    await transport.sendMail({ from: SMTP_FROM, to, subject: `${code} — код сброса пароля`, text, html })
   } else {
-    // Dev fallback: print to console
-    console.log(`[DEV] Password reset for ${to}: ${resetUrl}`)
+    console.log(`[DEV] Password reset code for ${to}: ${code}`)
   }
 }
 
@@ -742,28 +745,37 @@ async function handleAuth(req, res, state, pathname, auth) {
     const login = normalizeLogin(body.email || body.login)
     if (!login) throw httpError(400, 'Введите email.')
     const user = state.users.find((u) => u.login === login)
-    // Always return success to avoid user enumeration
     if (user) {
-      const token = crypto.randomBytes(32).toString('hex')
-      passwordResetTokens.set(token, { userId: user.id, expiresAt: Date.now() + 60 * 60 * 1000 })
-      await sendResetEmail(login, token)
+      const code = String(Math.floor(100000 + Math.random() * 900000))
+      passwordResetCodes.set(code, { userId: user.id, expiresAt: Date.now() + 15 * 60 * 1000 })
+      await sendResetEmail(login, code)
     }
-    send(res, 200, { ok: true, message: 'Если аккаунт существует, письмо со ссылкой будет отправлено.' })
+    send(res, 200, { ok: true, message: 'Если аккаунт существует, код будет отправлен на email.' })
+    return true
+  }
+
+  if (pathname === '/api/auth/verify-reset-code' && req.method === 'POST') {
+    const body = await readBody(req)
+    const code = String(body.code || '').trim()
+    if (!code) throw httpError(400, 'Введите код.')
+    const entry = passwordResetCodes.get(code)
+    if (!entry || entry.expiresAt < Date.now()) throw httpError(400, 'Код неверный или истёк.')
+    send(res, 200, { ok: true })
     return true
   }
 
   if (pathname === '/api/auth/reset-password' && req.method === 'POST') {
     const body = await readBody(req)
-    const token = String(body.token || '')
+    const code = String(body.code || '').trim()
     const password = String(body.password || '')
-    if (!token || password.length < 6) throw httpError(400, 'Неверный токен или пароль (минимум 6 символов).')
-    const entry = passwordResetTokens.get(token)
-    if (!entry || entry.expiresAt < Date.now()) throw httpError(400, 'Ссылка недействительна или истекла.')
+    if (!code || password.length < 6) throw httpError(400, 'Неверный код или пароль (минимум 6 символов).')
+    const entry = passwordResetCodes.get(code)
+    if (!entry || entry.expiresAt < Date.now()) throw httpError(400, 'Код неверный или истёк.')
     const user = state.users.find((u) => u.id === entry.userId)
     if (!user) throw httpError(400, 'Пользователь не найден.')
     user.passwordHash = hashPassword(password)
     user.updatedAt = nowIso()
-    passwordResetTokens.delete(token)
+    passwordResetCodes.delete(code)
     await saveState(state)
     send(res, 200, { ok: true, message: 'Пароль успешно изменён. Войдите с новым паролем.' })
     return true
