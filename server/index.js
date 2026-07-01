@@ -5,6 +5,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -25,29 +26,33 @@ const SMTP_PORT = Number(process.env.SMTP_PORT || 587)
 const SMTP_USER = process.env.SMTP_USER || ''
 const SMTP_PASS = process.env.SMTP_PASS || ''
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER
-const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`
+const RESEND_API_KEY = process.env.RESEND_API_KEY || ''
+const RESEND_FROM = process.env.RESEND_FROM || 'onboarding@resend.dev'
 
 const passwordResetCodes = new Map() // code → { userId, expiresAt }
 
-function createMailTransport() {
-  if (!SMTP_HOST || !SMTP_USER) return null
-  return nodemailer.createTransport({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465, auth: { user: SMTP_USER, pass: SMTP_PASS } })
-}
-
 async function sendResetEmail(to, code) {
-  const transport = createMailTransport()
-  const text = `Ваш код для сброса пароля:\n\n${code}\n\nКод действителен 15 минут.\nЕсли вы не запрашивали сброс — проигнорируйте это письмо.`
   const html = `<div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:32px 24px">
   <h2 style="margin:0 0 8px;font-size:20px;color:#111">Сброс пароля</h2>
   <p style="margin:0 0 24px;color:#555;font-size:15px">Введите этот код в приложении Ресто Контроль:</p>
   <div style="background:#f4f6fa;border-radius:12px;padding:20px 32px;text-align:center;letter-spacing:8px;font-size:36px;font-weight:700;color:#1a3a5c;font-family:monospace">${code}</div>
   <p style="margin:20px 0 0;color:#888;font-size:13px">Код действителен 15 минут. Если вы не запрашивали сброс — проигнорируйте это письмо.</p>
 </div>`
-  if (transport) {
-    await transport.sendMail({ from: SMTP_FROM, to, subject: `${code} — код сброса пароля`, text, html })
-  } else {
-    console.log(`[DEV] Password reset code for ${to}: ${code}`)
+  const text = `Ваш код для сброса пароля: ${code}\n\nКод действителен 15 минут.`
+
+  if (RESEND_API_KEY) {
+    const resend = new Resend(RESEND_API_KEY)
+    await resend.emails.send({ from: RESEND_FROM, to, subject: `${code} — код сброса пароля`, html, text })
+    return
   }
+
+  if (SMTP_HOST && SMTP_USER) {
+    const transport = nodemailer.createTransport({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_PORT === 465, auth: { user: SMTP_USER, pass: SMTP_PASS } })
+    await transport.sendMail({ from: SMTP_FROM, to, subject: `${code} — код сброса пароля`, text, html })
+    return
+  }
+
+  console.log(`[DEV] Password reset code for ${to}: ${code}`)
 }
 
 let pgPool = null
