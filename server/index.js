@@ -748,7 +748,11 @@ async function handleAuth(req, res, state, pathname, auth) {
     if (user) {
       const code = String(Math.floor(100000 + Math.random() * 900000))
       passwordResetCodes.set(code, { userId: user.id, expiresAt: Date.now() + 15 * 60 * 1000 })
-      await sendResetEmail(login, code)
+      try {
+        await sendResetEmail(login, code)
+      } catch (emailErr) {
+        console.error('[reset] email send failed:', emailErr.message)
+      }
     }
     send(res, 200, { ok: true, message: 'Если аккаунт существует, код будет отправлен на email.' })
     return true
