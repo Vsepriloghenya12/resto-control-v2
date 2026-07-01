@@ -57,7 +57,14 @@ export function PaymentPage() {
     }
   }
 
+  const REQUIRED_FIELDS = ['legalName', 'inn', 'bankName', 'bik', 'account'] as const
+
   async function saveRequisites() {
+    const missing = REQUIRED_FIELDS.filter((f) => !String(requisites[f] || '').trim())
+    if (missing.length > 0) {
+      setMessage('Заполните обязательные поля: ' + missing.map((f) => ({ legalName: 'Юридическое название', inn: 'ИНН', bankName: 'Банк', bik: 'БИК', account: 'Расчётный счёт' }[f])).join(', ') + '.')
+      return
+    }
     try {
       const updated = await apiRequest<typeof restaurant>('/api/restaurant', { method: 'PATCH', body: JSON.stringify(requisites) })
       setRestaurant(updated)
@@ -95,7 +102,16 @@ export function PaymentPage() {
 
       <div className="payment-layout"><section className="payment-requisites-card"><div className="payment-card-header"><div><h2>Реквизиты ресторана</h2><p>По ним владелец сервиса выставляет счёт и закрывающие документы.</p></div><div className="payment-toggle-group"><ToggleButton active={requisites.legalType === 'ИП'} onClick={() => setRequisites((v) => ({ ...v, legalType: 'ИП' }))}>ИП</ToggleButton><ToggleButton active={requisites.legalType === 'ООО'} onClick={() => setRequisites((v) => ({ ...v, legalType: 'ООО' }))}>ООО</ToggleButton></div></div>
         <div className="payment-form-grid">
-          {([['legalName','Юридическое название'],['inn','ИНН'],['kpp','КПП'],['ogrn','ОГРН / ОГРНИП'],['legalAddress','Юридический адрес'],['bankName','Банк'],['bik','БИК'],['account','Расчётный счёт'],['corrAccount','Корреспондентский счёт'],['contactEmail','Email для документов'],['contactPhone','Телефон бухгалтерии'],['edo','ЭДО']] as const).map(([key, label]) => <label key={key} className={key === 'legalAddress' ? 'payment-form-grid__wide' : undefined}><span>{label}</span><input value={String(requisites[key] || '')} onChange={(e) => setRequisites((v) => ({ ...v, [key]: e.target.value }))} /></label>)}
+          {([['legalName','Юридическое название'],['inn','ИНН'],['kpp','КПП'],['ogrn','ОГРН / ОГРНИП'],['legalAddress','Юридический адрес'],['bankName','Банк'],['bik','БИК'],['account','Расчётный счёт'],['corrAccount','Корреспондентский счёт'],['contactEmail','Email для документов'],['contactPhone','Телефон бухгалтерии'],['edo','ЭДО']] as const).map(([key, label]) => {
+            const required = (REQUIRED_FIELDS as readonly string[]).includes(key)
+            const empty = required && !String(requisites[key] || '').trim()
+            return (
+              <label key={key} className={['payment-form-grid__label', key === 'legalAddress' ? 'payment-form-grid__wide' : '', empty ? 'payment-form-grid__label--error' : ''].filter(Boolean).join(' ')}>
+                <span>{label}{required && <span className="payment-required-mark"> *</span>}</span>
+                <input value={String(requisites[key] || '')} onChange={(e) => setRequisites((v) => ({ ...v, [key]: e.target.value }))} />
+              </label>
+            )
+          })}
         </div><div className="payment-card-actions"><button className="payment-primary-button" type="button" onClick={saveRequisites}>Сохранить реквизиты</button><span>Счёт создаёт владелец сервиса после проверки реквизитов.</span></div></section>
         <aside className="payment-side-card"><h2>Порядок оплаты</h2><ol><li><strong>Выбрать тариф</strong><span>Тариф зависит от количества сотрудников.</span></li><li><strong>Заполнить реквизиты</strong><span>ИП или ООО, банк, расчётный счёт и email.</span></li><li><strong>Получить счёт</strong><span>Счёт выставляет владелец приложения.</span></li><li><strong>Отметить оплату</strong><span>При необходимости прикрепить платёжное поручение.</span></li></ol></aside></div>
 

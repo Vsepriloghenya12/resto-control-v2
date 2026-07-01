@@ -213,6 +213,15 @@
   grid-column: span 2;
 }
 
+.payment-required-mark {
+  color: #d0382a;
+}
+
+.payment-form-grid__label--error input {
+  border-color: #d0382a;
+  background: #fff8f7;
+}
+
 .payment-form-grid label {
   display: grid;
   gap: 6px;
